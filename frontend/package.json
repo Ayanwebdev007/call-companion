@@ -4,20 +4,13 @@
   "description": "A modern CRM application for managing customer calls and scheduling",
   "main": "index.js",
   "scripts": {
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "dev:frontend": "vite",
-    "dev:backend": "cd backend && npm run dev",
+    "dev": "vite",
     "build": "vite build",
-    "start": "cd backend && npm start",
     "preview": "vite preview",
-    "deploy": "npm run build && echo 'Ready for deployment to production'",
-    "deploy:render": "echo 'Deploy to Render using render.yaml'",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit",
-    "clean": "rimraf dist",
-    "postinstall": "cd backend && npm install",
-    "setup": "echo 'Project setup complete'"
+    "clean": "rimraf dist"
   },
   "keywords": [
     "crm",
@@ -91,7 +84,6 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
-    "concurrently": "^9.1.2",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",

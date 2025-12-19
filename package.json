@@ -11,8 +11,7 @@
     "start": "cd backend && npm start",
     "preview": "cd frontend && npm run preview",
     "deploy": "cd frontend && npm run build && echo 'Ready for deployment to production'",
-    "deploy:render": "echo 'Deploy to Render using render.yaml'",
-    "postinstall": "concurrently \"cd frontend && npm install\" \"cd backend && npm install\""
+    "deploy:render": "echo 'Deploy to Render using render.yaml'"
   },
   "keywords": [
     "crm",
