@@ -11,6 +11,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Debug logging
+console.log('Starting server...');
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
+console.log('PORT:', PORT);
+
 // More flexible CORS for production
 const allowedOrigins = [
   'http://localhost:8080', 
@@ -45,9 +51,15 @@ app.use(fileUpload({
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 
+// Debug route to check if server is running
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'Server is running' });
+});
+
 // Database Connection - Updated for MongoDB Atlas
 const MONGO_URI = process.env.DATABASE_URL || process.env.MONGO_URI || 'mongodb://localhost:27017/call-companion';
 
+console.log('Attempting to connect to MongoDB...');
 mongoose.connect(MONGO_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch((err) => console.error('MongoDB Atlas connection error:', err));
