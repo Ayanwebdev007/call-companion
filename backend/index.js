@@ -63,19 +63,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Root endpoint for debugging (optional)
-app.get('/', (req, res) => {
-  res.status(200).json({ 
-    message: 'Call Companion Backend API',
-    version: '1.0.0',
-    endpoints: {
-      auth: '/api/auth',
-      customers: '/api/customers',
-      health: '/api/health'
-    }
-  });
-});
-
 // Database Connection - Updated for MongoDB Atlas
 const MONGO_URI = process.env.DATABASE_URL;
 

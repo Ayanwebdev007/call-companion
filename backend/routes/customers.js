@@ -36,31 +36,6 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// BULK DELETE customers
-router.delete('/bulk-delete', auth, async (req, res) => {
-  try {
-    const { ids } = req.body;
-    
-    if (!ids || !Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ message: 'No customer IDs provided for deletion' });
-    }
-    
-    // Delete multiple customers belonging to the authenticated user
-    const result = await Customer.deleteMany({ 
-      _id: { $in: ids },
-      user_id: req.user.id
-    });
-    
-    res.json({ 
-      message: `${result.deletedCount} customers deleted successfully`,
-      deletedCount: result.deletedCount
-    });
-  } catch (err) {
-    console.error('Bulk delete error:', err);
-    res.status(500).json({ message: 'Error deleting customers', error: err.message });
-  }
-});
-
 // BULK IMPORT customers from Excel
 router.post('/bulk-import', auth, async (req, res) => {
   try {
@@ -229,6 +204,29 @@ router.delete('/:id', auth, async (req, res) => {
     res.json({ message: 'Customer deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// BULK DELETE customers
+router.delete('/bulk', auth, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'No customer IDs provided' });
+    }
+    
+    const result = await Customer.deleteMany({ 
+      _id: { $in: ids },
+      user_id: req.user.id 
+    });
+    
+    res.json({ 
+      message: `${result.deletedCount} customers deleted successfully`,
+      deletedCount: result.deletedCount 
+    });
+  } catch (err) {
+    console.error('Bulk delete error:', err);
+    res.status(500).json({ message: 'Error deleting customers', error: err.message });
   }
 });
 

@@ -1,5 +1,5 @@
-// Add a visible feature to force redeployment
-// Redeploy bulk delete feature with visible indicator - 2025-12-20
+// Add a comment to force redeployment
+// Redeploy bulk delete feature - 2025-12-20
 
 import { useState, useMemo, useRef, useEffect, memo } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical, Download, Upload, Trash, AlertCircle } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Download, Upload, Trash } from "lucide-react";
 import { format, isToday, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -218,11 +218,6 @@ const Index = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-semibold text-foreground">Calling CRM</h1>
-            {/* Visible indicator that deployment is working */}
-            <div className="flex items-center gap-1 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-              <AlertCircle className="h-3 w-3" />
-              <span>Bulk Delete Active</span>
-            </div>
             <span className="text-sm text-muted-foreground">Welcome, {user?.username}</span>
           </div>
           <div className="flex items-center gap-4">
