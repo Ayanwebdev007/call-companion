@@ -16,7 +16,7 @@ const allowedOrigins = [
   'http://localhost:8080', 
   'http://localhost:8081', 
   'http://192.168.31.210:8081',
-  'https://your-render-frontend.onrender.com'
+  'https://call-companion-frontend.onrender.com'
 ];
 
 app.use(cors({
