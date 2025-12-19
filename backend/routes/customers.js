@@ -44,6 +44,21 @@ router.post('/bulk-import', auth, async (req, res) => {
     }
 
     const file = req.files.file;
+    
+    // Debug file info
+    console.log('File info:', {
+      name: file.name,
+      size: file.size,
+      mimetype: file.mimetype,
+      encoding: file.encoding,
+      truncated: file.truncated
+    });
+    
+    // Check file validity
+    if (file.truncated) {
+      return res.status(400).json({ message: 'File too large' });
+    }
+    
     let buffer;
     
     // Handle both buffer and temp file approaches
@@ -57,13 +72,12 @@ router.post('/bulk-import', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid file format' });
     }
     
-    // Debug file info
-    console.log('File info:', {
-      name: file.name,
-      size: file.size,
-      mimetype: file.mimetype,
-      encoding: file.encoding
-    });
+    // Validate buffer
+    if (!buffer || buffer.length === 0) {
+      return res.status(400).json({ message: 'Empty file received' });
+    }
+    
+    console.log('Buffer size:', buffer.length);
     
     // Try reading with different options
     let workbook;
@@ -106,7 +120,7 @@ router.post('/bulk-import', auth, async (req, res) => {
     // Try different parsing methods
     let data = [];
     
-    // Method 1: Standard parsing
+    // Method 1: Standard parsing with defval
     try {
       data = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
       console.log('Method 1 - Standard parsing result:', data.length, 'rows');
@@ -301,16 +315,26 @@ router.get('/download-template', auth, async (req, res) => {
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.json_to_sheet(templateData);
     
-    // Add worksheet to workbook
+    // Ensure correct column headers
+    XLSX.utils.sheet_add_aoa(worksheet, [
+      ['customer_name', 'company_name', 'phone_number', 'next_call_date', 'next_call_time', 'remark']
+    ], { origin: "A1" });
+    
+    // Add data row
+    XLSX.utils.sheet_add_aoa(worksheet, [
+      ['John Doe', 'ABC Company', '+1234567890', '2023-12-25', '14:30', 'Important client']
+    ], { origin: "A2" });
+    
+    // Add worksheet to workbook with explicit name
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
     
-    // Write to buffer
+    // Write to buffer with explicit format
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
     
     // Convert buffer for proper sending
     const bufferArray = Buffer.from(buffer);
     
-    // Set headers for download
+    // Set headers for download with correct filename
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="customers_template.xlsx"');
     
