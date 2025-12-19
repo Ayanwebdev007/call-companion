@@ -66,7 +66,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Database Connection - Updated for MongoDB Atlas
-const MONGO_URI = process.env.DATABASE_URL || process.env.MONGO_URI || 'mongodb://localhost:27017/call-companion';
+const MONGO_URI = process.env.DATABASE_URL;
 
 console.log('Attempting to connect to MongoDB...');
 mongoose.connect(MONGO_URI)
