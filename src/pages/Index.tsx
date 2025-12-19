@@ -1,387 +1,586 @@
-import React, { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { CalendarIcon, PlusIcon, UploadIcon, DownloadIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ResizableTable, ResizableTableBody, ResizableTableCell, ResizableTableHead, ResizableTableHeader, ResizableTableRow } from '@/components/ui/resizable-table';
-import { BulkImportDialog } from '@/components/BulkImportDialog';
-import { BulkDelete } from '@/components/BulkDelete';
-import { useCustomerSelection } from '@/components/CustomerSelectionManager';
-import { toast } from '@/hooks/use-toast';
-import { DatePicker } from '@/components/ui/date-picker';
-import api from '@/lib/api';
+import { useState, useMemo, useRef, useEffect, memo } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Download, Upload, Trash } from "lucide-react";
+import { format, isToday, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers } from "@/lib/api";
 
-interface Customer {
-  id?: string;
-  customer_name: string;
-  company_name: string;
-  phone_number: string;
-  next_call_date: string;
-  next_call_time: string;
-  remark: string;
-}
+import { useAuth } from "@/context/AuthContext";
+import { LogOut } from "lucide-react";
+import { BulkImportDialog } from "@/components/BulkImportDialog";
+import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
 
-const Index: React.FC = () => {
+const Index = () => {
+  console.log("Index component rendering");
+  const [viewMode, setViewMode] = useState<"date" | "all">("date");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [date, setDate] = useState<Date>(new Date());
-  const [view, setView] = useState<'date' | 'all'>('date');
-  const [newCustomer, setNewCustomer] = useState<Customer>({
-    customer_name: '',
-    company_name: '',
-    phone_number: '',
-    next_call_date: format(new Date(), 'yyyy-MM-dd'),
-    next_call_time: '',
-    remark: ''
+  const { logout, user } = useAuth();
+  
+  // State for selected customers for bulk delete
+  const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
+
+  // New row state
+  const [newRow, setNewRow] = useState({
+    customer_name: "",
+    company_name: "",
+    phone_number: "",
+    next_call_date: format(new Date(), "yyyy-MM-dd"),
+    next_call_time: "",
+    remark: "",
   });
 
+  // Fetch customers
   const { data: customers = [], isLoading, error } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ["customers"],
     queryFn: async () => {
-      const res = await api.get('/customers');
-      return res.data;
-    }
+      try {
+        console.log("Fetching customers...");
+        const data = await fetchCustomers();
+        console.log("Customers fetched:", data);
+        if (!Array.isArray(data)) {
+          throw new Error("API response is not an array");
+        }
+        return data;
+      } catch (err) {
+        console.error("Fetch error:", err);
+        throw err;
+      }
+    },
+    enabled: !!user, // Only fetch when user is available
   });
 
-  // Use the customer selection hook
-  const { 
-    selectedCustomerIds, 
-    toggleCustomerSelection, 
-    selectAllCustomers, 
-    clearSelection, 
-    isSelected,
-    isAllSelected
-  } = useCustomerSelection(customers);
-
-  const filteredCustomers = view === 'date' 
-    ? customers.filter(customer => 
-        customer.next_call_date === format(date, 'yyyy-MM-dd')
-      )
-    : customers;
-
-  const mutation = useQueryClient();
-
-  const addCustomer = async () => {
-    if (!newCustomer.customer_name.trim() || !newCustomer.company_name.trim() || !newCustomer.phone_number.trim()) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fill Customer Name, Company Name, and Phone No.',
-        variant: 'destructive'
+  // Add customer mutation
+  const addMutation = useMutation({
+    mutationFn: addCustomer,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast({ title: "Customer added successfully!" });
+      // Reset new row
+      setNewRow({
+        customer_name: "",
+        company_name: "",
+        phone_number: "",
+        next_call_date: format(new Date(), "yyyy-MM-dd"),
+        next_call_time: "",
+        remark: "",
       });
+    },
+    onError: (error: unknown) => {
+      let errorMessage = "Failed to add customer";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      toast({ title: "Error adding customer", description: errorMessage, variant: "destructive" });
+    },
+  });
+
+  // Update customer mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, field, value }: { id: string; field: string; value: string }) => {
+      await updateCustomer(id, { [field]: value });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
+  });
+
+  // Delete customer mutation
+  const deleteMutation = useMutation({
+    mutationFn: deleteCustomer,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      toast({ title: "Customer deleted" });
+    },
+    onError: (error: unknown) => {
+      let errorMessage = "Failed to delete customer";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      toast({ title: "Error deleting customer", description: errorMessage, variant: "destructive" });
+    },
+  });
+  
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: bulkDeleteCustomers,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      setSelectedCustomers(new Set()); // Clear selection
+      toast({ title: `${data.deletedCount} customers deleted successfully` });
+    },
+    onError: (error: unknown) => {
+      let errorMessage = "Failed to delete customers";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      toast({ title: "Error deleting customers", description: errorMessage, variant: "destructive" });
+    },
+  });
+
+  const displayedCustomers = useMemo(() => {
+    if (!customers) return [];
+    if (!Array.isArray(customers)) {
+        console.error("Customers is not an array:", customers);
+        return [];
+    }
+    if (viewMode === "all") return customers;
+    const targetDateStr = format(selectedDate, "yyyy-MM-dd");
+    return customers.filter((c) => c.next_call_date === targetDateStr);
+  }, [customers, viewMode, selectedDate]);
+
+  // Handle customer selection for bulk delete
+  const toggleCustomerSelection = (customerId: string) => {
+    setSelectedCustomers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(customerId)) {
+        newSet.delete(customerId);
+      } else {
+        newSet.add(customerId);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all customers
+  const selectAllCustomers = () => {
+    if (selectedCustomers.size === displayedCustomers.length && displayedCustomers.length > 0) {
+      // Deselect all
+      setSelectedCustomers(new Set());
+    } else {
+      // Select all
+      setSelectedCustomers(new Set(displayedCustomers.map(c => c.id)));
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = () => {
+    if (selectedCustomers.size === 0) {
+      toast({ title: "No customers selected", description: "Please select customers to delete", variant: "destructive" });
       return;
     }
-
-    try {
-      await api.post('/customers', newCustomer);
-      mutation.invalidateQueries({ queryKey: ['customers'] });
-      setNewCustomer({
-        customer_name: '',
-        company_name: '',
-        phone_number: '',
-        next_call_date: format(new Date(), 'yyyy-MM-dd'),
-        next_call_time: '',
-        remark: ''
-      });
-      toast({
-        title: 'Success',
-        description: 'Customer added successfully'
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to add customer',
-        variant: 'destructive'
-      });
+    
+    if (confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)? This action cannot be undone.`)) {
+      bulkDeleteMutation.mutate(Array.from(selectedCustomers));
     }
   };
 
-  const updateCustomer = async (id: string, field: keyof Customer, value: string) => {
-    try {
-      await api.put(`/customers/${id}`, { [field]: value });
-      mutation.invalidateQueries({ queryKey: ['customers'] });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to update customer',
-        variant: 'destructive'
-      });
+  // Render different states based on conditions
+  if (!user) {
+    return <div className="p-4 text-center">Redirecting to login...</div>;
+  }
+
+  if (error) {
+    console.error("Query Error:", error);
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <h2 className="text-xl font-bold text-red-600">Error loading customers</h2>
+        <p className="text-gray-600">{error.message}</p>
+        {error.response && (
+          <p className="text-gray-600 mt-2">Status: {error.response.status} - {JSON.stringify(error.response.data)}</p>
+        )}
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  const handleAddRow = () => {
+    if (!newRow.customer_name.trim() || !newRow.company_name.trim() || !newRow.phone_number.trim()) {
+      toast({ title: "Please fill Customer Name, Company Name, and Phone No.", variant: "destructive" });
+      return;
     }
+    addMutation.mutate(newRow);
   };
 
-  const deleteCustomer = async (id: string) => {
-    try {
-      await api.delete(`/customers/${id}`);
-      mutation.invalidateQueries({ queryKey: ['customers'] });
-      toast({
-        title: 'Success',
-        description: 'Customer deleted successfully'
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to delete customer',
-        variant: 'destructive'
-      });
-    }
+  const handleCellChange = (id: string, field: string, value: string) => {
+    updateMutation.mutate({ id, field, value });
   };
-
-  if (isLoading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
-  if (error) return <div className="flex items-center justify-center min-h-screen text-red-500">Error loading customers</div>;
 
   return (
-    <div className="container mx-auto py-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Call Management</CardTitle>
-          <div className="flex gap-2">
-            <BulkDelete 
-              selectedCustomerIds={selectedCustomerIds} 
-              onSelectionClear={clearSelection} 
-            />
-            <BulkImportDialog onImportSuccess={() => mutation.invalidateQueries({ queryKey: ['customers'] })} />
-            <Button variant="outline" size="sm">
-              <DownloadIcon className="h-4 w-4 mr-2" />
-              Export
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header */}
+      <header className="bg-card border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold text-foreground">Calling CRM</h1>
+            <span className="text-sm text-muted-foreground">Welcome, {user?.username}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              {format(new Date(), "EEEE, MMMM do, yyyy")}
+            </span>
+            <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
+            <Button variant="outline" size="sm" onClick={logout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-card border-b border-border px-4 py-2 flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Button 
-                variant={view === 'date' ? "secondary" : "ghost"} 
-                size="sm" 
-                onClick={() => {
-                  setView('date');
-                  setDate(new Date());
-                }}
+        </div>
+      </header>
+
+      {/* Sheet Tabs */}
+      <div className="bg-card border-b border-border px-4 py-2 flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => {
+              setViewMode("date");
+              setSelectedDate(new Date());
+            }}
+          >
+            Today
+          </Button>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={viewMode === "date" ? "secondary" : "ghost"}
+                size="sm"
+                className={cn(
+                  "gap-2",
+                  viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
+                )}
               >
-                Today
+                <CalendarIcon className="h-4 w-4" />
+                {format(selectedDate, "PPP")}
               </Button>
-              <DatePicker 
-                date={date} 
-                onDateChange={setDate} 
-                placeholder="Select date" 
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setSelectedDate(date);
+                    setViewMode("date");
+                  }
+                }}
+                initialFocus
               />
-            </div>
-            <div className="h-6 w-px bg-border"></div>
-            <Button 
-              variant={view === 'all' ? "secondary" : "ghost"} 
-              size="sm" 
-              onClick={() => setView('all')}
-            >
-              All Customers ({customers.length})
-            </Button>
-          </div>
-          
-          <div className="flex-1 overflow-auto">
-            <ResizableTable>
-              <ResizableTableHeader>
-                <ResizableTableRow>
-                  {/* Checkbox Header */}
-                  <ResizableTableCell className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-12">
-                    <input
-                      type="checkbox"
-                      checked={isAllSelected}
-                      onChange={selectAllCustomers}
-                      className="h-4 w-4"
-                    />
-                  </ResizableTableCell>
-                  
-                  <ResizableTableCell className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10" resizable={false}>
-                    #
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
-                    Customer Name
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
-                    Company Name
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[120px]">
-                    Phone No.
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px]">
-                    Next Call Date
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[100px]">
-                    Time
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[200px]">
-                    Remark
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12" resizable={false}>
-                    WP
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12" resizable={false}>
-                    Actions
-                  </ResizableTableCell>
-                </ResizableTableRow>
-              </ResizableTableHeader>
-              
-              <ResizableTableBody>
-                {filteredCustomers.map((customer, index) => (
-                  <ResizableTableRow key={customer.id} className="hover:bg-muted/50">
-                    {/* Checkbox Cell */}
-                    <ResizableTableCell className="border border-border px-3 py-1 text-center">
-                      <input
-                        type="checkbox"
-                        checked={isSelected(customer.id || '')}
-                        onChange={() => toggleCustomerSelection(customer.id || '')}
-                        className="h-4 w-4"
-                      />
-                    </ResizableTableCell>
-                    
-                    <ResizableTableCell className="border border-border px-3 py-1 text-xs text-muted-foreground text-center">
-                      {index + 1}
-                    </ResizableTableCell>
-                    <ResizableTableCell className="border border-border p-0">
-                      <Input
-                        defaultValue={customer.customer_name}
-                        onBlur={(e) => updateCustomer(customer.id!, 'customer_name', e.target.value)}
-                        className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
-                      />
-                    </ResizableTableCell>
-                    <ResizableTableCell className="border border-border p-0">
-                      <Input
-                        defaultValue={customer.company_name}
-                        onBlur={(e) => updateCustomer(customer.id!, 'company_name', e.target.value)}
-                        className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
-                      />
-                    </ResizableTableCell>
-                    <ResizableTableCell className="border border-border p-0">
-                      <Input
-                        defaultValue={customer.phone_number}
-                        onBlur={(e) => updateCustomer(customer.id!, 'phone_number', e.target.value)}
-                        className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
-                      />
-                    </ResizableTableCell>
-                    <ResizableTableCell className="border border-border p-0">
-                      <DatePicker 
-                        date={customer.next_call_date ? new Date(customer.next_call_date) : undefined}
-                        onDateChange={(date) => updateCustomer(customer.id!, 'next_call_date', format(date, 'yyyy-MM-dd'))}
-                      />
-                    </ResizableTableCell>
-                    <ResizableTableCell className="border border-border p-0">
-                      <Input
-                        type="time"
-                        defaultValue={customer.next_call_time || ''}
-                        onBlur={(e) => updateCustomer(customer.id!, 'next_call_time', e.target.value)}
-                        className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
-                      />
-                    </ResizableTableCell>
-                    <ResizableTableCell className="border border-border p-0">
-                      <Input
-                        defaultValue={customer.remark || ''}
-                        onBlur={(e) => updateCustomer(customer.id!, 'remark', e.target.value)}
-                        className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
-                      />
-                    </ResizableTableCell>
-                    <ResizableTableCell className="border border-border p-1 text-center">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => {
-                          const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
-                          window.open(`https://wa.me/${phoneNumber}`, '_blank');
-                        }}
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-green-600"
-                      >
-                        <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                        </svg>
-                      </Button>
-                    </ResizableTableCell>
-                    <ResizableTableCell className="border border-border p-1 text-center">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => deleteCustomer(customer.id!)}
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                      >
-                        <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </Button>
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <div className="h-6 w-px bg-border" />
+
+        <Button
+          variant={viewMode === "all" ? "secondary" : "ghost"}
+          size="sm"
+          onClick={() => setViewMode("all")}
+        >
+          All Customers ({customers.length})
+        </Button>
+        
+        {/* Bulk Delete Button */}
+        {selectedCustomers.size > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+            disabled={bulkDeleteMutation.isPending}
+          >
+            <Trash className="h-4 w-4 mr-2" />
+            Delete {selectedCustomers.size} Selected
+          </Button>
+        )}
+      </div>
+
+      {/* Spreadsheet */}
+      <div className="flex-1 overflow-auto">
+        <ResizableTable className="w-full border-collapse">
+          <ResizableTableHeader className="bg-muted sticky top-0 z-10">
+            <ResizableTableRow>
+              <ResizableTableHead 
+                className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10"
+                resizable={false}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedCustomers.size > 0 && selectedCustomers.size === displayedCustomers.length}
+                  onChange={selectAllCustomers}
+                  className="h-4 w-4"
+                />
+              </ResizableTableHead>
+              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
+                Customer Name
+              </ResizableTableHead>
+              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
+                Company Name
+              </ResizableTableHead>
+              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[120px]">
+                Phone No.
+              </ResizableTableHead>
+              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px]">
+                Next Call Date
+              </ResizableTableHead>
+              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[100px]">
+                Time
+              </ResizableTableHead>
+              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[200px]">
+                Remark
+              </ResizableTableHead>
+              <ResizableTableHead 
+                className="border border-border px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12"
+                resizable={false}
+              >
+                WP
+              </ResizableTableHead>
+              <ResizableTableHead 
+                className="border border-border px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12"
+                resizable={false}
+              >
+                
+              </ResizableTableHead>
+            </ResizableTableRow>
+          </ResizableTableHeader>
+          <ResizableTableBody>
+            {isLoading ? (
+              <ResizableTableRow>
+                <ResizableTableCell colSpan={9} className="border border-border px-3 py-8 text-center text-muted-foreground">
+                  Loading...
+                </ResizableTableCell>
+              </ResizableTableRow>
+            ) : (
+              <>
+                {displayedCustomers.length === 0 && (
+                  <ResizableTableRow>
+                    <ResizableTableCell colSpan={9} className="border border-border px-3 py-4 text-center text-muted-foreground text-sm">
+                      {viewMode === "date" 
+                        ? `No calls scheduled for ${format(selectedDate, "MMM do")}` 
+                        : "No customers yet. Add one below!"}
                     </ResizableTableCell>
                   </ResizableTableRow>
+                )}
+                {displayedCustomers.map((customer, index) => (
+                  <MemoizedSpreadsheetRow
+                    key={customer.id}
+                    customer={customer}
+                    index={index + 1}
+                    onCellChange={handleCellChange}
+                    onDelete={() => deleteMutation.mutate(customer.id)}
+                    isSelected={selectedCustomers.has(customer.id)}
+                    onToggleSelect={() => toggleCustomerSelection(customer.id)}
+                  />
                 ))}
-                
+                {/* New Row Input */}
                 <ResizableTableRow className="bg-primary/5">
-                  {/* Empty cell for new row checkbox */}
-                  <ResizableTableCell className="border border-border px-3 py-1 text-center"></ResizableTableCell>
-                  
                   <ResizableTableCell className="border border-border px-3 py-1 text-xs text-primary font-medium text-center">
                     NEW
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
                     <Input
-                      value={newCustomer.customer_name}
-                      onChange={(e) => setNewCustomer({...newCustomer, customer_name: e.target.value})}
+                      value={newRow.customer_name}
+                      onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
                       className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
                       placeholder="Enter customer name..."
                     />
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
                     <Input
-                      value={newCustomer.company_name}
-                      onChange={(e) => setNewCustomer({...newCustomer, company_name: e.target.value})}
+                      value={newRow.company_name}
+                      onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
                       className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
                       placeholder="Enter company..."
                     />
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
                     <Input
-                      value={newCustomer.phone_number}
-                      onChange={(e) => setNewCustomer({...newCustomer, phone_number: e.target.value})}
+                      value={newRow.phone_number}
+                      onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
                       className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
                       placeholder="Enter phone..."
                     />
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
-                    <DatePicker 
-                      date={newCustomer.next_call_date ? new Date(newCustomer.next_call_date) : undefined}
-                      onDateChange={(date) => setNewCustomer({...newCustomer, next_call_date: format(date, 'yyyy-MM-dd')})}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="w-full h-9 px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
+                      <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                      {format(parseISO(newRow.next_call_date), "dd/MM/yyyy")}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={parseISO(newRow.next_call_date)}
+                      onSelect={(date) => date && setNewRow({ ...newRow, next_call_date: format(date, "yyyy-MM-dd") })}
+                      initialFocus
+                      className="pointer-events-auto"
                     />
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                    <Input
-                      type="time"
-                      value={newCustomer.next_call_time}
-                      onChange={(e) => setNewCustomer({...newCustomer, next_call_time: e.target.value})}
-                      className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
-                    />
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                    <Input
-                      value={newCustomer.remark}
-                      onChange={(e) => setNewCustomer({...newCustomer, remark: e.target.value})}
+                  </PopoverContent>
+                </Popover>
+              </ResizableTableCell>
+              <ResizableTableCell className="border border-border p-0">
+                <Input
+                  type="time"
+                  value={newRow.next_call_time}
+                  onChange={(e) => setNewRow({ ...newRow, next_call_time: e.target.value })}
+                  className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
+                />
+              </ResizableTableCell>
+              <ResizableTableCell className="border border-border p-0">
+                <Input
+                  value={newRow.remark}
+                      onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
                       className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
                       placeholder="Enter remark..."
                     />
                   </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-1 text-center"></ResizableTableCell>
                   <ResizableTableCell className="border border-border p-1 text-center">
-                    <Button 
-                      size="sm" 
-                      onClick={addCustomer}
-                      disabled={!newCustomer.customer_name.trim() || !newCustomer.company_name.trim() || !newCustomer.phone_number.trim()}
+                    {/* WhatsApp button for new row (empty) */}
+                  </ResizableTableCell>
+                  <ResizableTableCell className="border border-border p-1 text-center">
+                    <Button
+                      size="sm"
+                      onClick={handleAddRow}
+                      disabled={addMutation.isPending}
                       className="h-7 px-3 text-xs"
                     >
-                      <PlusIcon className="h-3 w-3 mr-1" />
-                      Add
+                      {addMutation.isPending ? "..." : "Add"}
                     </Button>
                   </ResizableTableCell>
                 </ResizableTableRow>
-              </ResizableTableBody>
-            </ResizableTable>
-          </div>
-        </CardContent>
-      </Card>
+              </>
+            )}
+          </ResizableTableBody>
+        </ResizableTable>
+      </div>
     </div>
   );
 };
+
+function SpreadsheetRow({
+  customer,
+  index,
+  onCellChange,
+  onDelete,
+  isSelected,
+  onToggleSelect,
+}: {
+  customer: Customer;
+  index: number;
+  onCellChange: (id: string, field: string, value: string) => void;
+  onDelete: () => void;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+}) {
+  const [date, setDate] = useState<Date | undefined>(
+    customer.next_call_date ? parseISO(customer.next_call_date) : undefined
+  );
+
+  const handleDateChange = (newDate: Date | undefined) => {
+    if (newDate) {
+      setDate(newDate);
+      onCellChange(customer.id, "next_call_date", format(newDate, "yyyy-MM-dd"));
+    }
+  };
+
+  return (
+    <ResizableTableRow className={`hover:bg-muted/50 ${isSelected ? 'bg-blue-50' : ''}`}>
+      <ResizableTableCell className="border border-border px-3 py-1 text-xs text-muted-foreground text-center">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          className="h-4 w-4"
+        />
+      </ResizableTableCell>
+      <ResizableTableCell className="border border-border p-0">
+        <Input
+          defaultValue={customer.customer_name}
+          onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
+          className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
+        />
+      </ResizableTableCell>
+      <ResizableTableCell className="border border-border p-0">
+        <Input
+          defaultValue={customer.company_name}
+          onBlur={(e) => onCellChange(customer.id, "company_name", e.target.value)}
+          className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
+        />
+      </ResizableTableCell>
+      <ResizableTableCell className="border border-border p-0">
+        <Input
+          defaultValue={customer.phone_number}
+          onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
+          className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
+        />
+      </ResizableTableCell>
+      <ResizableTableCell className="border border-border p-0">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="w-full h-8 px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
+              <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+              {date ? format(date, "dd/MM/yyyy") : "Pick date"}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={handleDateChange}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      </ResizableTableCell>
+      <ResizableTableCell className="border border-border p-0">
+        <Input
+          type="time"
+          defaultValue={customer.next_call_time || ""}
+          onBlur={(e) => onCellChange(customer.id, "next_call_time", e.target.value)}
+          className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
+        />
+      </ResizableTableCell>
+      <ResizableTableCell className="border border-border p-0">
+        <Input
+          defaultValue={customer.remark || ""}
+          onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
+          className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
+        />
+      </ResizableTableCell>
+      <ResizableTableCell className="border border-border p-1 text-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
+            const whatsappUrl = `https://wa.me/${phoneNumber}`;
+            window.open(whatsappUrl, '_blank');
+          }}
+          className="h-6 w-6 p-0 text-muted-foreground hover:text-green-600"
+        >
+          <MessageCircle className="h-3 w-3" />
+        </Button>
+      </ResizableTableCell>
+      <ResizableTableCell className="border border-border p-1 text-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onDelete}
+          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </ResizableTableCell>
+    </ResizableTableRow>
+  );
+}
+
+const MemoizedSpreadsheetRow = memo(SpreadsheetRow);
 
 export default Index;
