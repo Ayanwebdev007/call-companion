@@ -44,21 +44,6 @@ router.post('/bulk-import', auth, async (req, res) => {
     }
 
     const file = req.files.file;
-    
-    // Debug file info
-    console.log('File info:', {
-      name: file.name,
-      size: file.size,
-      mimetype: file.mimetype,
-      encoding: file.encoding,
-      truncated: file.truncated
-    });
-    
-    // Check file validity
-    if (file.truncated) {
-      return res.status(400).json({ message: 'File too large' });
-    }
-    
     let buffer;
     
     // Handle both buffer and temp file approaches
@@ -72,118 +57,13 @@ router.post('/bulk-import', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid file format' });
     }
     
-    // Validate buffer
-    if (!buffer || buffer.length === 0) {
-      return res.status(400).json({ message: 'Empty file received' });
-    }
-    
-    console.log('Buffer size:', buffer.length);
-    
-    // Try reading with different options
-    let workbook;
-    try {
-      // Method 1: Standard read
-      workbook = XLSX.read(buffer, { type: 'buffer' });
-    } catch (e1) {
-      console.log('Method 1 failed:', e1.message);
-      try {
-        // Method 2: Read with cellNF
-        workbook = XLSX.read(buffer, { type: 'buffer', cellNF: true });
-      } catch (e2) {
-        console.log('Method 2 failed:', e2.message);
-        try {
-          // Method 3: Read with all options
-          workbook = XLSX.read(buffer, { type: 'buffer', cellNF: true, cellDates: true, sheetStubs: true });
-        } catch (e3) {
-          console.log('Method 3 failed:', e3.message);
-          return res.status(400).json({ message: 'Unable to read Excel file', error: e3.message });
-        }
-      }
-    }
-    
-    // Debug workbook info
-    console.log('Workbook info:', {
-      sheetNames: workbook.SheetNames,
-      sheetCount: workbook.SheetNames.length
-    });
-    
-    // Check if workbook has sheets
-    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-      return res.status(400).json({ message: 'No sheets found in Excel file' });
-    }
-    
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
-    console.log('Using sheet:', sheetName);
-    
     const worksheet = workbook.Sheets[sheetName];
-    
-    // Try different parsing methods
-    let data = [];
-    
-    // Method 1: Standard parsing with defval
-    try {
-      data = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-      console.log('Method 1 - Standard parsing result:', data.length, 'rows');
-    } catch (e1) {
-      console.log('Method 1 failed:', e1.message);
-      
-      // Method 2: Parse with headers
-      try {
-        data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-        console.log('Method 2 - Header parsing result:', data.length, 'rows');
-        
-        // If we got array of arrays, convert to objects
-        if (data.length > 0 && Array.isArray(data[0])) {
-          const headers = data[0];
-          data = data.slice(1).map(row => {
-            const obj = {};
-            headers.forEach((header, index) => {
-              obj[header] = row[index] || "";
-            });
-            return obj;
-          });
-          console.log('Converted to objects:', data.length, 'rows');
-        }
-      } catch (e2) {
-        console.log('Method 2 failed:', e2.message);
-        
-        // Method 3: Parse with raw
-        try {
-          data = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: "" });
-          console.log('Method 3 - Raw parsing result:', data.length, 'rows');
-        } catch (e3) {
-          console.log('Method 3 failed:', e3.message);
-          return res.status(400).json({ message: 'Unable to parse Excel file', error: e3.message });
-        }
-      }
-    }
+    const data = XLSX.utils.sheet_to_json(worksheet);
     
     // Debug: Log the raw data structure
-    console.log('Excel data structure:', JSON.stringify(data.slice(0, 5), null, 2)); // Only first 5 rows
-
-    if (!data || data.length === 0) {
-      // Try to get raw cell data as fallback
-      try {
-        const rawCells = XLSX.utils.sheet_to_json(worksheet, { header: "A" });
-        console.log('Raw cell data:', JSON.stringify(rawCells.slice(0, 5), null, 2));
-        if (rawCells.length > 0) {
-          data = rawCells;
-        }
-      } catch (rawErr) {
-        console.log('Raw cell data extraction failed:', rawErr.message);
-      }
-      
-      if (!data || data.length === 0) {
-        return res.status(400).json({ 
-          message: 'No data found in Excel file',
-          file_info: {
-            name: file.name,
-            size: file.size,
-            mimetype: file.mimetype
-          }
-        });
-      }
-    }
+    console.log('Excel data structure:', JSON.stringify(data, null, 2));
 
     const customers = [];
     const errors = [];
@@ -201,18 +81,9 @@ router.post('/bulk-import', auth, async (req, res) => {
       return normalized;
     };
 
-    // Process in batches to avoid memory issues
-    const batchSize = 100;
-    let validRowsProcessed = 0;
-
     for (let i = 0; i < data.length; i++) {
       const originalRow = data[i];
       const row = normalizeRow(originalRow);
-      
-      // Debug first few rows
-      if (i < 3) {
-        console.log(`Row ${i + 1}:`, JSON.stringify(row, null, 2));
-      }
       
       // Try multiple possible column names
       const customerName = row['customer_name'] || row['customername'] || row['name'] || '';
@@ -222,9 +93,7 @@ router.post('/bulk-import', auth, async (req, res) => {
       // Validate mandatory fields
       if (!customerName || !companyName || !phoneNumber) {
         errors.push(`Row ${i + 1}: Missing mandatory fields. Found - Name: '${customerName}', Company: '${companyName}', Phone: '${phoneNumber}'`);
-        if (i < 5) { // Only log first 5 errors
-          console.log(`Row ${i + 1} debug:`, JSON.stringify(row, null, 2));
-        }
+        console.log(`Row ${i + 1} debug:`, JSON.stringify(row, null, 2));
         continue;
       }
 
@@ -250,47 +119,19 @@ router.post('/bulk-import', auth, async (req, res) => {
       };
 
       customers.push(customerData);
-      validRowsProcessed++;
     }
 
-    console.log(`Processed ${validRowsProcessed} valid rows out of ${data.length} total rows`);
-
-    if (customers.length === 0) {
-      return res.status(400).json({ 
-        message: 'No valid customers found in Excel file', 
-        total_rows: data.length,
-        sample_data: data.slice(0, 3), // Show first 3 rows for debugging
-        errors: errors.slice(0, 10) // First 10 errors only
-      });
+    if (errors.length > 0) {
+      return res.status(400).json({ message: 'Validation errors', errors });
     }
 
-    // Process in batches to avoid memory issues
-    let totalInserted = 0;
-    for (let i = 0; i < customers.length; i += batchSize) {
-      const batch = customers.slice(i, i + batchSize);
-      try {
-        const insertedCustomers = await Customer.insertMany(batch);
-        totalInserted += insertedCustomers.length;
-        console.log(`Inserted batch of ${insertedCustomers.length} customers (${totalInserted}/${customers.length} total)`);
-      } catch (batchErr) {
-        console.error('Batch insert error:', batchErr);
-        errors.push(`Batch insert error (rows ${i + 1}-${Math.min(i + batchSize, customers.length)}): ${batchErr.message}`);
-      }
-    }
-
-    if (errors.length > 0 && totalInserted === 0) {
-      return res.status(400).json({ 
-        message: 'Errors occurred during import', 
-        errors,
-        processed: totalInserted,
-        total_rows: data.length
-      });
-    }
-
+    // Insert all customers
+    const insertedCustomers = await Customer.insertMany(customers);
+    
     res.status(201).json({ 
-      message: `${totalInserted} customers imported successfully`, 
-      count: totalInserted,
-      errors: errors.length > 0 ? errors : undefined
+      message: `${insertedCustomers.length} customers imported successfully`, 
+      count: insertedCustomers.length,
+      customers: insertedCustomers 
     });
   } catch (err) {
     console.error('Bulk import error:', err);
@@ -315,26 +156,16 @@ router.get('/download-template', auth, async (req, res) => {
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.json_to_sheet(templateData);
     
-    // Ensure correct column headers
-    XLSX.utils.sheet_add_aoa(worksheet, [
-      ['customer_name', 'company_name', 'phone_number', 'next_call_date', 'next_call_time', 'remark']
-    ], { origin: "A1" });
-    
-    // Add data row
-    XLSX.utils.sheet_add_aoa(worksheet, [
-      ['John Doe', 'ABC Company', '+1234567890', '2023-12-25', '14:30', 'Important client']
-    ], { origin: "A2" });
-    
-    // Add worksheet to workbook with explicit name
+    // Add worksheet to workbook
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
     
-    // Write to buffer with explicit format
+    // Write to buffer
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
     
     // Convert buffer for proper sending
     const bufferArray = Buffer.from(buffer);
     
-    // Set headers for download with correct filename
+    // Set headers for download
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="customers_template.xlsx"');
     
