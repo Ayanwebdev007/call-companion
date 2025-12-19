@@ -65,7 +65,27 @@ router.post('/bulk-import', auth, async (req, res) => {
       encoding: file.encoding
     });
     
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    // Try reading with different options
+    let workbook;
+    try {
+      // Method 1: Standard read
+      workbook = XLSX.read(buffer, { type: 'buffer' });
+    } catch (e1) {
+      console.log('Method 1 failed:', e1.message);
+      try {
+        // Method 2: Read with cellNF
+        workbook = XLSX.read(buffer, { type: 'buffer', cellNF: true });
+      } catch (e2) {
+        console.log('Method 2 failed:', e2.message);
+        try {
+          // Method 3: Read with all options
+          workbook = XLSX.read(buffer, { type: 'buffer', cellNF: true, cellDates: true, sheetStubs: true });
+        } catch (e3) {
+          console.log('Method 3 failed:', e3.message);
+          return res.status(400).json({ message: 'Unable to read Excel file', error: e3.message });
+        }
+      }
+    }
     
     // Debug workbook info
     console.log('Workbook info:', {
@@ -88,14 +108,14 @@ router.post('/bulk-import', auth, async (req, res) => {
     
     // Method 1: Standard parsing
     try {
-      data = XLSX.utils.sheet_to_json(worksheet);
+      data = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
       console.log('Method 1 - Standard parsing result:', data.length, 'rows');
     } catch (e1) {
       console.log('Method 1 failed:', e1.message);
       
       // Method 2: Parse with headers
       try {
-        data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
         console.log('Method 2 - Header parsing result:', data.length, 'rows');
         
         // If we got array of arrays, convert to objects
@@ -104,7 +124,7 @@ router.post('/bulk-import', auth, async (req, res) => {
           data = data.slice(1).map(row => {
             const obj = {};
             headers.forEach((header, index) => {
-              obj[header] = row[index];
+              obj[header] = row[index] || "";
             });
             return obj;
           });
@@ -113,10 +133,10 @@ router.post('/bulk-import', auth, async (req, res) => {
       } catch (e2) {
         console.log('Method 2 failed:', e2.message);
         
-        // Method 3: Parse with defval
+        // Method 3: Parse with raw
         try {
-          data = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-          console.log('Method 3 - Defval parsing result:', data.length, 'rows');
+          data = XLSX.utils.sheet_to_json(worksheet, { raw: false, defval: "" });
+          console.log('Method 3 - Raw parsing result:', data.length, 'rows');
         } catch (e3) {
           console.log('Method 3 failed:', e3.message);
           return res.status(400).json({ message: 'Unable to parse Excel file', error: e3.message });
@@ -128,7 +148,27 @@ router.post('/bulk-import', auth, async (req, res) => {
     console.log('Excel data structure:', JSON.stringify(data.slice(0, 5), null, 2)); // Only first 5 rows
 
     if (!data || data.length === 0) {
-      return res.status(400).json({ message: 'No data found in Excel file' });
+      // Try to get raw cell data as fallback
+      try {
+        const rawCells = XLSX.utils.sheet_to_json(worksheet, { header: "A" });
+        console.log('Raw cell data:', JSON.stringify(rawCells.slice(0, 5), null, 2));
+        if (rawCells.length > 0) {
+          data = rawCells;
+        }
+      } catch (rawErr) {
+        console.log('Raw cell data extraction failed:', rawErr.message);
+      }
+      
+      if (!data || data.length === 0) {
+        return res.status(400).json({ 
+          message: 'No data found in Excel file',
+          file_info: {
+            name: file.name,
+            size: file.size,
+            mimetype: file.mimetype
+          }
+        });
+      }
     }
 
     const customers = [];
@@ -205,6 +245,7 @@ router.post('/bulk-import', auth, async (req, res) => {
       return res.status(400).json({ 
         message: 'No valid customers found in Excel file', 
         total_rows: data.length,
+        sample_data: data.slice(0, 3), // Show first 3 rows for debugging
         errors: errors.slice(0, 10) // First 10 errors only
       });
     }
