@@ -15,7 +15,8 @@ const PORT = process.env.PORT || 5000;
 console.log('Starting server...');
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
-console.log('PORT:', PORT);
+console.log('PORT from env:', process.env.PORT || 'NOT SET (using default 5000)');
+console.log('Final PORT value:', PORT);
 
 // More flexible CORS for production
 const allowedOrigins = [
@@ -53,7 +54,15 @@ app.use('/api/customers', customerRoutes);
 
 // Debug route to check if server is running
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'Server is running' });
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    port: PORT,
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT
+    }
+  });
 });
 
 // Database Connection - Updated for MongoDB Atlas
@@ -62,8 +71,11 @@ const MONGO_URI = process.env.DATABASE_URL || process.env.MONGO_URI || 'mongodb:
 console.log('Attempting to connect to MongoDB...');
 mongoose.connect(MONGO_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
-  .catch((err) => console.error('MongoDB Atlas connection error:', err));
+  .catch((err) => {
+    console.error('MongoDB Atlas connection error:', err);
+    console.error('Full error details:', JSON.stringify(err, null, 2));
+  });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
 });
