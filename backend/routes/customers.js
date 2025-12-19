@@ -1,8 +1,10 @@
-const express = require('express');
+import express from 'express';
+import Customer from '../models/Customer.js';
+import auth from '../middleware/auth.js';
+import XLSX from 'xlsx';
+import fs from 'fs';
+
 const router = express.Router();
-const Customer = require('../models/Customer');
-const auth = require('../middleware/auth');
-const XLSX = require('xlsx');
 
 // GET all customers for logged in user
 router.get('/', auth, async (req, res) => {
@@ -50,7 +52,6 @@ router.post('/bulk-import', auth, async (req, res) => {
       buffer = Buffer.from(file.data);
     } else if (file.tempFilePath) {
       // Temp file approach
-      const fs = require('fs');
       buffer = fs.readFileSync(file.tempFilePath);
     } else {
       return res.status(400).json({ message: 'Invalid file format' });
@@ -206,4 +207,4 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,11 +1,13 @@
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const fileUpload = require('express-fileupload');
-const customerRoutes = require('./routes/customers');
-const authRoutes = require('./routes/auth');
-const path = require('path');
+import dotenv from 'dotenv';
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import fileUpload from 'express-fileupload';
+import path from 'path';
+import customerRoutes from './routes/customers.js';
+import authRoutes from './routes/auth.js';
+
+dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
