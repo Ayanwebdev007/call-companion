@@ -284,16 +284,16 @@ const Index = () => {
           All Customers ({customers.length})
         </Button>
         
-        {/* Bulk Delete Button */}
-        {selectedCustomers.size > 0 && (
+        {/* Bulk Delete Button - Always visible when there are customers */}
+        {displayedCustomers.length > 0 && (
           <Button
             variant="destructive"
             size="sm"
             onClick={handleBulkDelete}
-            disabled={bulkDeleteMutation.isPending}
+            disabled={bulkDeleteMutation.isPending || selectedCustomers.size === 0}
           >
             <Trash className="h-4 w-4 mr-2" />
-            Delete {selectedCustomers.size} Selected
+            Delete {selectedCustomers.size > 0 ? `${selectedCustomers.size} Selected` : "Selected"}
           </Button>
         )}
       </div>
