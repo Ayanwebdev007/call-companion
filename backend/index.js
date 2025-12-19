@@ -48,10 +48,7 @@ app.use('/api/customers', customerRoutes);
 // Database Connection - Updated for MongoDB Atlas
 const MONGO_URI = process.env.DATABASE_URL || process.env.MONGO_URI || 'mongodb://localhost:27017/call-companion';
 
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(MONGO_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch((err) => console.error('MongoDB Atlas connection error:', err));
 
