@@ -11,12 +11,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Debug logging
-console.log('Starting server...');
-console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
-console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
-console.log('PORT from env:', process.env.PORT || 'NOT SET (using default 5000)');
-console.log('Final PORT value:', PORT);
+// Increase payload limits and timeout
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // More flexible CORS for production
 const allowedOrigins = [
@@ -41,13 +38,16 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
-
-// Only apply fileUpload middleware to routes that need it
+// Increase file upload limits and timeout
 app.use('/api/customers', fileUpload({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
-  useTempFiles: false,
-  debug: false // Turn off debug to reduce logs
+  useTempFiles: true, // Use temporary files for large uploads
+  tempFileDir: '/tmp/',
+  debug: false,
+  abortOnLimit: true,
+  responseOnLimit: 'File size limit exceeded',
+  safeFileNames: true,
+  preserveExtension: true
 }));
 
 // Routes
@@ -85,6 +85,13 @@ mongoose.connect(MONGO_URI)
   .catch((err) => {
     console.error('MongoDB Atlas connection error:', err);
   });
+
+// Increase server timeout
+app.use((req, res, next) => {
+  req.setTimeout(300000); // 5 minutes
+  res.setTimeout(300000); // 5 minutes
+  next();
+});
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);

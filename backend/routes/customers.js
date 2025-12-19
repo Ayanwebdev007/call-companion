@@ -63,7 +63,7 @@ router.post('/bulk-import', auth, async (req, res) => {
     const data = XLSX.utils.sheet_to_json(worksheet);
     
     // Debug: Log the raw data structure
-    console.log('Excel data structure:', JSON.stringify(data, null, 2));
+    console.log('Excel data structure:', JSON.stringify(data.slice(0, 5), null, 2)); // Only first 5 rows
 
     const customers = [];
     const errors = [];
@@ -80,6 +80,10 @@ router.post('/bulk-import', auth, async (req, res) => {
       }
       return normalized;
     };
+
+    // Process in batches to avoid memory issues
+    const batchSize = 100;
+    let validRowsProcessed = 0;
 
     for (let i = 0; i < data.length; i++) {
       const originalRow = data[i];
@@ -119,19 +123,43 @@ router.post('/bulk-import', auth, async (req, res) => {
       };
 
       customers.push(customerData);
+      validRowsProcessed++;
+
+      // Process in batches to avoid memory issues
+      if (customers.length >= batchSize) {
+        try {
+          const insertedCustomers = await Customer.insertMany(customers.splice(0, batchSize));
+          console.log(`Inserted batch of ${insertedCustomers.length} customers`);
+        } catch (batchErr) {
+          console.error('Batch insert error:', batchErr);
+          errors.push(`Batch insert error: ${batchErr.message}`);
+        }
+      }
+    }
+
+    // Insert remaining customers
+    if (customers.length > 0) {
+      try {
+        const insertedCustomers = await Customer.insertMany(customers);
+        console.log(`Inserted final batch of ${insertedCustomers.length} customers`);
+      } catch (batchErr) {
+        console.error('Final batch insert error:', batchErr);
+        errors.push(`Final batch insert error: ${batchErr.message}`);
+      }
     }
 
     if (errors.length > 0) {
-      return res.status(400).json({ message: 'Validation errors', errors });
+      return res.status(400).json({ 
+        message: 'Validation errors', 
+        errors,
+        processed: validRowsProcessed,
+        total_rows: data.length
+      });
     }
 
-    // Insert all customers
-    const insertedCustomers = await Customer.insertMany(customers);
-    
     res.status(201).json({ 
-      message: `${insertedCustomers.length} customers imported successfully`, 
-      count: insertedCustomers.length,
-      customers: insertedCustomers 
+      message: `${validRowsProcessed} customers imported successfully`, 
+      count: validRowsProcessed
     });
   } catch (err) {
     console.error('Bulk import error:', err);
