@@ -11,6 +11,13 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Debug logging
+console.log('Starting server...');
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
+console.log('PORT from env:', process.env.PORT || 'NOT SET (using default 5000)');
+console.log('Final PORT value:', PORT);
+
 // Increase payload limits and timeout
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -38,8 +45,8 @@ app.use(cors({
   credentials: true
 }));
 
-// Increase file upload limits and timeout
-app.use('/api/customers', fileUpload({
+// Increase file upload limits and timeout - Apply globally for all routes that need it
+app.use(fileUpload({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
   useTempFiles: true, // Use temporary files for large uploads
   tempFileDir: '/tmp/',
