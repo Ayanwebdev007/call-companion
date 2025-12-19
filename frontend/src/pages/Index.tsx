@@ -1,19 +1,23 @@
+// Add a comment to force redeployment
+// Redeploy bulk delete feature - 2025-12-20
+
 import { useState, useMemo, useRef, useEffect, memo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Download, Upload, Trash } from "lucide-react";
 import { format, isToday, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers } from "@/lib/api";
 
 import { useAuth } from "@/context/AuthContext";
 import { LogOut } from "lucide-react";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
+
 const Index = () => {
   console.log("Index component rendering");
   const [viewMode, setViewMode] = useState<"date" | "all">("date");
@@ -21,6 +25,9 @@ const Index = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
+  
+  // State for selected customers for bulk delete
+  const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
 
   // New row state
   const [newRow, setNewRow] = useState({
@@ -104,6 +111,25 @@ const Index = () => {
       toast({ title: "Error deleting customer", description: errorMessage, variant: "destructive" });
     },
   });
+  
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: bulkDeleteCustomers,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      setSelectedCustomers(new Set()); // Clear selection
+      toast({ title: `${data.deletedCount} customers deleted successfully` });
+    },
+    onError: (error: unknown) => {
+      let errorMessage = "Failed to delete customers";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      toast({ title: "Error deleting customers", description: errorMessage, variant: "destructive" });
+    },
+  });
 
   const displayedCustomers = useMemo(() => {
     if (!customers) return [];
@@ -115,6 +141,42 @@ const Index = () => {
     const targetDateStr = format(selectedDate, "yyyy-MM-dd");
     return customers.filter((c) => c.next_call_date === targetDateStr);
   }, [customers, viewMode, selectedDate]);
+
+  // Handle customer selection for bulk delete
+  const toggleCustomerSelection = (customerId: string) => {
+    setSelectedCustomers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(customerId)) {
+        newSet.delete(customerId);
+      } else {
+        newSet.add(customerId);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all customers
+  const selectAllCustomers = () => {
+    if (selectedCustomers.size === displayedCustomers.length && displayedCustomers.length > 0) {
+      // Deselect all
+      setSelectedCustomers(new Set());
+    } else {
+      // Select all
+      setSelectedCustomers(new Set(displayedCustomers.map(c => c.id)));
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = () => {
+    if (selectedCustomers.size === 0) {
+      toast({ title: "No customers selected", description: "Please select customers to delete", variant: "destructive" });
+      return;
+    }
+    
+    if (confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)? This action cannot be undone.`)) {
+      bulkDeleteMutation.mutate(Array.from(selectedCustomers));
+    }
+  };
 
   // Render different states based on conditions
   if (!user) {
@@ -224,6 +286,19 @@ const Index = () => {
         >
           All Customers ({customers.length})
         </Button>
+        
+        {/* Bulk Delete Button - Always visible when there are customers */}
+        {displayedCustomers.length > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+            disabled={bulkDeleteMutation.isPending || selectedCustomers.size === 0}
+          >
+            <Trash className="h-4 w-4 mr-2" />
+            Delete {selectedCustomers.size > 0 ? `${selectedCustomers.size} Selected` : "Selected"}
+          </Button>
+        )}
       </div>
 
       {/* Spreadsheet */}
@@ -235,7 +310,12 @@ const Index = () => {
                 className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10"
                 resizable={false}
               >
-                #
+                <input
+                  type="checkbox"
+                  checked={selectedCustomers.size > 0 && selectedCustomers.size === displayedCustomers.length}
+                  onChange={selectAllCustomers}
+                  className="h-4 w-4"
+                />
               </ResizableTableHead>
               <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
                 Customer Name
@@ -286,13 +366,16 @@ const Index = () => {
                         : "No customers yet. Add one below!"}
                     </ResizableTableCell>
                   </ResizableTableRow>
-                )}                {displayedCustomers.map((customer, index) => (
+                )}
+                {displayedCustomers.map((customer, index) => (
                   <MemoizedSpreadsheetRow
                     key={customer.id}
                     customer={customer}
                     index={index + 1}
                     onCellChange={handleCellChange}
                     onDelete={() => deleteMutation.mutate(customer.id)}
+                    isSelected={selectedCustomers.has(customer.id)}
+                    onToggleSelect={() => toggleCustomerSelection(customer.id)}
                   />
                 ))}
                 {/* New Row Input */}
@@ -387,11 +470,15 @@ function SpreadsheetRow({
   index,
   onCellChange,
   onDelete,
+  isSelected,
+  onToggleSelect,
 }: {
   customer: Customer;
   index: number;
   onCellChange: (id: string, field: string, value: string) => void;
   onDelete: () => void;
+  isSelected: boolean;
+  onToggleSelect: () => void;
 }) {
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
@@ -405,9 +492,14 @@ function SpreadsheetRow({
   };
 
   return (
-    <ResizableTableRow className="hover:bg-muted/50">
+    <ResizableTableRow className={`hover:bg-muted/50 ${isSelected ? 'bg-blue-50' : ''}`}>
       <ResizableTableCell className="border border-border px-3 py-1 text-xs text-muted-foreground text-center">
-        {index}
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          className="h-4 w-4"
+        />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <Input
