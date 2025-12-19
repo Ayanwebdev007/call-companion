@@ -42,26 +42,24 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(fileUpload({
+
+// Only apply fileUpload middleware to routes that need it
+app.use('/api/customers', fileUpload({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
   useTempFiles: false,
-  debug: true
+  debug: false // Turn off debug to reduce logs
 }));
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 
-// Debug route to check if server is running
+// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
     message: 'Server is running',
-    port: PORT,
-    env: {
-      NODE_ENV: process.env.NODE_ENV,
-      PORT: process.env.PORT
-    }
+    port: PORT
   });
 });
 
@@ -73,7 +71,6 @@ mongoose.connect(MONGO_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
   .catch((err) => {
     console.error('MongoDB Atlas connection error:', err);
-    console.error('Full error details:', JSON.stringify(err, null, 2));
   });
 
 app.listen(PORT, '0.0.0.0', () => {
