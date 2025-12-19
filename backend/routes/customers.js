@@ -128,7 +128,8 @@ router.post('/bulk-import', auth, async (req, res) => {
       // Process in batches to avoid memory issues
       if (customers.length >= batchSize) {
         try {
-          const insertedCustomers = await Customer.insertMany(customers.splice(0, batchSize));
+          const batchToInsert = customers.splice(0, batchSize);
+          const insertedCustomers = await Customer.insertMany(batchToInsert);
           console.log(`Inserted batch of ${insertedCustomers.length} customers`);
         } catch (batchErr) {
           console.error('Batch insert error:', batchErr);
@@ -142,6 +143,7 @@ router.post('/bulk-import', auth, async (req, res) => {
       try {
         const insertedCustomers = await Customer.insertMany(customers);
         console.log(`Inserted final batch of ${insertedCustomers.length} customers`);
+        validRowsProcessed += insertedCustomers.length; // Add to total count
       } catch (batchErr) {
         console.error('Final batch insert error:', batchErr);
         errors.push(`Final batch insert error: ${batchErr.message}`);
