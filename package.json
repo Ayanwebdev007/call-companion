@@ -1,0 +1,30 @@
+{
+  "name": "call-companion",
+  "version": "1.0.0",
+  "description": "A modern CRM application for managing customer calls and scheduling",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
+    "preview": "cd frontend && npm run preview",
+    "deploy": "cd frontend && npm run build && echo 'Ready for deployment to production'",
+    "deploy:render": "echo 'Deploy to Render using render.yaml'",
+    "postinstall": "concurrently \"cd frontend && npm install\" \"cd backend && npm install\""
+  },
+  "keywords": [
+    "crm",
+    "call-management",
+    "scheduler",
+    "react",
+    "nodejs",
+    "mongodb"
+  ],
+  "author": "Call Companion Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

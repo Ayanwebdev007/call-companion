@@ -1,0 +1,68 @@
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api/customers';
+
+// Add interceptor to include token
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export interface Customer {
+  id: string;
+  customer_name: string;
+  company_name: string;
+  phone_number: string;
+  next_call_date: string;
+  next_call_time?: string;
+  remark: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const fetchCustomers = async (): Promise<Customer[]> => {
+  const response = await axios.get(API_URL);
+  return response.data;
+};
+
+export const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<Customer> => {
+  const response = await axios.post(API_URL, customer);
+  return response.data;
+};
+
+export interface BulkImportResponse {
+  success: boolean;
+  message: string;
+  importedCount?: number;
+  errors?: string[];
+}
+
+export const bulkImportCustomers = async (file: File): Promise<BulkImportResponse> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await axios.post<BulkImportResponse>(`${API_URL}/bulk-import`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+export const downloadTemplate = async (): Promise<Blob> => {
+  const response = await axios.get(`${API_URL}/download-template`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+export const updateCustomer = async (id: string, updates: Partial<Customer>): Promise<Customer> => {
+  const response = await axios.put(`${API_URL}/${id}`, updates);
+  return response.data;
+};
+
+export const deleteCustomer = async (id: string): Promise<void> => {
+  await axios.delete(`${API_URL}/${id}`);
+};
