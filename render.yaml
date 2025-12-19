@@ -2,7 +2,7 @@ services:
   - type: web
     name: call-companion-frontend
     env: static
-    buildCommand: cd frontend && npm install && npm run build
+    buildCommand: cd frontend && npm ci && npm run build
     staticPublishPath: frontend/dist
     envVars:
       - key: NODE_VERSION
@@ -16,7 +16,7 @@ services:
     name: call-companion-backend
     env: node
     plan: free
-    buildCommand: cd backend && npm install
+    buildCommand: cd backend && npm ci
     startCommand: cd backend && npm start
     envVars:
       - key: NODE_VERSION
