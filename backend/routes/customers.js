@@ -57,13 +57,79 @@ router.post('/bulk-import', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid file format' });
     }
     
+    // Debug file info
+    console.log('File info:', {
+      name: file.name,
+      size: file.size,
+      mimetype: file.mimetype,
+      encoding: file.encoding
+    });
+    
     const workbook = XLSX.read(buffer, { type: 'buffer' });
+    
+    // Debug workbook info
+    console.log('Workbook info:', {
+      sheetNames: workbook.SheetNames,
+      sheetCount: workbook.SheetNames.length
+    });
+    
+    // Check if workbook has sheets
+    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+      return res.status(400).json({ message: 'No sheets found in Excel file' });
+    }
+    
     const sheetName = workbook.SheetNames[0];
+    console.log('Using sheet:', sheetName);
+    
     const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet);
+    
+    // Try different parsing methods
+    let data = [];
+    
+    // Method 1: Standard parsing
+    try {
+      data = XLSX.utils.sheet_to_json(worksheet);
+      console.log('Method 1 - Standard parsing result:', data.length, 'rows');
+    } catch (e1) {
+      console.log('Method 1 failed:', e1.message);
+      
+      // Method 2: Parse with headers
+      try {
+        data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        console.log('Method 2 - Header parsing result:', data.length, 'rows');
+        
+        // If we got array of arrays, convert to objects
+        if (data.length > 0 && Array.isArray(data[0])) {
+          const headers = data[0];
+          data = data.slice(1).map(row => {
+            const obj = {};
+            headers.forEach((header, index) => {
+              obj[header] = row[index];
+            });
+            return obj;
+          });
+          console.log('Converted to objects:', data.length, 'rows');
+        }
+      } catch (e2) {
+        console.log('Method 2 failed:', e2.message);
+        
+        // Method 3: Parse with defval
+        try {
+          data = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+          console.log('Method 3 - Defval parsing result:', data.length, 'rows');
+        } catch (e3) {
+          console.log('Method 3 failed:', e3.message);
+          return res.status(400).json({ message: 'Unable to parse Excel file', error: e3.message });
+        }
+      }
+    }
     
     // Debug: Log the raw data structure
     console.log('Excel data structure:', JSON.stringify(data.slice(0, 5), null, 2)); // Only first 5 rows
+
+    if (!data || data.length === 0) {
+      return res.status(400).json({ message: 'No data found in Excel file' });
+    }
 
     const customers = [];
     const errors = [];
@@ -89,6 +155,11 @@ router.post('/bulk-import', auth, async (req, res) => {
       const originalRow = data[i];
       const row = normalizeRow(originalRow);
       
+      // Debug first few rows
+      if (i < 3) {
+        console.log(`Row ${i + 1}:`, JSON.stringify(row, null, 2));
+      }
+      
       // Try multiple possible column names
       const customerName = row['customer_name'] || row['customername'] || row['name'] || '';
       const companyName = row['company_name'] || row['companyname'] || row['company'] || '';
@@ -97,7 +168,9 @@ router.post('/bulk-import', auth, async (req, res) => {
       // Validate mandatory fields
       if (!customerName || !companyName || !phoneNumber) {
         errors.push(`Row ${i + 1}: Missing mandatory fields. Found - Name: '${customerName}', Company: '${companyName}', Phone: '${phoneNumber}'`);
-        console.log(`Row ${i + 1} debug:`, JSON.stringify(row, null, 2));
+        if (i < 5) { // Only log first 5 errors
+          console.log(`Row ${i + 1} debug:`, JSON.stringify(row, null, 2));
+        }
         continue;
       }
 
@@ -124,44 +197,45 @@ router.post('/bulk-import', auth, async (req, res) => {
 
       customers.push(customerData);
       validRowsProcessed++;
-
-      // Process in batches to avoid memory issues
-      if (customers.length >= batchSize) {
-        try {
-          const batchToInsert = customers.splice(0, batchSize);
-          const insertedCustomers = await Customer.insertMany(batchToInsert);
-          console.log(`Inserted batch of ${insertedCustomers.length} customers`);
-        } catch (batchErr) {
-          console.error('Batch insert error:', batchErr);
-          errors.push(`Batch insert error: ${batchErr.message}`);
-        }
-      }
     }
 
-    // Insert remaining customers
-    if (customers.length > 0) {
-      try {
-        const insertedCustomers = await Customer.insertMany(customers);
-        console.log(`Inserted final batch of ${insertedCustomers.length} customers`);
-        validRowsProcessed += insertedCustomers.length; // Add to total count
-      } catch (batchErr) {
-        console.error('Final batch insert error:', batchErr);
-        errors.push(`Final batch insert error: ${batchErr.message}`);
-      }
-    }
+    console.log(`Processed ${validRowsProcessed} valid rows out of ${data.length} total rows`);
 
-    if (errors.length > 0) {
+    if (customers.length === 0) {
       return res.status(400).json({ 
-        message: 'Validation errors', 
+        message: 'No valid customers found in Excel file', 
+        total_rows: data.length,
+        errors: errors.slice(0, 10) // First 10 errors only
+      });
+    }
+
+    // Process in batches to avoid memory issues
+    let totalInserted = 0;
+    for (let i = 0; i < customers.length; i += batchSize) {
+      const batch = customers.slice(i, i + batchSize);
+      try {
+        const insertedCustomers = await Customer.insertMany(batch);
+        totalInserted += insertedCustomers.length;
+        console.log(`Inserted batch of ${insertedCustomers.length} customers (${totalInserted}/${customers.length} total)`);
+      } catch (batchErr) {
+        console.error('Batch insert error:', batchErr);
+        errors.push(`Batch insert error (rows ${i + 1}-${Math.min(i + batchSize, customers.length)}): ${batchErr.message}`);
+      }
+    }
+
+    if (errors.length > 0 && totalInserted === 0) {
+      return res.status(400).json({ 
+        message: 'Errors occurred during import', 
         errors,
-        processed: validRowsProcessed,
+        processed: totalInserted,
         total_rows: data.length
       });
     }
 
     res.status(201).json({ 
-      message: `${validRowsProcessed} customers imported successfully`, 
-      count: validRowsProcessed
+      message: `${totalInserted} customers imported successfully`, 
+      count: totalInserted,
+      errors: errors.length > 0 ? errors : undefined
     });
   } catch (err) {
     console.error('Bulk import error:', err);
