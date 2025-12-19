@@ -5,7 +5,7 @@ const cors = require('cors');
 const fileUpload = require('express-fileupload');
 const customerRoutes = require('./routes/customers');
 const authRoutes = require('./routes/auth');
-import path from 'path';
+const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
