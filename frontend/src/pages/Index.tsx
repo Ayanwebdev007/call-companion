@@ -279,26 +279,28 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="bg-card border-b border-border px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold text-foreground">Calling CRM</h1>
-            <span className="text-sm text-muted-foreground">Welcome, {user?.username}</span>
+    <div className="h-screen flex flex-col bg-background">
+      {/* Fixed Header Section */}
+      <div className="flex-shrink-0">
+        {/* Main Header */}
+        <header className="bg-card border-b border-border px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-semibold text-foreground">Calling CRM</h1>
+              <span className="text-sm text-muted-foreground">Welcome, {user?.username}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                {format(new Date(), "EEEE, MMMM do, yyyy")}
+              </span>
+              <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
+              <Button variant="outline" size="sm" onClick={logout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              {format(new Date(), "EEEE, MMMM do, yyyy")}
-            </span>
-            <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
-            <Button variant="outline" size="sm" onClick={logout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
+        </header>
 
       {/* Sheet Tabs */}
       <div className="bg-card border-b border-border px-4 py-2 flex items-center gap-4">
@@ -385,9 +387,10 @@ const Index = () => {
       )}
 
       {/* Spreadsheet */}
-      <div className="flex-1 overflow-auto">
-        <ResizableTable className="w-full border-collapse">
-          <ResizableTableHeader className="bg-muted sticky top-0 z-10">
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full scroll-container">
+          <ResizableTable className="w-full border-collapse" containerClassName="table-container-fixed">
+            <ResizableTableHeader className="bg-muted sticky-header shadow-sm">
             <ResizableTableRow>
               <ResizableTableHead 
                 className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10"
@@ -627,7 +630,9 @@ const Index = () => {
         </ResizableTable>
       </div>
     </div>
-  );
+  </div>
+</div>
+);
 };
 
 function SpreadsheetRow({

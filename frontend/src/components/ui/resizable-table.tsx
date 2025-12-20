@@ -8,12 +8,14 @@ interface ResizableTableProps extends React.TableHTMLAttributes<HTMLTableElement
 
 const ResizableTable = React.forwardRef<HTMLTableElement, ResizableTableProps>(
   ({ className, containerClassName, ...props }, ref) => (
-    <div className={cn("relative w-full overflow-auto", containerClassName)}>
+    <div className={cn("relative w-full h-full", containerClassName)}>
+      <div className="h-full overflow-auto">
       <table
         ref={ref}
         className={cn("w-full caption-bottom text-sm", className)}
         {...props}
       />
+      </div>
     </div>
   )
 );
