@@ -221,6 +221,18 @@ router.delete('/bulk', auth, async (req, res) => {
     }
     
     console.log('Deleting customers with IDs:', ids);
+    console.log('User ID for query:', req.user.id);
+    
+    // First, let's check if we can find the customers
+    try {
+      const customersToCheck = await Customer.find({ 
+        _id: { $in: ids },
+        user_id: req.user.id 
+      });
+      console.log('Customers to delete (before deletion):', customersToCheck.length);
+    } catch (checkErr) {
+      console.error('Error checking customers before deletion:', checkErr);
+    }
     
     const result = await Customer.deleteMany({ 
       _id: { $in: ids },
@@ -235,6 +247,7 @@ router.delete('/bulk', auth, async (req, res) => {
     });
   } catch (err) {
     console.error('Bulk delete error:', err);
+    console.error('Error stack:', err.stack);
     res.status(500).json({ message: 'Error deleting customers', error: err.message });
   }
 });
