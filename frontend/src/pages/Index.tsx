@@ -470,14 +470,33 @@ const Index = () => {
                 className="border border-border px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12"
                 resizable={false}
               >
-                {showCheckboxes ? "Select" : "WP"}
+                WP
               </ResizableTableHead>
+              {showCheckboxes && (
+                <ResizableTableHead 
+                  className="border border-border px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-8"
+                  resizable={false}
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0"
+                    onClick={selectAllCustomers}
+                  >
+                    {selectedCustomers.size === displayedCustomers.length && displayedCustomers.length > 0 ? (
+                      <CheckSquare className="h-3 w-3" />
+                    ) : (
+                      <Square className="h-3 w-3" />
+                    )}
+                  </Button>
+                </ResizableTableHead>
+              )
             </ResizableTableRow>
           </ResizableTableHeader>
           <ResizableTableBody>
             {isLoading ? (
               <ResizableTableRow>
-                <ResizableTableCell colSpan={9} className="border border-border px-3 py-8 text-center text-muted-foreground">
+                <ResizableTableCell colSpan={showCheckboxes ? 10 : 9} className="border border-border px-3 py-8 text-center text-muted-foreground">
                   Loading...
                 </ResizableTableCell>
               </ResizableTableRow>
@@ -485,7 +504,7 @@ const Index = () => {
               <>
                 {displayedCustomers.length === 0 && (
                   <ResizableTableRow>
-                    <ResizableTableCell colSpan={9} className="border border-border px-3 py-4 text-center text-muted-foreground text-sm">
+                    <ResizableTableCell colSpan={showCheckboxes ? 10 : 9} className="border border-border px-3 py-4 text-center text-muted-foreground text-sm">
                       {viewMode === "date" 
                         ? `No calls scheduled for ${format(selectedDate, "MMM do")}` 
                         : "No customers yet. Add one below!"}
@@ -858,7 +877,21 @@ function SpreadsheetRow({
         />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-1 text-center">
-        {showCheckboxes ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
+            const whatsappUrl = `https://wa.me/${phoneNumber}`;
+            window.open(whatsappUrl, '_blank');
+          }}
+          className="h-6 w-6 p-0 text-muted-foreground hover:text-green-600"
+        >
+          <MessageCircle className="h-3 w-3" />
+        </Button>
+      </ResizableTableCell>
+      {showCheckboxes && (
+        <ResizableTableCell className="border border-border px-1 py-1 text-center">
           <Button
             variant="ghost"
             size="sm"
@@ -871,21 +904,8 @@ function SpreadsheetRow({
               <Square className="h-3 w-3" />
             )}
           </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
-              const whatsappUrl = `https://wa.me/${phoneNumber}`;
-              window.open(whatsappUrl, '_blank');
-            }}
-            className="h-6 w-6 p-0 text-muted-foreground hover:text-green-600"
-          >
-            <MessageCircle className="h-3 w-3" />
-          </Button>
-        )}
-      </ResizableTableCell>
+        </ResizableTableCell>
+      )}
     </ResizableTableRow>
   );
 }
