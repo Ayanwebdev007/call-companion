@@ -8,6 +8,7 @@ const customerSchema = new mongoose.Schema({
   next_call_date: { type: String, required: true, default: () => new Date().toISOString().split('T')[0] }, // Keeping as string to match frontend format "yyyy-MM-dd"
   next_call_time: { type: String, default: '' }, // New field for time (e.g., "14:30")
   remark: { type: String, default: '' },
+  position: { type: Number, default: 0 } // For drag and drop ordering
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 // Map _id to id

@@ -22,6 +22,7 @@ export interface Customer {
   remark: string | null;
   created_at?: string;
   updated_at?: string;
+  position?: number;
 }
 
 export const fetchCustomers = async (): Promise<Customer[]> => {
@@ -70,6 +71,11 @@ export const deleteCustomer = async (id: string): Promise<void> => {
 };
 
 export const bulkDeleteCustomers = async (ids: string[]): Promise<{ deletedCount: number }> => {
-  const response = await axios.delete(`${API_URL}/bulk`, { data: { ids } });
+  // Use axios.post instead of axios.delete with data to avoid potential issues
+  const response = await axios.post(`${API_URL}/bulk-delete`, { ids });
   return response.data;
+};
+
+export const reorderCustomers = async (customerIds: string[]): Promise<void> => {
+  await axios.post(`${API_URL}/reorder`, { customerIds });
 };

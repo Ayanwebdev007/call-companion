@@ -1,17 +1,14 @@
-// Add a comment to force redeployment
-// Redeploy bulk delete feature - 2025-12-20
-
 import { useState, useMemo, useRef, useEffect, memo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical, Download, Upload, Trash } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare } from "lucide-react";
 import { format, isToday, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers } from "@/lib/api";
 
 import { useAuth } from "@/context/AuthContext";
 import { LogOut } from "lucide-react";
@@ -26,8 +23,11 @@ const Index = () => {
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
   
-  // State for selected customers for bulk delete
+  // Bulk selection state
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
+
+  // Drag and drop state
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
   // New row state
   const [newRow, setNewRow] = useState({
@@ -111,7 +111,7 @@ const Index = () => {
       toast({ title: "Error deleting customer", description: errorMessage, variant: "destructive" });
     },
   });
-  
+
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: bulkDeleteCustomers,
@@ -131,6 +131,23 @@ const Index = () => {
     },
   });
 
+  // Reorder customers mutation
+  const reorderMutation = useMutation({
+    mutationFn: reorderCustomers,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+    onError: (error: unknown) => {
+      let errorMessage = "Failed to reorder customers";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      toast({ title: "Error reordering customers", description: errorMessage, variant: "destructive" });
+    },
+  });
+
   const displayedCustomers = useMemo(() => {
     if (!customers) return [];
     if (!Array.isArray(customers)) {
@@ -142,40 +159,74 @@ const Index = () => {
     return customers.filter((c) => c.next_call_date === targetDateStr);
   }, [customers, viewMode, selectedDate]);
 
-  // Handle customer selection for bulk delete
+  // Toggle customer selection
   const toggleCustomerSelection = (customerId: string) => {
-    setSelectedCustomers(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(customerId)) {
-        newSet.delete(customerId);
-      } else {
-        newSet.add(customerId);
-      }
-      return newSet;
-    });
+    const newSelected = new Set(selectedCustomers);
+    if (newSelected.has(customerId)) {
+      newSelected.delete(customerId);
+    } else {
+      newSelected.add(customerId);
+    }
+    setSelectedCustomers(newSelected);
   };
 
   // Select all customers
   const selectAllCustomers = () => {
     if (selectedCustomers.size === displayedCustomers.length && displayedCustomers.length > 0) {
-      // Deselect all
       setSelectedCustomers(new Set());
     } else {
-      // Select all
       setSelectedCustomers(new Set(displayedCustomers.map(c => c.id)));
     }
   };
 
   // Handle bulk delete
   const handleBulkDelete = () => {
-    if (selectedCustomers.size === 0) {
-      toast({ title: "No customers selected", description: "Please select customers to delete", variant: "destructive" });
-      return;
-    }
+    if (selectedCustomers.size === 0) return;
     
-    if (confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)? This action cannot be undone.`)) {
+    if (window.confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)?`)) {
       bulkDeleteMutation.mutate(Array.from(selectedCustomers));
     }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    e.dataTransfer.setData("text/plain", id);
+    setDraggedItem(id);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    const draggedId = e.dataTransfer.getData("text/plain");
+    
+    if (draggedId !== targetId) {
+      // Reorder the customers
+      const newOrder = [...displayedCustomers];
+      const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
+      const targetIndex = newOrder.findIndex(c => c.id === targetId);
+      
+      if (draggedIndex !== -1 && targetIndex !== -1) {
+        // Remove the dragged item
+        const [removed] = newOrder.splice(draggedIndex, 1);
+        // Insert it at the new position
+        newOrder.splice(targetIndex, 0, removed);
+        
+        // Get the IDs in the new order
+        const reorderedIds = newOrder.map(c => c.id);
+        reorderMutation.mutate(reorderedIds);
+      }
+    }
+    
+    setDraggedItem(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
   };
 
   // Render different states based on conditions
@@ -286,20 +337,36 @@ const Index = () => {
         >
           All Customers ({customers.length})
         </Button>
-        
-        {/* Bulk Delete Button - Always visible when there are customers */}
-        {displayedCustomers.length > 0 && (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleBulkDelete}
-            disabled={bulkDeleteMutation.isPending || selectedCustomers.size === 0}
-          >
-            <Trash className="h-4 w-4 mr-2" />
-            Delete {selectedCustomers.size > 0 ? `${selectedCustomers.size} Selected` : "Selected"}
-          </Button>
-        )}
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedCustomers.size > 0 && (
+        <div className="bg-primary/10 border-b border-border px-4 py-2 flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-primary">
+              {selectedCustomers.size} selected
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={selectAllCustomers}
+              className="h-7 px-2 text-xs"
+            >
+              {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
+            </Button>
+          </div>
+          <div className="h-4 w-px bg-border" />
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={handleBulkDelete}
+            disabled={bulkDeleteMutation.isPending}
+            className="h-7 px-2 text-xs"
+          >
+            {bulkDeleteMutation.isPending ? "Deleting..." : "Delete Selected"}
+          </Button>
+        </div>
+      )}
 
       {/* Spreadsheet */}
       <div className="flex-1 overflow-auto">
@@ -310,12 +377,24 @@ const Index = () => {
                 className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10"
                 resizable={false}
               >
-                <input
-                  type="checkbox"
-                  checked={selectedCustomers.size > 0 && selectedCustomers.size === displayedCustomers.length}
-                  onChange={selectAllCustomers}
-                  className="h-4 w-4"
-                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-4 w-4 p-0"
+                  onClick={selectAllCustomers}
+                >
+                  {selectedCustomers.size === displayedCustomers.length && displayedCustomers.length > 0 ? (
+                    <CheckSquare className="h-3 w-3" />
+                  ) : (
+                    <Square className="h-3 w-3" />
+                  )}
+                </Button>
+              </ResizableTableHead>
+              <ResizableTableHead 
+                className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-8"
+                resizable={false}
+              >
+                {/* Drag handle column header */}
               </ResizableTableHead>
               <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
                 Customer Name
@@ -352,7 +431,7 @@ const Index = () => {
           <ResizableTableBody>
             {isLoading ? (
               <ResizableTableRow>
-                <ResizableTableCell colSpan={9} className="border border-border px-3 py-8 text-center text-muted-foreground">
+                <ResizableTableCell colSpan={10} className="border border-border px-3 py-8 text-center text-muted-foreground">
                   Loading...
                 </ResizableTableCell>
               </ResizableTableRow>
@@ -360,7 +439,7 @@ const Index = () => {
               <>
                 {displayedCustomers.length === 0 && (
                   <ResizableTableRow>
-                    <ResizableTableCell colSpan={9} className="border border-border px-3 py-4 text-center text-muted-foreground text-sm">
+                    <ResizableTableCell colSpan={10} className="border border-border px-3 py-4 text-center text-muted-foreground text-sm">
                       {viewMode === "date" 
                         ? `No calls scheduled for ${format(selectedDate, "MMM do")}` 
                         : "No customers yet. Add one below!"}
@@ -372,16 +451,24 @@ const Index = () => {
                     key={customer.id}
                     customer={customer}
                     index={index + 1}
+                    isSelected={selectedCustomers.has(customer.id)}
+                    isDragging={draggedItem === customer.id}
+                    onToggleSelect={toggleCustomerSelection}
                     onCellChange={handleCellChange}
                     onDelete={() => deleteMutation.mutate(customer.id)}
-                    isSelected={selectedCustomers.has(customer.id)}
-                    onToggleSelect={() => toggleCustomerSelection(customer.id)}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onDragEnd={handleDragEnd}
                   />
                 ))}
                 {/* New Row Input */}
                 <ResizableTableRow className="bg-primary/5">
                   <ResizableTableCell className="border border-border px-3 py-1 text-xs text-primary font-medium text-center">
                     NEW
+                  </ResizableTableCell>
+                  <ResizableTableCell className="border border-border p-0">
+                    {/* Empty cell for drag handle column */}
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
                     <Input
@@ -468,17 +555,27 @@ const Index = () => {
 function SpreadsheetRow({
   customer,
   index,
+  isSelected,
+  isDragging,
+  onToggleSelect,
   onCellChange,
   onDelete,
-  isSelected,
-  onToggleSelect,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   customer: Customer;
   index: number;
+  isSelected: boolean;
+  isDragging: boolean;
+  onToggleSelect: (id: string) => void;
   onCellChange: (id: string, field: string, value: string) => void;
   onDelete: () => void;
-  isSelected: boolean;
-  onToggleSelect: () => void;
+  onDragStart: (e: React.DragEvent, id: string) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent, targetId: string) => void;
+  onDragEnd: () => void;
 }) {
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
@@ -492,14 +589,30 @@ function SpreadsheetRow({
   };
 
   return (
-    <ResizableTableRow className={`hover:bg-muted/50 ${isSelected ? 'bg-blue-50' : ''}`}>
+    <ResizableTableRow 
+      className={`hover:bg-muted/50 ${isSelected ? "bg-primary/10" : ""} ${isDragging ? "opacity-50" : ""}`}
+      draggable
+      onDragStart={(e) => onDragStart(e, customer.id)}
+      onDragOver={onDragOver}
+      onDrop={(e) => onDrop(e, customer.id)}
+      onDragEnd={onDragEnd}
+    >
       <ResizableTableCell className="border border-border px-3 py-1 text-xs text-muted-foreground text-center">
-        <input
-          type="checkbox"
-          checked={isSelected}
-          onChange={onToggleSelect}
-          className="h-4 w-4"
-        />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-4 w-4 p-0"
+          onClick={() => onToggleSelect(customer.id)}
+        >
+          {isSelected ? (
+            <CheckSquare className="h-3 w-3 text-primary" />
+          ) : (
+            <Square className="h-3 w-3" />
+          )}
+        </Button>
+      </ResizableTableCell>
+      <ResizableTableCell className="border border-border px-1 py-1 text-center cursor-move">
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <Input
