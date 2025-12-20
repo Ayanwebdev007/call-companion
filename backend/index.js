@@ -54,6 +54,11 @@ app.use('/api/customers', fileUpload({
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 
+// Test DELETE route
+app.delete('/api/test-delete', (req, res) => {
+  res.status(200).json({ message: 'DELETE route working' });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).json({ 
