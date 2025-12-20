@@ -131,4 +131,31 @@
       min-height: 40px;
     }
   }
+  
+  /* Sticky table header */
+  .sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  
+  /* Ensure proper scrolling behavior */
+  .scroll-container {
+    overflow: auto;
+    height: 100%;
+  }
+  
+  /* Table container fixes */
+  .table-container-fixed {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Ensure table header stays on top during scroll */
+  thead.sticky-header {
+    position: sticky;
+    top: 0;
+    background: hsl(var(--muted));
+  }
 }

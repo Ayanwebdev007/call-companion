@@ -263,290 +263,295 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="bg-card border-b border-border px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold text-foreground">Calling CRM</h1>
-            <span className="text-sm text-muted-foreground">Welcome, {user?.username}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              {format(new Date(), "EEEE, MMMM do, yyyy")}
-            </span>
-            <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
-            <Button variant="outline" size="sm" onClick={logout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Sheet Tabs */}
-      <div className="bg-card border-b border-border px-4 py-2 flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => {
-              setViewMode("date");
-              setSelectedDate(new Date());
-            }}
-          >
-            Today
-          </Button>
-
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={viewMode === "date" ? "secondary" : "ghost"}
-                size="sm"
-                className={cn(
-                  "gap-2",
-                  viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
-                )}
-              >
-                <CalendarIcon className="h-4 w-4" />
-                {format(selectedDate, "PPP")}
+    <div className="h-screen flex flex-col bg-background">
+      {/* Fixed Header Section */}
+      <div className="flex-shrink-0">
+        {/* Main Header */}
+        <header className="bg-card border-b border-border px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-semibold text-foreground">Calling CRM</h1>
+              <span className="text-sm text-muted-foreground">Welcome, {user?.username}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                {format(new Date(), "EEEE, MMMM do, yyyy")}
+              </span>
+              <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
+              <Button variant="outline" size="sm" onClick={logout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => {
-                  if (date) {
-                    setSelectedDate(date);
-                    setViewMode("date");
-                  }
-                }}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+            </div>
+          </div>
+        </header>
+
+        {/* Sheet Tabs */}
+        <div className="bg-card border-b border-border px-4 py-2 flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => {
+                setViewMode("date");
+                setSelectedDate(new Date());
+              }}
+            >
+              Today
+            </Button>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={viewMode === "date" ? "secondary" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "gap-2",
+                    viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  {format(selectedDate, "PPP")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date);
+                      setViewMode("date");
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="h-6 w-px bg-border" />
+
+          <Button
+            variant={viewMode === "all" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("all")}
+          >
+            All Customers ({customers.length})
+          </Button>
         </div>
 
-        <div className="h-6 w-px bg-border" />
-
-        <Button
-          variant={viewMode === "all" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => setViewMode("all")}
-        >
-          All Customers ({customers.length})
-        </Button>
-      </div>
-
-      {/* Bulk Actions Bar */}
-      {selectedCustomers.size > 0 && (
-        <div className="bg-primary/10 border-b border-border px-4 py-2 flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-primary">
-              {selectedCustomers.size} selected
-            </span>
+        {/* Bulk Actions Bar */}
+        {selectedCustomers.size > 0 && (
+          <div className="bg-primary/10 border-b border-border px-4 py-2 flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-primary">
+                {selectedCustomers.size} selected
+              </span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={selectAllCustomers}
+                className="h-7 px-2 text-xs"
+              >
+                {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
+              </Button>
+            </div>
+            <div className="h-4 w-px bg-border" />
             <Button 
-              variant="outline" 
+              variant="destructive" 
               size="sm" 
-              onClick={selectAllCustomers}
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
               className="h-7 px-2 text-xs"
             >
-              {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
+              {bulkDeleteMutation.isPending ? "Deleting..." : "Delete Selected"}
             </Button>
           </div>
-          <div className="h-4 w-px bg-border" />
-          <Button 
-            variant="destructive" 
-            size="sm" 
-            onClick={handleBulkDelete}
-            disabled={bulkDeleteMutation.isPending}
-            className="h-7 px-2 text-xs"
-          >
-            {bulkDeleteMutation.isPending ? "Deleting..." : "Delete Selected"}
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Spreadsheet */}
-      <div className="flex-1 overflow-auto">
-        <ResizableTable className="w-full border-collapse">
-          <ResizableTableHeader className="bg-muted sticky top-0 z-10">
-            <ResizableTableRow>
-              <ResizableTableHead 
-                className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10"
-                resizable={false}
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-4 w-4 p-0"
-                  onClick={selectAllCustomers}
-                >
-                  {selectedCustomers.size === displayedCustomers.length && displayedCustomers.length > 0 ? (
-                    <CheckSquare className="h-3 w-3" />
-                  ) : (
-                    <Square className="h-3 w-3" />
-                  )}
-                </Button>
-              </ResizableTableHead>
-              <ResizableTableHead 
-                className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-8"
-                resizable={false}
-              >
-                {/* Drag handle column header */}
-              </ResizableTableHead>
-              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
-                Customer Name
-              </ResizableTableHead>
-              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
-                Company Name
-              </ResizableTableHead>
-              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[120px]">
-                Phone No.
-              </ResizableTableHead>
-              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px]">
-                Next Call Date
-              </ResizableTableHead>
-              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[100px]">
-                Time
-              </ResizableTableHead>
-              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[200px]">
-                Remark
-              </ResizableTableHead>
-              <ResizableTableHead 
-                className="border border-border px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12"
-                resizable={false}
-              >
-                WP
-              </ResizableTableHead>
-              <ResizableTableHead 
-                className="border border-border px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12"
-                resizable={false}
-              >
-                
-              </ResizableTableHead>
-            </ResizableTableRow>
-          </ResizableTableHeader>
-          <ResizableTableBody>
-            {isLoading ? (
+      {/* Scrollable Spreadsheet Area */}
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full scroll-container">
+          <ResizableTable className="w-full border-collapse" containerClassName="table-container-fixed">
+            <ResizableTableHeader className="bg-muted sticky-header shadow-sm">
               <ResizableTableRow>
-                <ResizableTableCell colSpan={10} className="border border-border px-3 py-8 text-center text-muted-foreground">
-                  Loading...
-                </ResizableTableCell>
+                <ResizableTableHead 
+                  className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10"
+                  resizable={false}
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0"
+                    onClick={selectAllCustomers}
+                  >
+                    {selectedCustomers.size === displayedCustomers.length && displayedCustomers.length > 0 ? (
+                      <CheckSquare className="h-3 w-3" />
+                    ) : (
+                      <Square className="h-3 w-3" />
+                    )}
+                  </Button>
+                </ResizableTableHead>
+                <ResizableTableHead 
+                  className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-8"
+                  resizable={false}
+                >
+                  {/* Drag handle column header */}
+                </ResizableTableHead>
+                <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
+                  Customer Name
+                </ResizableTableHead>
+                <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
+                  Company Name
+                </ResizableTableHead>
+                <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[120px]">
+                  Phone No.
+                </ResizableTableHead>
+                <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px]">
+                  Next Call Date
+                </ResizableTableHead>
+                <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[100px]">
+                  Time
+                </ResizableTableHead>
+                <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[200px]">
+                  Remark
+                </ResizableTableHead>
+                <ResizableTableHead 
+                  className="border border-border px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12"
+                  resizable={false}
+                >
+                  WP
+                </ResizableTableHead>
+                <ResizableTableHead 
+                  className="border border-border px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12"
+                  resizable={false}
+                >
+                  
+                </ResizableTableHead>
               </ResizableTableRow>
-            ) : (
-              <>
-                {displayedCustomers.length === 0 && (
-                  <ResizableTableRow>
-                    <ResizableTableCell colSpan={10} className="border border-border px-3 py-4 text-center text-muted-foreground text-sm">
-                      {viewMode === "date" 
-                        ? `No calls scheduled for ${format(selectedDate, "MMM do")}` 
-                        : "No customers yet. Add one below!"}
-                    </ResizableTableCell>
-                  </ResizableTableRow>
-                )}
-                {displayedCustomers.map((customer, index) => (
-                  <MemoizedSpreadsheetRow
-                    key={customer.id}
-                    customer={customer}
-                    index={index + 1}
-                    isSelected={selectedCustomers.has(customer.id)}
-                    isDragging={draggedItem === customer.id}
-                    onToggleSelect={toggleCustomerSelection}
-                    onCellChange={handleCellChange}
-                    onDelete={() => deleteMutation.mutate(customer.id)}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                    onDragEnd={handleDragEnd}
-                  />
-                ))}
-                {/* New Row Input */}
-                <ResizableTableRow className="bg-primary/5">
-                  <ResizableTableCell className="border border-border px-3 py-1 text-xs text-primary font-medium text-center">
-                    NEW
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                    {/* Empty cell for drag handle column */}
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                    <Input
-                      value={newRow.customer_name}
-                      onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
-                      className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
-                      placeholder="Enter customer name..."
-                    />
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                    <Input
-                      value={newRow.company_name}
-                      onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
-                      className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
-                      placeholder="Enter company..."
-                    />
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                    <Input
-                      value={newRow.phone_number}
-                      onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
-                      className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
-                      placeholder="Enter phone..."
-                    />
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="w-full h-9 px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
-                      <CalendarIcon className="h-3 w-3 text-muted-foreground" />
-                      {format(parseISO(newRow.next_call_date), "dd/MM/yyyy")}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={parseISO(newRow.next_call_date)}
-                      onSelect={(date) => date && setNewRow({ ...newRow, next_call_date: format(date, "yyyy-MM-dd") })}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </ResizableTableCell>
-              <ResizableTableCell className="border border-border p-0">
-                <Input
-                  type="time"
-                  value={newRow.next_call_time}
-                  onChange={(e) => setNewRow({ ...newRow, next_call_time: e.target.value })}
-                  className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
-                />
-              </ResizableTableCell>
-              <ResizableTableCell className="border border-border p-0">
-                <Input
-                  value={newRow.remark}
-                      onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
-                      className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
-                      placeholder="Enter remark..."
-                    />
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-1 text-center">
-                    {/* WhatsApp button for new row (empty) */}
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-1 text-center">
-                    <Button
-                      size="sm"
-                      onClick={handleAddRow}
-                      disabled={addMutation.isPending}
-                      className="h-7 px-3 text-xs"
-                    >
-                      {addMutation.isPending ? "..." : "Add"}
-                    </Button>
+              </ResizableTableHeader>
+            <ResizableTableBody>
+              {isLoading ? (
+                <ResizableTableRow>
+                  <ResizableTableCell colSpan={10} className="border border-border px-3 py-8 text-center text-muted-foreground">
+                    Loading...
                   </ResizableTableCell>
                 </ResizableTableRow>
-              </>
-            )}
-          </ResizableTableBody>
-        </ResizableTable>
+              ) : (
+                <>
+                  {displayedCustomers.length === 0 && (
+                    <ResizableTableRow>
+                      <ResizableTableCell colSpan={10} className="border border-border px-3 py-4 text-center text-muted-foreground text-sm">
+                        {viewMode === "date" 
+                          ? `No calls scheduled for ${format(selectedDate, "MMM do")}` 
+                          : "No customers yet. Add one below!"}
+                      </ResizableTableCell>
+                    </ResizableTableRow>
+                  )}
+                  {displayedCustomers.map((customer, index) => (
+                    <MemoizedSpreadsheetRow
+                      key={customer.id}
+                      customer={customer}
+                      index={index + 1}
+                      isSelected={selectedCustomers.has(customer.id)}
+                      isDragging={draggedItem === customer.id}
+                      onToggleSelect={toggleCustomerSelection}
+                      onCellChange={handleCellChange}
+                      onDelete={() => deleteMutation.mutate(customer.id)}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
+                    />
+                  ))}
+                  {/* New Row Input */}
+                  <ResizableTableRow className="bg-primary/5">
+                    <ResizableTableCell className="border border-border px-3 py-1 text-xs text-primary font-medium text-center">
+                      NEW
+                    </ResizableTableCell>
+                    <ResizableTableCell className="border border-border p-0">
+                      {/* Empty cell for drag handle column */}
+                    </ResizableTableCell>
+                    <ResizableTableCell className="border border-border p-0">
+                      <Input
+                        value={newRow.customer_name}
+                        onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
+                        className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
+                        placeholder="Enter customer name..."
+                      />
+                    </ResizableTableCell>
+                    <ResizableTableCell className="border border-border p-0">
+                      <Input
+                        value={newRow.company_name}
+                        onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
+                        className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
+                        placeholder="Enter company..."
+                      />
+                    </ResizableTableCell>
+                    <ResizableTableCell className="border border-border p-0">
+                      <Input
+                        value={newRow.phone_number}
+                        onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
+                        className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
+                        placeholder="Enter phone..."
+                      />
+                    </ResizableTableCell>
+                    <ResizableTableCell className="border border-border p-0">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="w-full h-9 px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
+                        <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                        {format(parseISO(newRow.next_call_date), "dd/MM/yyyy")}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={parseISO(newRow.next_call_date)}
+                        onSelect={(date) => date && setNewRow({ ...newRow, next_call_date: format(date, "yyyy-MM-dd") })}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </ResizableTableCell>
+                <ResizableTableCell className="border border-border p-0">
+                  <Input
+                    type="time"
+                    value={newRow.next_call_time}
+                    onChange={(e) => setNewRow({ ...newRow, next_call_time: e.target.value })}
+                    className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
+                  />
+                </ResizableTableCell>
+                <ResizableTableCell className="border border-border p-0">
+                  <Input
+                    value={newRow.remark}
+                        onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
+                        className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
+                        placeholder="Enter remark..."
+                      />
+                    </ResizableTableCell>
+                    <ResizableTableCell className="border border-border p-1 text-center">
+                      {/* WhatsApp button for new row (empty) */}
+                    </ResizableTableCell>
+                    <ResizableTableCell className="border border-border p-1 text-center">
+                      <Button
+                        size="sm"
+                        onClick={handleAddRow}
+                        disabled={addMutation.isPending}
+                        className="h-7 px-3 text-xs"
+                      >
+                        {addMutation.isPending ? "..." : "Add"}
+                      </Button>
+                    </ResizableTableCell>
+                  </ResizableTableRow>
+                </>
+              )}
+            </ResizableTableBody>
+          </ResizableTable>
+        </div>
       </div>
     </div>
   );
