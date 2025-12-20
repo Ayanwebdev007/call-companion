@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, memo } from "react";
+import { useState, useMemo, useRef, useEffect, memo, Fragment } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,7 @@ const Index = () => {
 
   // Drag and drop state
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
 
   // New row state
   const [newRow, setNewRow] = useState({
@@ -200,6 +201,19 @@ const Index = () => {
     e.dataTransfer.dropEffect = "move";
   };
 
+  const handleDragEnter = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    setDropTarget(targetId);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Only clear drop target if we're leaving the table
+    if (e.currentTarget.contains(e.relatedTarget as Node)) {
+      return;
+    }
+    setDropTarget(null);
+  };
+
   const handleDrop = (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
     const draggedId = e.dataTransfer.getData("text/plain");
@@ -223,10 +237,12 @@ const Index = () => {
     }
     
     setDraggedItem(null);
+    setDropTarget(null);
   };
 
   const handleDragEnd = () => {
     setDraggedItem(null);
+    setDropTarget(null);
   };
 
   // Render different states based on conditions
@@ -447,20 +463,82 @@ const Index = () => {
                   </ResizableTableRow>
                 )}
                 {displayedCustomers.map((customer, index) => (
-                  <MemoizedSpreadsheetRow
-                    key={customer.id}
-                    customer={customer}
-                    index={index + 1}
-                    isSelected={selectedCustomers.has(customer.id)}
-                    isDragging={draggedItem === customer.id}
-                    onToggleSelect={toggleCustomerSelection}
-                    onCellChange={handleCellChange}
-                    onDelete={() => deleteMutation.mutate(customer.id)}
-                    onDragStart={handleDragStart}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                    onDragEnd={handleDragEnd}
-                  />
+                  <Fragment key={customer.id}>
+                    {/* Drop zone before row */}
+                    <tr 
+                      className={`h-2 ${dropTarget === `before-${customer.id}` ? 'bg-primary/20 border-t-2 border-dashed border-primary' : 'bg-transparent'}`}
+                      onDragOver={handleDragOver}
+                      onDragEnter={(e) => handleDragEnter(e, `before-${customer.id}`)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const draggedId = e.dataTransfer.getData("text/plain");
+                        if (draggedId !== customer.id) {
+                          // Move dragged item to before this item
+                          const newOrder = [...displayedCustomers];
+                          const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
+                          const targetIndex = newOrder.findIndex(c => c.id === customer.id);
+                          
+                          if (draggedIndex !== -1 && targetIndex !== -1) {
+                            const [removed] = newOrder.splice(draggedIndex, 1);
+                            newOrder.splice(targetIndex, 0, removed);
+                            
+                            const reorderedIds = newOrder.map(c => c.id);
+                            reorderMutation.mutate(reorderedIds);
+                          }
+                        }
+                        setDraggedItem(null);
+                        setDropTarget(null);
+                      }}
+                    />
+                    
+                    <MemoizedSpreadsheetRow
+                      customer={customer}
+                      index={index + 1}
+                      isSelected={selectedCustomers.has(customer.id)}
+                      isDragging={draggedItem === customer.id}
+                      dropTarget={dropTarget}
+                      onToggleSelect={toggleCustomerSelection}
+                      onCellChange={handleCellChange}
+                      onDelete={() => deleteMutation.mutate(customer.id)}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDragEnter={handleDragEnter}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
+                    />
+                    
+                    {/* Drop zone after last row */}
+                    {index === displayedCustomers.length - 1 && (
+                      <tr 
+                        className={`h-2 ${dropTarget === `after-${customer.id}` ? 'bg-primary/20 border-b-2 border-dashed border-primary' : 'bg-transparent'}`}
+                        onDragOver={handleDragOver}
+                        onDragEnter={(e) => handleDragEnter(e, `after-${customer.id}`)}
+                        onDragLeave={handleDragLeave}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const draggedId = e.dataTransfer.getData("text/plain");
+                          if (draggedId !== customer.id) {
+                            // Move dragged item to after this item
+                            const newOrder = [...displayedCustomers];
+                            const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
+                            const targetIndex = newOrder.findIndex(c => c.id === customer.id);
+                            
+                            if (draggedIndex !== -1 && targetIndex !== -1) {
+                              const [removed] = newOrder.splice(draggedIndex, 1);
+                              newOrder.splice(targetIndex + 1, 0, removed);
+                              
+                              const reorderedIds = newOrder.map(c => c.id);
+                              reorderMutation.mutate(reorderedIds);
+                            }
+                          }
+                          setDraggedItem(null);
+                          setDropTarget(null);
+                        }}
+                      />
+                    )}
+                  </Fragment>
                 ))}
                 {/* New Row Input */}
                 <ResizableTableRow className="bg-primary/5">
@@ -557,11 +635,14 @@ function SpreadsheetRow({
   index,
   isSelected,
   isDragging,
+  dropTarget,
   onToggleSelect,
   onCellChange,
   onDelete,
   onDragStart,
   onDragOver,
+  onDragEnter,
+  onDragLeave,
   onDrop,
   onDragEnd,
 }: {
@@ -569,11 +650,14 @@ function SpreadsheetRow({
   index: number;
   isSelected: boolean;
   isDragging: boolean;
+  dropTarget: string | null;
   onToggleSelect: (id: string) => void;
   onCellChange: (id: string, field: string, value: string) => void;
   onDelete: () => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragOver: (e: React.DragEvent) => void;
+  onDragEnter: (e: React.DragEvent, targetId: string) => void;
+  onDragLeave: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, targetId: string) => void;
   onDragEnd: () => void;
 }) {
@@ -590,10 +674,18 @@ function SpreadsheetRow({
 
   return (
     <ResizableTableRow 
-      className={`hover:bg-muted/50 ${isSelected ? "bg-primary/10" : ""} ${isDragging ? "opacity-50" : ""}`}
+      className={`hover:bg-muted/50 transition-all duration-200 ${
+        isSelected ? "bg-primary/10" : ""
+      } ${
+        isDragging ? "opacity-50 scale-95 shadow-lg" : ""
+      } ${
+        dropTarget === customer.id ? "border-2 border-dashed border-primary" : ""
+      }`}
       draggable
       onDragStart={(e) => onDragStart(e, customer.id)}
       onDragOver={onDragOver}
+      onDragEnter={(e) => onDragEnter(e, customer.id)}
+      onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, customer.id)}
       onDragEnd={onDragEnd}
     >
@@ -611,8 +703,11 @@ function SpreadsheetRow({
           )}
         </Button>
       </ResizableTableCell>
-      <ResizableTableCell className="border border-border px-1 py-1 text-center cursor-move">
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      <ResizableTableCell 
+        className="border border-border px-1 py-1 text-center cursor-move group"
+        title="Drag to reorder"
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <Input
