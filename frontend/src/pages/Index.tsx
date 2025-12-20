@@ -252,12 +252,15 @@ const Index = () => {
 
   if (error) {
     console.error("Query Error:", error);
+    // Type guard to check if error has response property (e.g., Axios errors)
+    const hasResponse = (error as any).response;
+    
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h2 className="text-xl font-bold text-red-600">Error loading customers</h2>
         <p className="text-gray-600">{error.message}</p>
-        {error.response && (
-          <p className="text-gray-600 mt-2">Status: {error.response.status} - {JSON.stringify(error.response.data)}</p>
+        {hasResponse && (
+          <p className="text-gray-600 mt-2">Status: {hasResponse.status} - {JSON.stringify(hasResponse.data)}</p>
         )}
         <Button onClick={() => window.location.reload()} className="mt-4">
           Retry
