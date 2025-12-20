@@ -23,6 +23,7 @@ export interface Customer {
   created_at?: string;
   updated_at?: string;
   position?: number;
+  color?: string;
 }
 
 export const fetchCustomers = async (): Promise<Customer[]> => {
