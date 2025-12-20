@@ -519,6 +519,7 @@ const Index = () => {
                       isSelected={selectedCustomers.has(customer.id)}
                       isDragging={draggedItem === customer.id}
                       dropTarget={dropTarget}
+                      selectedCustomers={selectedCustomers}
                       onToggleSelect={toggleCustomerSelection}
                       onCellChange={handleCellChange}
                       onDelete={() => deleteMutation.mutate(customer.id)}
@@ -703,6 +704,7 @@ function SpreadsheetRow({
   isSelected: boolean;
   isDragging: boolean;
   dropTarget: string | null;
+  selectedCustomers: Set<string>;
   onToggleSelect: (id: string) => void;
   onCellChange: (id: string, field: string, value: string) => void;
   onDelete: () => void;
@@ -740,7 +742,7 @@ function SpreadsheetRow({
 
   return (
     <ResizableTableRow 
-      className={`hover:bg-muted/50 transition-all duration-200 ${
+      className={`hover:bg-muted/50 transition-all duration-200 group ${
         isSelected ? "bg-primary/10" : ""
       } ${
         isDragging ? "opacity-50 scale-95 shadow-lg" : ""
@@ -753,7 +755,7 @@ function SpreadsheetRow({
       onDrop={(e) => onDrop(e, customer.id)}
       onDragEnd={onDragEnd}
     >
-      <ResizableTableCell className="border border-border px-3 py-1 text-xs text-muted-foreground text-center">
+      <ResizableTableCell className={`border border-border px-3 py-1 text-xs text-muted-foreground text-center opacity-0 group-hover:opacity-100 transition-opacity ${selectedCustomers.size > 0 ? 'opacity-100' : ''}`}>
         <Button
           variant="ghost"
           size="sm"
@@ -768,7 +770,7 @@ function SpreadsheetRow({
         </Button>
       </ResizableTableCell>
       <ResizableTableCell 
-        className="border border-border px-1 py-1 text-center cursor-move group"
+        className="border border-border px-1 py-1 text-center cursor-move group opacity-0 group-hover:opacity-100 transition-opacity"
         title="Drag to reorder"
         draggable
         onDragStart={(e) => onDragStart(e, customer.id)}
@@ -870,7 +872,7 @@ function SpreadsheetRow({
           <MessageCircle className="h-3 w-3" />
         </Button>
       </ResizableTableCell>
-      <ResizableTableCell className="border border-border p-1 text-center">
+      <ResizableTableCell className="border border-border p-1 text-center opacity-0 group-hover:opacity-100 transition-opacity">
         <Button
           variant="ghost"
           size="sm"
