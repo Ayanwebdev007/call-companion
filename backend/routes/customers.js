@@ -223,10 +223,20 @@ router.delete('/bulk', auth, async (req, res) => {
     console.log('Deleting customers with IDs:', ids);
     console.log('User ID for query:', req.user.id);
     
+    // Validate that all IDs are valid ObjectIds
+    const mongoose = await import('mongoose');
+    const validIds = ids.filter(id => mongoose.default.isValidObjectId(id));
+    console.log('Valid IDs:', validIds);
+    console.log('Invalid IDs:', ids.filter(id => !mongoose.default.isValidObjectId(id)));
+    
+    if (validIds.length === 0) {
+      return res.status(400).json({ message: 'No valid customer IDs provided' });
+    }
+    
     // First, let's check if we can find the customers
     try {
       const customersToCheck = await Customer.find({ 
-        _id: { $in: ids },
+        _id: { $in: validIds },
         user_id: req.user.id 
       });
       console.log('Customers to delete (before deletion):', customersToCheck.length);
@@ -235,7 +245,7 @@ router.delete('/bulk', auth, async (req, res) => {
     }
     
     const result = await Customer.deleteMany({ 
-      _id: { $in: ids },
+      _id: { $in: validIds },
       user_id: req.user.id 
     });
     
