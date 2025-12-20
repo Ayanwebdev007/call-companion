@@ -37,6 +37,7 @@ const Index = () => {
     company_name: "",
     phone_number: "",
     next_call_date: format(new Date(), "yyyy-MM-dd"),
+    last_call_date: "",
     next_call_time: "",
     remark: "",
     color: null as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null,
@@ -458,6 +459,9 @@ const Index = () => {
                 Phone No.
               </ResizableTableHead>
               <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px]">
+                Last Call Date
+              </ResizableTableHead>
+              <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px]">
                 Next Call Date
               </ResizableTableHead>
               <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[100px]">
@@ -647,6 +651,25 @@ const Index = () => {
                     />
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="w-full h-9 px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
+                          <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                          {newRow.last_call_date ? format(parseISO(newRow.last_call_date), "dd/MM/yyyy") : "Pick date"}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={newRow.last_call_date ? parseISO(newRow.last_call_date) : undefined}
+                          onSelect={(date) => date && setNewRow({ ...newRow, last_call_date: format(date, "yyyy-MM-dd") })}
+                          initialFocus
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </ResizableTableCell>
+                  <ResizableTableCell className="border border-border p-0">
                 <Popover>
                   <PopoverTrigger asChild>
                     <button className="w-full h-9 px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
@@ -830,6 +853,25 @@ function SpreadsheetRow({
           onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
           className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
         />
+      </ResizableTableCell>
+      <ResizableTableCell className="border border-border p-0">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="w-full h-8 px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
+              <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+              {customer.last_call_date ? format(parseISO(customer.last_call_date), "dd/MM/yyyy") : "Pick date"}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={customer.last_call_date ? parseISO(customer.last_call_date) : undefined}
+              onSelect={(date) => date && onCellChange(customer.id, "last_call_date", format(date, "yyyy-MM-dd"))}
+              initialFocus
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <Popover>

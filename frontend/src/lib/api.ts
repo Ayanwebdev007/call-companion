@@ -19,6 +19,7 @@ export interface Customer {
   phone_number: string;
   next_call_date: string;
   next_call_time?: string;
+  last_call_date?: string;
   remark: string | null;
   color?: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null;
   created_at?: string;
