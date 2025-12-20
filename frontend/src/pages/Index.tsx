@@ -376,7 +376,7 @@ const Index = () => {
           {/* Delete button removed as we're not using checkboxes anymore */}
         </div>
 
-        {/* Bulk Actions Bar removed as we're not using checkboxes anymore */}}
+        {/* Bulk Actions Bar removed as we're not using checkboxes anymore */}
       </div>
 
 
