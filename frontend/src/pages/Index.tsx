@@ -391,7 +391,7 @@ const Index = () => {
         <div className="h-full scroll-container">
           <ResizableTable className="w-full border-collapse" containerClassName="table-container-fixed">
             <ResizableTableHeader className="bg-muted sticky-header shadow-sm">
-  <ResizableTableRow>
+            <ResizableTableRow>
               <ResizableTableHead 
                 className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10"
                 resizable={false}
@@ -630,7 +630,9 @@ const Index = () => {
         </ResizableTable>
       </div>
     </div>
-  );
+  </div>
+</div>
+);
 };
 
 function SpreadsheetRow({
