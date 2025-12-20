@@ -728,6 +728,7 @@ function SpreadsheetRow({
   onDragLeave,
   onDrop,
   onDragEnd,
+  showCheckboxes,
 }: {
   customer: Customer;
   index: number;
