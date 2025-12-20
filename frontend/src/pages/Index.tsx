@@ -762,6 +762,9 @@ function SpreadsheetRow({
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
   );
+  const [lastCallDate, setLastCallDate] = useState<Date | undefined>(
+    customer.last_call_date ? parseISO(customer.last_call_date) : undefined
+  );
   const [localColor, setLocalColor] = useState(customer.color);
   
   // Sync localColor with customer.color when it changes from outside (e.g. after refetch)
@@ -769,10 +772,22 @@ function SpreadsheetRow({
     setLocalColor(customer.color);
   }, [customer.color]);
 
+  // Sync lastCallDate with customer.last_call_date when it changes from outside (e.g. after refetch)
+  useEffect(() => {
+    setLastCallDate(customer.last_call_date ? parseISO(customer.last_call_date) : undefined);
+  }, [customer.last_call_date]);
+
   const handleDateChange = (newDate: Date | undefined) => {
     if (newDate) {
       setDate(newDate);
       onCellChange(customer.id, "next_call_date", format(newDate, "yyyy-MM-dd"));
+    }
+  };
+
+  const handleLastCallDateChange = (newDate: Date | undefined) => {
+    if (newDate) {
+      setLastCallDate(newDate);
+      onCellChange(customer.id, "last_call_date", format(newDate, "yyyy-MM-dd"));
     }
   };
 
@@ -859,14 +874,14 @@ function SpreadsheetRow({
           <PopoverTrigger asChild>
             <button className="w-full h-8 px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
               <CalendarIcon className="h-3 w-3 text-muted-foreground" />
-              {customer.last_call_date ? format(parseISO(customer.last_call_date), "dd/MM/yyyy") : "Pick date"}
+              {lastCallDate ? format(lastCallDate, "dd/MM/yyyy") : "Pick date"}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="single"
-              selected={customer.last_call_date ? parseISO(customer.last_call_date) : undefined}
-              onSelect={(date) => date && onCellChange(customer.id, "last_call_date", format(date, "yyyy-MM-dd"))}
+              selected={lastCallDate}
+              onSelect={handleLastCallDateChange}
               initialFocus
               className="pointer-events-auto"
             />
