@@ -1,10 +1,10 @@
-import { useState, useMemo, useRef, useEffect, memo, Fragment } from "react";
+import { useState, useMemo, useRef, useEffect, memo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, Circle } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare } from "lucide-react";
 import { format, isToday, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,17 +14,6 @@ import { useAuth } from "@/context/AuthContext";
 import { LogOut } from "lucide-react";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
-
-// Define color options
-const COLOR_OPTIONS = [
-  { name: "Gray", value: "gray", classes: "bg-gray-400" },
-  { name: "Red", value: "red", classes: "bg-red-500" },
-  { name: "Orange", value: "orange", classes: "bg-orange-500" },
-  { name: "Yellow", value: "yellow", classes: "bg-yellow-500" },
-  { name: "Green", value: "green", classes: "bg-green-500" },
-  { name: "Blue", value: "blue", classes: "bg-blue-500" },
-  { name: "Purple", value: "purple", classes: "bg-purple-500" },
-];
 
 const Index = () => {
   console.log("Index component rendering");
@@ -39,10 +28,6 @@ const Index = () => {
 
   // Drag and drop state
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
-
-  // Color picker state
-  const [colorPickerOpen, setColorPickerOpen] = useState<string | null>(null);
 
   // New row state
   const [newRow, setNewRow] = useState({
@@ -52,7 +37,6 @@ const Index = () => {
     next_call_date: format(new Date(), "yyyy-MM-dd"),
     next_call_time: "",
     remark: "",
-    color: "gray",
   });
 
   // Fetch customers
@@ -89,7 +73,6 @@ const Index = () => {
         next_call_date: format(new Date(), "yyyy-MM-dd"),
         next_call_time: "",
         remark: "",
-        color: "gray",
       });
     },
     onError: (error: unknown) => {
@@ -205,12 +188,6 @@ const Index = () => {
     }
   };
 
-  // Handle color change
-  const handleColorChange = (customerId: string, color: string) => {
-    updateMutation.mutate({ id: customerId, field: "color", value: color });
-    setColorPickerOpen(null);
-  };
-
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, id: string) => {
     e.dataTransfer.setData("text/plain", id);
@@ -221,19 +198,6 @@ const Index = () => {
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-  };
-
-  const handleDragEnter = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    setDropTarget(targetId);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    // Only clear drop target if we're leaving the table
-    if (e.currentTarget.contains(e.relatedTarget as Node)) {
-      return;
-    }
-    setDropTarget(null);
   };
 
   const handleDrop = (e: React.DragEvent, targetId: string) => {
@@ -259,12 +223,10 @@ const Index = () => {
     }
     
     setDraggedItem(null);
-    setDropTarget(null);
   };
 
   const handleDragEnd = () => {
     setDraggedItem(null);
-    setDropTarget(null);
   };
 
   // Render different states based on conditions
@@ -485,85 +447,20 @@ const Index = () => {
                   </ResizableTableRow>
                 )}
                 {displayedCustomers.map((customer, index) => (
-                  <Fragment key={customer.id}>
-                    {/* Drop zone before row */}
-                    <tr 
-                      className={`h-2 ${dropTarget === `before-${customer.id}` ? 'bg-primary/20 border-t-2 border-dashed border-primary' : 'bg-transparent'}`}
-                      onDragOver={handleDragOver}
-                      onDragEnter={(e) => handleDragEnter(e, `before-${customer.id}`)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const draggedId = e.dataTransfer.getData("text/plain");
-                        if (draggedId !== customer.id) {
-                          // Move dragged item to before this item
-                          const newOrder = [...displayedCustomers];
-                          const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
-                          const targetIndex = newOrder.findIndex(c => c.id === customer.id);
-                          
-                          if (draggedIndex !== -1 && targetIndex !== -1) {
-                            const [removed] = newOrder.splice(draggedIndex, 1);
-                            newOrder.splice(targetIndex, 0, removed);
-                            
-                            const reorderedIds = newOrder.map(c => c.id);
-                            reorderMutation.mutate(reorderedIds);
-                          }
-                        }
-                        setDraggedItem(null);
-                        setDropTarget(null);
-                      }}
-                    />
-                    
-                    <MemoizedSpreadsheetRow
-                      customer={customer}
-                      index={index + 1}
-                      isSelected={selectedCustomers.has(customer.id)}
-                      isDragging={draggedItem === customer.id}
-                      dropTarget={dropTarget}
-                      colorPickerOpen={colorPickerOpen}
-                      setColorPickerOpen={setColorPickerOpen}
-                      onToggleSelect={toggleCustomerSelection}
-                      onCellChange={handleCellChange}
-                      onColorChange={handleColorChange}
-                      onDelete={() => deleteMutation.mutate(customer.id)}
-                      onDragStart={handleDragStart}
-                      onDragOver={handleDragOver}
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onDragEnd={handleDragEnd}
-                    />
-                    
-                    {/* Drop zone after last row */}
-                    {index === displayedCustomers.length - 1 && (
-                      <tr 
-                        className={`h-2 ${dropTarget === `after-${customer.id}` ? 'bg-primary/20 border-b-2 border-dashed border-primary' : 'bg-transparent'}`}
-                        onDragOver={handleDragOver}
-                        onDragEnter={(e) => handleDragEnter(e, `after-${customer.id}`)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          const draggedId = e.dataTransfer.getData("text/plain");
-                          if (draggedId !== customer.id) {
-                            // Move dragged item to after this item
-                            const newOrder = [...displayedCustomers];
-                            const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
-                            const targetIndex = newOrder.findIndex(c => c.id === customer.id);
-                            
-                            if (draggedIndex !== -1 && targetIndex !== -1) {
-                              const [removed] = newOrder.splice(draggedIndex, 1);
-                              newOrder.splice(targetIndex + 1, 0, removed);
-                              
-                              const reorderedIds = newOrder.map(c => c.id);
-                              reorderMutation.mutate(reorderedIds);
-                            }
-                          }
-                          setDraggedItem(null);
-                          setDropTarget(null);
-                        }}
-                      />
-                    )}
-                  </Fragment>
+                  <MemoizedSpreadsheetRow
+                    key={customer.id}
+                    customer={customer}
+                    index={index + 1}
+                    isSelected={selectedCustomers.has(customer.id)}
+                    isDragging={draggedItem === customer.id}
+                    onToggleSelect={toggleCustomerSelection}
+                    onCellChange={handleCellChange}
+                    onDelete={() => deleteMutation.mutate(customer.id)}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onDragEnd={handleDragEnd}
+                  />
                 ))}
                 {/* New Row Input */}
                 <ResizableTableRow className="bg-primary/5">
@@ -574,41 +471,12 @@ const Index = () => {
                     {/* Empty cell for drag handle column */}
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
-                    <div className="flex items-center gap-2">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 rounded-full"
-                            style={{ backgroundColor: COLOR_OPTIONS.find(c => c.value === newRow.color)?.classes.split(' ')[0].replace('bg-', '') }}
-                          >
-                            <Circle className="h-3 w-3 text-white" fill="white" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-2" align="start">
-                          <div className="grid grid-cols-4 gap-1">
-                            {COLOR_OPTIONS.map((color) => (
-                              <Button
-                                key={color.value}
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 rounded-full"
-                                onClick={() => setNewRow({ ...newRow, color: color.value })}
-                              >
-                                <div className={`h-4 w-4 rounded-full ${color.classes}`} />
-                              </Button>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                      <Input
-                        value={newRow.customer_name}
-                        onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
-                        className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset flex-1"
-                        placeholder="Enter customer name..."
-                      />
-                    </div>
+                    <Input
+                      value={newRow.customer_name}
+                      onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
+                      className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
+                      placeholder="Enter customer name..."
+                    />
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
                     <Input
@@ -689,17 +557,11 @@ function SpreadsheetRow({
   index,
   isSelected,
   isDragging,
-  dropTarget,
-  colorPickerOpen,
-  setColorPickerOpen,
   onToggleSelect,
   onCellChange,
-  onColorChange,
   onDelete,
   onDragStart,
   onDragOver,
-  onDragEnter,
-  onDragLeave,
   onDrop,
   onDragEnd,
 }: {
@@ -707,17 +569,11 @@ function SpreadsheetRow({
   index: number;
   isSelected: boolean;
   isDragging: boolean;
-  dropTarget: string | null;
-  colorPickerOpen: string | null;
-  setColorPickerOpen: (id: string | null) => void;
   onToggleSelect: (id: string) => void;
   onCellChange: (id: string, field: string, value: string) => void;
-  onColorChange: (id: string, color: string) => void;
   onDelete: () => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragOver: (e: React.DragEvent) => void;
-  onDragEnter: (e: React.DragEvent, targetId: string) => void;
-  onDragLeave: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, targetId: string) => void;
   onDragEnd: () => void;
 }) {
@@ -732,23 +588,12 @@ function SpreadsheetRow({
     }
   };
 
-  // Get color classes
-  const colorClass = COLOR_OPTIONS.find(c => c.value === (customer.color || "gray"))?.classes || "bg-gray-400";
-
   return (
     <ResizableTableRow 
-      className={`hover:bg-muted/50 transition-all duration-200 ${
-        isSelected ? "bg-primary/10" : ""
-      } ${
-        isDragging ? "opacity-50 scale-95 shadow-lg" : ""
-      } ${
-        dropTarget === customer.id ? "border-2 border-dashed border-primary" : ""
-      }`}
+      className={`hover:bg-muted/50 ${isSelected ? "bg-primary/10" : ""} ${isDragging ? "opacity-50" : ""}`}
       draggable
       onDragStart={(e) => onDragStart(e, customer.id)}
       onDragOver={onDragOver}
-      onDragEnter={(e) => onDragEnter(e, customer.id)}
-      onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, customer.id)}
       onDragEnd={onDragEnd}
     >
@@ -766,46 +611,15 @@ function SpreadsheetRow({
           )}
         </Button>
       </ResizableTableCell>
-      <ResizableTableCell 
-        className="border border-border px-1 py-1 text-center cursor-move group"
-        title="Drag to reorder"
-      >
-        <GripVertical className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+      <ResizableTableCell className="border border-border px-1 py-1 text-center cursor-move">
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
-        <div className="flex items-center gap-2">
-          <Popover open={colorPickerOpen === customer.id} onOpenChange={(open) => setColorPickerOpen(open ? customer.id : null)}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 rounded-full"
-              >
-                <div className={`h-4 w-4 rounded-full ${colorClass}`} />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-2" align="start">
-              <div className="grid grid-cols-4 gap-1">
-                {COLOR_OPTIONS.map((color) => (
-                  <Button
-                    key={color.value}
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 rounded-full"
-                    onClick={() => onColorChange(customer.id, color.value)}
-                  >
-                    <div className={`h-4 w-4 rounded-full ${color.classes}`} />
-                  </Button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Input
-            defaultValue={customer.customer_name}
-            onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
-            className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset flex-1"
-          />
-        </div>
+        <Input
+          defaultValue={customer.customer_name}
+          onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
+          className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
+        />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <Input

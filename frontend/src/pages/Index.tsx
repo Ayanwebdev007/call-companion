@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, Circle } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare } from "lucide-react";
 import { format, isToday, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,17 +14,6 @@ import { useAuth } from "@/context/AuthContext";
 import { LogOut } from "lucide-react";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
-
-// Define color options
-const COLOR_OPTIONS = [
-  { name: "Gray", value: "gray", classes: "bg-gray-400" },
-  { name: "Red", value: "red", classes: "bg-red-500" },
-  { name: "Orange", value: "orange", classes: "bg-orange-500" },
-  { name: "Yellow", value: "yellow", classes: "bg-yellow-500" },
-  { name: "Green", value: "green", classes: "bg-green-500" },
-  { name: "Blue", value: "blue", classes: "bg-blue-500" },
-  { name: "Purple", value: "purple", classes: "bg-purple-500" },
-];
 
 const Index = () => {
   console.log("Index component rendering");
@@ -41,9 +30,6 @@ const Index = () => {
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
-  // Color picker state
-  const [colorPickerOpen, setColorPickerOpen] = useState<string | null>(null);
-
   // New row state
   const [newRow, setNewRow] = useState({
     customer_name: "",
@@ -52,7 +38,6 @@ const Index = () => {
     next_call_date: format(new Date(), "yyyy-MM-dd"),
     next_call_time: "",
     remark: "",
-    color: "gray",
   });
 
   // Fetch customers
@@ -89,7 +74,6 @@ const Index = () => {
         next_call_date: format(new Date(), "yyyy-MM-dd"),
         next_call_time: "",
         remark: "",
-        color: "gray",
       });
     },
     onError: (error: unknown) => {
@@ -203,12 +187,6 @@ const Index = () => {
     if (window.confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)?`)) {
       bulkDeleteMutation.mutate(Array.from(selectedCustomers));
     }
-  };
-
-  // Handle color change
-  const handleColorChange = (customerId: string, color: string) => {
-    updateMutation.mutate({ id: customerId, field: "color", value: color });
-    setColorPickerOpen(null);
   };
 
   // Drag and drop handlers
@@ -520,11 +498,8 @@ const Index = () => {
                       isSelected={selectedCustomers.has(customer.id)}
                       isDragging={draggedItem === customer.id}
                       dropTarget={dropTarget}
-                      colorPickerOpen={colorPickerOpen}
-                      setColorPickerOpen={setColorPickerOpen}
                       onToggleSelect={toggleCustomerSelection}
                       onCellChange={handleCellChange}
-                      onColorChange={handleColorChange}
                       onDelete={() => deleteMutation.mutate(customer.id)}
                       onDragStart={handleDragStart}
                       onDragOver={handleDragOver}
@@ -574,41 +549,12 @@ const Index = () => {
                     {/* Empty cell for drag handle column */}
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
-                    <div className="flex items-center gap-2">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 rounded-full"
-                            style={{ backgroundColor: COLOR_OPTIONS.find(c => c.value === newRow.color)?.classes.split(' ')[0].replace('bg-', '') }}
-                          >
-                            <Circle className="h-3 w-3 text-white" fill="white" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-2" align="start">
-                          <div className="grid grid-cols-4 gap-1">
-                            {COLOR_OPTIONS.map((color) => (
-                              <Button
-                                key={color.value}
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 rounded-full"
-                                onClick={() => setNewRow({ ...newRow, color: color.value })}
-                              >
-                                <div className={`h-4 w-4 rounded-full ${color.classes}`} />
-                              </Button>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                      <Input
-                        value={newRow.customer_name}
-                        onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
-                        className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset flex-1"
-                        placeholder="Enter customer name..."
-                      />
-                    </div>
+                    <Input
+                      value={newRow.customer_name}
+                      onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
+                      className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
+                      placeholder="Enter customer name..."
+                    />
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
                     <Input
@@ -690,11 +636,8 @@ function SpreadsheetRow({
   isSelected,
   isDragging,
   dropTarget,
-  colorPickerOpen,
-  setColorPickerOpen,
   onToggleSelect,
   onCellChange,
-  onColorChange,
   onDelete,
   onDragStart,
   onDragOver,
@@ -708,11 +651,8 @@ function SpreadsheetRow({
   isSelected: boolean;
   isDragging: boolean;
   dropTarget: string | null;
-  colorPickerOpen: string | null;
-  setColorPickerOpen: (id: string | null) => void;
   onToggleSelect: (id: string) => void;
   onCellChange: (id: string, field: string, value: string) => void;
-  onColorChange: (id: string, color: string) => void;
   onDelete: () => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -731,9 +671,6 @@ function SpreadsheetRow({
       onCellChange(customer.id, "next_call_date", format(newDate, "yyyy-MM-dd"));
     }
   };
-
-  // Get color classes
-  const colorClass = COLOR_OPTIONS.find(c => c.value === (customer.color || "gray"))?.classes || "bg-gray-400";
 
   return (
     <ResizableTableRow 
@@ -773,39 +710,11 @@ function SpreadsheetRow({
         <GripVertical className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
-        <div className="flex items-center gap-2">
-          <Popover open={colorPickerOpen === customer.id} onOpenChange={(open) => setColorPickerOpen(open ? customer.id : null)}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0 rounded-full"
-              >
-                <div className={`h-4 w-4 rounded-full ${colorClass}`} />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-2" align="start">
-              <div className="grid grid-cols-4 gap-1">
-                {COLOR_OPTIONS.map((color) => (
-                  <Button
-                    key={color.value}
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 rounded-full"
-                    onClick={() => onColorChange(customer.id, color.value)}
-                  >
-                    <div className={`h-4 w-4 rounded-full ${color.classes}`} />
-                  </Button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Input
-            defaultValue={customer.customer_name}
-            onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
-            className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset flex-1"
-          />
-        </div>
+        <Input
+          defaultValue={customer.customer_name}
+          onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
+          className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
+        />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <Input
