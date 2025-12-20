@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare } from "lucide-react";
-import { format, isToday, parseISO } from "date-fns";
+import { format, isToday, parseISO, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers } from "@/lib/api";
@@ -390,6 +390,33 @@ const Index = () => {
         )}
       </div>
 
+      {/* Color Legend */}
+      <div className="px-4 py-2 bg-muted/50 border-b border-border text-xs">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="font-medium text-muted-foreground">Color Legend:</span>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-sm"></div>
+            <span>Overdue</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-sm"></div>
+            <span>Today</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-sm"></div>
+            <span>Tomorrow</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-sm"></div>
+            <span>This Week</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-sm"></div>
+            <span>Future</span>
+          </div>
+        </div>
+      </div>
+
       {/* Spreadsheet - Only this section should scroll */}
       <div className="flex-1 overflow-auto">
         <ResizableTable className="w-full border-collapse">
@@ -678,11 +705,29 @@ function SpreadsheetRow({
     }
   };
 
+  // Determine row color based on date
+  const getRowColorClass = () => {
+    if (isSelected) return "bg-primary/10"; // Keep selection color as priority
+    
+    const callDate = customer.next_call_date ? parseISO(customer.next_call_date) : null;
+    if (!callDate) return "";
+    
+    if (isToday(callDate)) return "bg-blue-50 dark:bg-blue-950/30"; // Today's calls - blue
+    if (isPast(callDate)) return "bg-red-50 dark:bg-red-950/30"; // Overdue calls - red
+    
+    // Upcoming calls - check how far in future
+    const today = new Date();
+    const timeDiff = callDate.getTime() - today.getTime();
+    const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff <= 1) return "bg-yellow-50 dark:bg-yellow-950/30"; // Tomorrow - yellow
+    if (daysDiff <= 7) return "bg-green-50 dark:bg-green-950/30"; // Within a week - green
+    return "bg-purple-50 dark:bg-purple-950/30"; // Future calls - purple
+  };
+
   return (
     <ResizableTableRow 
-      className={`hover:bg-muted/50 transition-all duration-200 ${
-        isSelected ? "bg-primary/10" : ""
-      } ${
+      className={`hover:bg-muted/50 transition-all duration-200 ${getRowColorClass()} ${
         isDragging ? "opacity-50 scale-95 shadow-lg" : ""
       } ${
         dropTarget === customer.id ? "border-2 border-dashed border-primary" : ""
