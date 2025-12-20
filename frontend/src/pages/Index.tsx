@@ -490,7 +490,7 @@ const Index = () => {
                     )}
                   </Button>
                 </ResizableTableHead>
-              )
+              )}
             </ResizableTableRow>
           </ResizableTableHeader>
           <ResizableTableBody>
