@@ -210,15 +210,24 @@ router.delete('/:id', auth, async (req, res) => {
 // BULK DELETE customers
 router.delete('/bulk', auth, async (req, res) => {
   try {
+    console.log('Bulk delete request received');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('User ID:', req.user.id);
+    
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      console.log('No customer IDs provided or invalid format');
       return res.status(400).json({ message: 'No customer IDs provided' });
     }
+    
+    console.log('Deleting customers with IDs:', ids);
     
     const result = await Customer.deleteMany({ 
       _id: { $in: ids },
       user_id: req.user.id 
     });
+    
+    console.log('Delete result:', result);
     
     res.json({ 
       message: `${result.deletedCount} customers deleted successfully`,
