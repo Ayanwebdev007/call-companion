@@ -305,95 +305,95 @@ const Index = () => {
           </div>
         </header>
 
-      {/* Sheet Tabs */}
-      <div className="bg-card border-b border-border px-4 py-2 flex items-center gap-4">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => {
-              setViewMode("date");
-              setSelectedDate(new Date());
-            }}
-          >
-            Today
-          </Button>
+        {/* Sheet Tabs */}
+        <div className="bg-card border-b border-border px-4 py-2 flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => {
+                setViewMode("date");
+                setSelectedDate(new Date());
+              }}
+            >
+              Today
+            </Button>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={viewMode === "date" ? "secondary" : "ghost"}
-                size="sm"
-                className={cn(
-                  "gap-2",
-                  viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
-                )}
-              >
-                <CalendarIcon className="h-4 w-4" />
-                {format(selectedDate, "PPP")}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => {
-                  if (date) {
-                    setSelectedDate(date);
-                    setViewMode("date");
-                  }
-                }}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={viewMode === "date" ? "secondary" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "gap-2",
+                    viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  {format(selectedDate, "PPP")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date);
+                      setViewMode("date");
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="h-6 w-px bg-border" />
+
+          <Button
+            variant={viewMode === "all" ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("all")}
+          >
+            All Customers ({customers.length})
+          </Button>
         </div>
 
-        <div className="h-6 w-px bg-border" />
-
-        <Button
-          variant={viewMode === "all" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => setViewMode("all")}
-        >
-          All Customers ({customers.length})
-        </Button>
-      </div>
-
-      {/* Bulk Actions Bar */}
-      {selectedCustomers.size > 0 && (
-        <div className="bg-primary/10 border-b border-border px-4 py-2 flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-primary">
-              {selectedCustomers.size} selected
-            </span>
+        {/* Bulk Actions Bar */}
+        {selectedCustomers.size > 0 && (
+          <div className="bg-primary/10 border-b border-border px-4 py-2 flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-primary">
+                {selectedCustomers.size} selected
+              </span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={selectAllCustomers}
+                className="h-7 px-2 text-xs"
+              >
+                {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
+              </Button>
+            </div>
+            <div className="h-4 w-px bg-border" />
             <Button 
-              variant="outline" 
+              variant="destructive" 
               size="sm" 
-              onClick={selectAllCustomers}
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
               className="h-7 px-2 text-xs"
             >
-              {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
+              {bulkDeleteMutation.isPending ? "Deleting..." : "Delete Selected"}
             </Button>
           </div>
-          <div className="h-4 w-px bg-border" />
-          <Button 
-            variant="destructive" 
-            size="sm" 
-            onClick={handleBulkDelete}
-            disabled={bulkDeleteMutation.isPending}
-            className="h-7 px-2 text-xs"
-          >
-            {bulkDeleteMutation.isPending ? "Deleting..." : "Delete Selected"}
-          </Button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Spreadsheet */}
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full scroll-container">
-          <ResizableTable className="w-full border-collapse" containerClassName="table-container-fixed">
-            <ResizableTableHeader className="bg-muted sticky-header shadow-sm z-10">
+      {/* Spreadsheet - Only this section should scroll */}
+      <div className="flex-1 overflow-auto">
+        <ResizableTable className="w-full border-collapse">
+          <ResizableTableHeader className="bg-muted sticky top-0 shadow-sm z-10">
             <ResizableTableRow>
               <ResizableTableHead 
                 className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10"
@@ -633,9 +633,7 @@ const Index = () => {
         </ResizableTable>
       </div>
     </div>
-  </div>
-</div>
-);
+  );
 };
 
 function SpreadsheetRow({

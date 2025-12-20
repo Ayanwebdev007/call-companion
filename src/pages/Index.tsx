@@ -371,11 +371,11 @@ const Index = () => {
         )}
       </div>
 
-      {/* Scrollable Spreadsheet Area */}
-      <div className="flex-1 overflow-hidden">
+      {/* Spreadsheet - Only this section should scroll */}
+      <div className="flex-1 overflow-auto">
         <div className="h-full scroll-container">
-          <ResizableTable className="w-full border-collapse" containerClassName="table-container-fixed">
-            <ResizableTableHeader className="bg-muted sticky-header shadow-sm z-10">
+          <ResizableTable className="w-full border-collapse">
+            <ResizableTableHeader className="bg-muted sticky top-0 shadow-sm z-10">
               <ResizableTableRow>
                 <ResizableTableHead 
                   className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10"
@@ -551,11 +551,9 @@ const Index = () => {
               )}
             </ResizableTableBody>
           </ResizableTable>
-        </div>
       </div>
     </div>
   );
-};
 
 function SpreadsheetRow({
   customer,
