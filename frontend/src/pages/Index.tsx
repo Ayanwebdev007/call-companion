@@ -394,40 +394,7 @@ const Index = () => {
         )}
       </div>
 
-      {/* Color Legend */}
-      <div className="px-4 py-2 bg-muted/50 border-b border-border text-xs">
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="font-medium text-muted-foreground">Manual Color Marking:</span>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'red' }}></div>
-            <span>Red</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'orange' }}></div>
-            <span>Orange</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'yellow' }}></div>
-            <span>Yellow</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'green' }}></div>
-            <span>Green</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'blue' }}></div>
-            <span>Blue</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'purple' }}></div>
-            <span>Purple</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'pink' }}></div>
-            <span>Pink</span>
-          </div>
-        </div>
-      </div>
+
 
       {/* Spreadsheet - Only this section should scroll */}
       <div className="flex-1 overflow-auto">
@@ -594,12 +561,38 @@ const Index = () => {
                     {/* Empty cell for drag handle column */}
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
-                    <Input
-                      value={newRow.customer_name}
-                      onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
-                      className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
-                      placeholder="Enter customer name..."
-                    />
+                    <div className="flex items-center h-9">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
+                            style={{ backgroundColor: newRow.color || 'white' }} />
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-2" align="start">
+                          <div className="grid grid-cols-4 gap-1">
+                            {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
+                              <Button
+                                key={color || 'none'}
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => setNewRow({ ...newRow, color: color as any })}
+                              >
+                                <div 
+                                  className={`w-4 h-4 rounded-full border ${color ? 'border-muted-foreground/50' : 'border-dashed border-muted-foreground/50'}`} 
+                                  style={{ backgroundColor: color || 'transparent' }} 
+                                />
+                              </Button>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      <Input
+                        value={newRow.customer_name}
+                        onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
+                        className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset flex-grow"
+                        placeholder="Enter customer name..."
+                      />
+                    </div>
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
                     <Input
@@ -651,38 +644,6 @@ const Index = () => {
                       className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
                       placeholder="Enter remark..."
                     />
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-1 text-center">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                        >
-                          <div className="w-3 h-3 rounded-full border border-muted-foreground/50" 
-                            style={{ backgroundColor: newRow.color ? newRow.color : 'transparent' }} />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-2" align="start">
-                        <div className="grid grid-cols-4 gap-1">
-                          {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
-                            <Button
-                              key={color || 'none'}
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => setNewRow({ ...newRow, color: color as any })}
-                            >
-                              <div 
-                                className={`w-4 h-4 rounded-full border ${color ? 'border-muted-foreground/50' : 'border-dashed border-muted-foreground/50'}`} 
-                                style={{ backgroundColor: color || 'transparent' }} 
-                              />
-                            </Button>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-1 text-center">
                     <Button
@@ -805,11 +766,37 @@ function SpreadsheetRow({
         <GripVertical className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
-        <Input
-          defaultValue={customer.customer_name}
-          onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
-          className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
-        />
+        <div className="flex items-center h-8">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
+                style={{ backgroundColor: customer.color || 'white' }} />
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-2" align="start">
+              <div className="grid grid-cols-4 gap-1">
+                {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
+                  <Button
+                    key={color || 'none'}
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => handleColorChange(color as any)}
+                  >
+                    <div 
+                      className={`w-4 h-4 rounded-full border ${color ? 'border-muted-foreground/50' : 'border-dashed border-muted-foreground/50'}`} 
+                      style={{ backgroundColor: color || 'transparent' }} 
+                    />
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Input
+            defaultValue={customer.customer_name}
+            onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
+            className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset flex-grow"
+          />
+        </div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <Input
@@ -858,38 +845,6 @@ function SpreadsheetRow({
           onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
           className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
         />
-      </ResizableTableCell>
-      <ResizableTableCell className="border border-border p-1 text-center">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-            >
-              <div className="w-3 h-3 rounded-full border border-muted-foreground/50" 
-                style={{ backgroundColor: customer.color ? customer.color : 'transparent' }} />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-2" align="start">
-            <div className="grid grid-cols-4 gap-1">
-              {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
-                <Button
-                  key={color || 'none'}
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  onClick={() => handleColorChange(color as any)}
-                >
-                  <div 
-                    className={`w-4 h-4 rounded-full border ${color ? 'border-muted-foreground/50' : 'border-dashed border-muted-foreground/50'}`} 
-                    style={{ backgroundColor: color || 'transparent' }} 
-                  />
-                </Button>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-1 text-center">
         <Button
