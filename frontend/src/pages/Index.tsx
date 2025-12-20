@@ -38,6 +38,7 @@ const Index = () => {
     next_call_date: format(new Date(), "yyyy-MM-dd"),
     next_call_time: "",
     remark: "",
+    color: null as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null,
   });
 
   // Fetch customers
@@ -274,7 +275,10 @@ const Index = () => {
       toast({ title: "Please fill Customer Name, Company Name, and Phone No.", variant: "destructive" });
       return;
     }
-    addMutation.mutate(newRow);
+    // Remove color field if it's null to avoid sending unnecessary data
+    const { color, ...newRowWithoutNullColor } = newRow;
+    const rowData = color ? newRow : newRowWithoutNullColor;
+    addMutation.mutate(rowData as any);
   };
 
   const handleCellChange = (id: string, field: string, value: string) => {
@@ -393,26 +397,34 @@ const Index = () => {
       {/* Color Legend */}
       <div className="px-4 py-2 bg-muted/50 border-b border-border text-xs">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="font-medium text-muted-foreground">Color Legend:</span>
+          <span className="font-medium text-muted-foreground">Manual Color Marking:</span>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-sm"></div>
-            <span>Overdue</span>
+            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'red' }}></div>
+            <span>Red</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-sm"></div>
-            <span>Today</span>
+            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'orange' }}></div>
+            <span>Orange</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-sm"></div>
-            <span>Tomorrow</span>
+            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'yellow' }}></div>
+            <span>Yellow</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-sm"></div>
-            <span>This Week</span>
+            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'green' }}></div>
+            <span>Green</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-sm"></div>
-            <span>Future</span>
+            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'blue' }}></div>
+            <span>Blue</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'purple' }}></div>
+            <span>Purple</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full border border-muted-foreground/50" style={{ backgroundColor: 'pink' }}></div>
+            <span>Pink</span>
           </div>
         </div>
       </div>
@@ -641,7 +653,36 @@ const Index = () => {
                     />
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-1 text-center">
-                    {/* WhatsApp button for new row (empty) */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                        >
+                          <div className="w-3 h-3 rounded-full border border-muted-foreground/50" 
+                            style={{ backgroundColor: newRow.color ? newRow.color : 'transparent' }} />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-2" align="start">
+                        <div className="grid grid-cols-4 gap-1">
+                          {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
+                            <Button
+                              key={color || 'none'}
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => setNewRow({ ...newRow, color: color as any })}
+                            >
+                              <div 
+                                className={`w-4 h-4 rounded-full border ${color ? 'border-muted-foreground/50' : 'border-dashed border-muted-foreground/50'}`} 
+                                style={{ backgroundColor: color || 'transparent' }} 
+                              />
+                            </Button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-1 text-center">
                     <Button
@@ -705,24 +746,27 @@ function SpreadsheetRow({
     }
   };
 
-  // Determine row color based on date
+  // Determine row color based on manual selection
   const getRowColorClass = () => {
     if (isSelected) return "bg-primary/10"; // Keep selection color as priority
     
-    const callDate = customer.next_call_date ? parseISO(customer.next_call_date) : null;
-    if (!callDate) return "";
+    // Map color names to Tailwind classes
+    const colorMap: Record<string, string> = {
+      red: "bg-red-100 dark:bg-red-900/50",
+      orange: "bg-orange-100 dark:bg-orange-900/50",
+      yellow: "bg-yellow-100 dark:bg-yellow-900/50",
+      green: "bg-green-100 dark:bg-green-900/50",
+      blue: "bg-blue-100 dark:bg-blue-900/50",
+      purple: "bg-purple-100 dark:bg-purple-900/50",
+      pink: "bg-pink-100 dark:bg-pink-900/50",
+    };
     
-    if (isToday(callDate)) return "bg-blue-50 dark:bg-blue-950/30"; // Today's calls - blue
-    if (isPast(callDate)) return "bg-red-50 dark:bg-red-950/30"; // Overdue calls - red
-    
-    // Upcoming calls - check how far in future
-    const today = new Date();
-    const timeDiff = callDate.getTime() - today.getTime();
-    const daysDiff = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-    
-    if (daysDiff <= 1) return "bg-yellow-50 dark:bg-yellow-950/30"; // Tomorrow - yellow
-    if (daysDiff <= 7) return "bg-green-50 dark:bg-green-950/30"; // Within a week - green
-    return "bg-purple-50 dark:bg-purple-950/30"; // Future calls - purple
+    return customer.color ? colorMap[customer.color] : "";
+  };
+
+  // Handle color change
+  const handleColorChange = (color: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null) => {
+    onCellChange(customer.id, "color", color || "");
   };
 
   return (
@@ -814,6 +858,38 @@ function SpreadsheetRow({
           onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
           className="border-0 rounded-none h-8 text-sm focus-visible:ring-1 focus-visible:ring-inset"
         />
+      </ResizableTableCell>
+      <ResizableTableCell className="border border-border p-1 text-center">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+            >
+              <div className="w-3 h-3 rounded-full border border-muted-foreground/50" 
+                style={{ backgroundColor: customer.color ? customer.color : 'transparent' }} />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-2" align="start">
+            <div className="grid grid-cols-4 gap-1">
+              {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
+                <Button
+                  key={color || 'none'}
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => handleColorChange(color as any)}
+                >
+                  <div 
+                    className={`w-4 h-4 rounded-full border ${color ? 'border-muted-foreground/50' : 'border-dashed border-muted-foreground/50'}`} 
+                    style={{ backgroundColor: color || 'transparent' }} 
+                  />
+                </Button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-1 text-center">
         <Button

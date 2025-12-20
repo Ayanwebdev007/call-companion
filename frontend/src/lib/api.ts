@@ -20,6 +20,7 @@ export interface Customer {
   next_call_date: string;
   next_call_time?: string;
   remark: string | null;
+  color?: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null;
   created_at?: string;
   updated_at?: string;
   position?: number;
