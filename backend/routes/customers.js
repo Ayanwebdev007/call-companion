@@ -18,6 +18,10 @@ router.get('/', auth, async (req, res) => {
 
 // POST new customer
 router.post('/', auth, async (req, res) => {
+  // First get the highest position value
+  const maxPositionCustomer = await Customer.findOne({ user_id: req.user.id }).sort({ position: -1 });
+  const newPosition = maxPositionCustomer ? maxPositionCustomer.position + 1 : 0;
+  
   const customer = new Customer({
     user_id: req.user.id,
     customer_name: req.body.customer_name,
@@ -25,7 +29,8 @@ router.post('/', auth, async (req, res) => {
     phone_number: req.body.phone_number,
     next_call_date: req.body.next_call_date,
     next_call_time: req.body.next_call_time,
-    remark: req.body.remark
+    remark: req.body.remark,
+    position: newPosition
   });
 
   try {
@@ -81,6 +86,9 @@ router.post('/bulk-import', auth, async (req, res) => {
       return normalized;
     };
 
+    // Get the highest position value for this user
+    const maxPositionCustomer = await Customer.findOne({ user_id: req.user.id }).sort({ position: -1 });
+    let currentPosition = maxPositionCustomer ? maxPositionCustomer.position + 1 : 0;
 
     for (let i = 0; i < data.length; i++) {
       const originalRow = data[i];
@@ -116,7 +124,8 @@ router.post('/bulk-import', auth, async (req, res) => {
         phone_number: phoneNumber.toString().trim(),
         next_call_date: nextCallDate,
         next_call_time: (row['next_call_time'] || row['nextcalltime'] || '').toString().trim(),
-        remark: (row['remark'] || '').toString().trim()
+        remark: (row['remark'] || '').toString().trim(),
+        position: currentPosition++
       };
 
       customers.push(customerData);
@@ -263,5 +272,29 @@ router.post('/bulk-delete', auth, async (req, res) => {
   }
 });
 
+// REORDER customers
+router.post('/reorder', auth, async (req, res) => {
+  try {
+    const { customerIds } = req.body;
+    
+    if (!customerIds || !Array.isArray(customerIds)) {
+      return res.status(400).json({ message: 'Invalid customer IDs format' });
+    }
+    
+    // Update position for each customer
+    const updates = customerIds.map((id, index) => 
+      Customer.updateOne(
+        { _id: id, user_id: req.user.id },
+        { position: index }
+      )
+    );
+    
+    await Promise.all(updates);
+    res.json({ message: 'Order updated successfully' });
+  } catch (err) {
+    console.error('Reorder error:', err);
+    res.status(500).json({ message: 'Error updating order', error: err.message });
+  }
+});
 
 export default router;

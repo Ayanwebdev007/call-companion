@@ -26,6 +26,8 @@ const Index = () => {
   // Bulk selection state
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
 
+  // Drag and drop state
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
   // New row state
   const [newRow, setNewRow] = useState({
@@ -129,6 +131,22 @@ const Index = () => {
     },
   });
 
+  // Reorder customers mutation
+  const reorderMutation = useMutation({
+    mutationFn: reorderCustomers,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+    onError: (error: unknown) => {
+      let errorMessage = "Failed to reorder customers";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      toast({ title: "Error reordering customers", description: errorMessage, variant: "destructive" });
+    },
+  });
 
   const displayedCustomers = useMemo(() => {
     if (!customers) return [];
@@ -170,6 +188,46 @@ const Index = () => {
     }
   };
 
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    e.dataTransfer.setData("text/plain", id);
+    setDraggedItem(id);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    const draggedId = e.dataTransfer.getData("text/plain");
+    
+    if (draggedId !== targetId) {
+      // Reorder the customers
+      const newOrder = [...displayedCustomers];
+      const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
+      const targetIndex = newOrder.findIndex(c => c.id === targetId);
+      
+      if (draggedIndex !== -1 && targetIndex !== -1) {
+        // Remove the dragged item
+        const [removed] = newOrder.splice(draggedIndex, 1);
+        // Insert it at the new position
+        newOrder.splice(targetIndex, 0, removed);
+        
+        // Get the IDs in the new order
+        const reorderedIds = newOrder.map(c => c.id);
+        reorderMutation.mutate(reorderedIds);
+      }
+    }
+    
+    setDraggedItem(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+  };
 
   // Render different states based on conditions
   if (!user) {
@@ -206,115 +264,112 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
-        {/* Main Header */}
-        <header className="bg-card px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl font-semibold text-foreground">Calling CRM</h1>
-              <span className="text-sm text-muted-foreground">Welcome, {user?.username}</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">
-                {format(new Date(), "EEEE, MMMM do, yyyy")}
-              </span>
-              <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
-              <Button variant="outline" size="sm" onClick={logout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
+      {/* Header */}
+      <header className="bg-card border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold text-foreground">Calling CRM</h1>
+            <span className="text-sm text-muted-foreground">Welcome, {user?.username}</span>
           </div>
-        </header>
-
-        {/* Sheet Tabs */}
-        <div className="bg-card px-4 py-2 flex items-center gap-4 border-t border-border">
-          <div className="flex items-center gap-2">
-            <Button
-              variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => {
-                setViewMode("date");
-                setSelectedDate(new Date());
-              }}
-            >
-              Today
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              {format(new Date(), "EEEE, MMMM do, yyyy")}
+            </span>
+            <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
+            <Button variant="outline" size="sm" onClick={logout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
             </Button>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={viewMode === "date" ? "secondary" : "ghost"}
-                  size="sm"
-                  className={cn(
-                    "gap-2",
-                    viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
-                  )}
-                >
-                  <CalendarIcon className="h-4 w-4" />
-                  {format(selectedDate, "PPP")}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedDate(date);
-                      setViewMode("date");
-                    }
-                  }}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
           </div>
+        </div>
+      </header>
 
-          <div className="h-6 w-px bg-border" />
-
+      {/* Sheet Tabs */}
+      <div className="bg-card border-b border-border px-4 py-2 flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <Button
-            variant={viewMode === "all" ? "secondary" : "ghost"}
+            variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
             size="sm"
-            onClick={() => setViewMode("all")}
+            onClick={() => {
+              setViewMode("date");
+              setSelectedDate(new Date());
+            }}
           >
-            All Customers ({customers.length})
+            Today
           </Button>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={viewMode === "date" ? "secondary" : "ghost"}
+                size="sm"
+                className={cn(
+                  "gap-2",
+                  viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
+                )}
+              >
+                <CalendarIcon className="h-4 w-4" />
+                {format(selectedDate, "PPP")}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setSelectedDate(date);
+                    setViewMode("date");
+                  }
+                }}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
-        {/* Bulk Actions Bar */}
-        {selectedCustomers.size > 0 && (
-          <div className="bg-primary/10 px-4 py-2 flex items-center gap-4 border-t border-border">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-primary">
-                {selectedCustomers.size} selected
-              </span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={selectAllCustomers}
-                className="h-7 px-2 text-xs"
-              >
-                {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
-              </Button>
-            </div>
-            <div className="h-4 w-px bg-border" />
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={handleBulkDelete}
-              disabled={bulkDeleteMutation.isPending}
-              className="h-7 px-2 text-xs"
-            >
-              {bulkDeleteMutation.isPending ? "Deleting..." : "Delete Selected"}
-            </Button>
-          </div>
-        )}
+        <div className="h-6 w-px bg-border" />
+
+        <Button
+          variant={viewMode === "all" ? "secondary" : "ghost"}
+          size="sm"
+          onClick={() => setViewMode("all")}
+        >
+          All Customers ({customers.length})
+        </Button>
       </div>
 
-      {/* Spreadsheet - with padding to account for fixed header */}
-      <div className="pt-32 flex-1 overflow-auto">
+      {/* Bulk Actions Bar */}
+      {selectedCustomers.size > 0 && (
+        <div className="bg-primary/10 border-b border-border px-4 py-2 flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-primary">
+              {selectedCustomers.size} selected
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={selectAllCustomers}
+              className="h-7 px-2 text-xs"
+            >
+              {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
+            </Button>
+          </div>
+          <div className="h-4 w-px bg-border" />
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={handleBulkDelete}
+            disabled={bulkDeleteMutation.isPending}
+            className="h-7 px-2 text-xs"
+          >
+            {bulkDeleteMutation.isPending ? "Deleting..." : "Delete Selected"}
+          </Button>
+        </div>
+      )}
+
+      {/* Spreadsheet */}
+      <div className="flex-1 overflow-auto">
         <ResizableTable className="w-full border-collapse">
           <ResizableTableHeader className="bg-muted sticky top-0 z-10">
             <ResizableTableRow>
@@ -339,7 +394,7 @@ const Index = () => {
                 className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-8"
                 resizable={false}
               >
-                {/* Empty column header */}
+                {/* Drag handle column header */}
               </ResizableTableHead>
               <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
                 Customer Name
@@ -397,9 +452,14 @@ const Index = () => {
                     customer={customer}
                     index={index + 1}
                     isSelected={selectedCustomers.has(customer.id)}
+                    isDragging={draggedItem === customer.id}
                     onToggleSelect={toggleCustomerSelection}
                     onCellChange={handleCellChange}
                     onDelete={() => deleteMutation.mutate(customer.id)}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onDragEnd={handleDragEnd}
                   />
                 ))}
                 {/* New Row Input */}
@@ -408,7 +468,7 @@ const Index = () => {
                     NEW
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
-                    {/* Empty cell */}
+                    {/* Empty cell for drag handle column */}
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
                     <Input
@@ -496,16 +556,26 @@ function SpreadsheetRow({
   customer,
   index,
   isSelected,
+  isDragging,
   onToggleSelect,
   onCellChange,
   onDelete,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
 }: {
   customer: Customer;
   index: number;
   isSelected: boolean;
+  isDragging: boolean;
   onToggleSelect: (id: string) => void;
   onCellChange: (id: string, field: string, value: string) => void;
   onDelete: () => void;
+  onDragStart: (e: React.DragEvent, id: string) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent, targetId: string) => void;
+  onDragEnd: () => void;
 }) {
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
@@ -520,7 +590,12 @@ function SpreadsheetRow({
 
   return (
     <ResizableTableRow 
-      className={`hover:bg-muted/50 ${isSelected ? "bg-primary/10" : ""}`}
+      className={`hover:bg-muted/50 ${isSelected ? "bg-primary/10" : ""} ${isDragging ? "opacity-50" : ""}`}
+      draggable
+      onDragStart={(e) => onDragStart(e, customer.id)}
+      onDragOver={onDragOver}
+      onDrop={(e) => onDrop(e, customer.id)}
+      onDragEnd={onDragEnd}
     >
       <ResizableTableCell className="border border-border px-3 py-1 text-xs text-muted-foreground text-center">
         <Button
@@ -536,8 +611,8 @@ function SpreadsheetRow({
           )}
         </Button>
       </ResizableTableCell>
-      <ResizableTableCell className="border border-border px-1 py-1 text-center">
-        {/* Empty cell */}
+      <ResizableTableCell className="border border-border px-1 py-1 text-center cursor-move">
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <Input
