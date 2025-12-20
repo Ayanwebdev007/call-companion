@@ -93,35 +93,7 @@ const Index = () => {
     mutationFn: async ({ id, field, value }: { id: string; field: string; value: string }) => {
       await updateCustomer(id, { [field]: value });
     },
-    onMutate: async ({ id, field, value }) => {
-      // Cancel any outgoing refetches to prevent overwriting our optimistic update
-      await queryClient.cancelQueries({ queryKey: ["customers"] });
-      
-      // Snapshot the previous value
-      const previousCustomers = queryClient.getQueryData<Customer[]>(["customers"]);
-      
-      // Optimistically update to the new value
-      queryClient.setQueryData<Customer[]>(["customers"], old => {
-        if (!old) return old;
-        return old.map(customer => 
-          customer.id === id ? { ...customer, [field]: value } : customer
-        );
-      });
-      
-      // Return a context object with the snapshotted value
-      return { previousCustomers };
-    },
-    onError: (err, variables, context) => {
-      // Rollback to the previous value if mutation fails
-      if (context?.previousCustomers) {
-        queryClient.setQueryData(["customers"], context.previousCustomers);
-      }
-      toast({ title: "Failed to update customer", variant: "destructive" });
-    },
-    onSuccess: () => {
-      // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
   });
 
   // Delete customer mutation
@@ -735,6 +707,12 @@ function SpreadsheetRow({
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
   );
+  const [localColor, setLocalColor] = useState(customer.color);
+  
+  // Sync localColor with customer.color when it changes from outside (e.g. after refetch)
+  useEffect(() => {
+    setLocalColor(customer.color);
+  }, [customer.color]);
 
   const handleDateChange = (newDate: Date | undefined) => {
     if (newDate) {
@@ -743,33 +721,12 @@ function SpreadsheetRow({
     }
   };
 
-  // Handle color change with optimistic update
+  // Handle color change
   const handleColorChange = (color: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null) => {
-    // Optimistically update the UI
-    queryClient.setQueryData<Customer[]>(["customers"], old => {
-      if (!old) return old;
-      return old.map(customerItem => 
-        customerItem.id === customer.id ? { ...customerItem, color: color === null ? null : color } : customerItem
-      );
-    });
-    
-    // Then update the database
-    updateMutation.mutate({ 
-      id: customer.id, 
-      field: "color", 
-      value: color === null ? "" : color 
-    }, {
-      onError: () => {
-        // Rollback on error
-        queryClient.setQueryData<Customer[]>(["customers"], old => {
-          if (!old) return old;
-          return old.map(customerItem => 
-            customerItem.id === customer.id ? { ...customerItem, color: customer.color } : customerItem
-          );
-        });
-        toast({ title: "Failed to update color", variant: "destructive" });
-      }
-    });
+    // Update local state immediately for instant feedback
+    setLocalColor(color);
+    // Update database
+    onCellChange(customer.id, "color", color === null ? "" : color);
   };
 
   return (
@@ -814,7 +771,7 @@ function SpreadsheetRow({
           <Popover>
             <PopoverTrigger asChild>
               <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
-                style={{ backgroundColor: customer.color && customer.color !== "" ? customer.color : 'white' }} />
+                style={{ backgroundColor: localColor && localColor !== "" ? localColor : 'white' }} />
             </PopoverTrigger>
             <PopoverContent className="w-auto p-2" align="start">
               <div className="grid grid-cols-4 gap-1">
