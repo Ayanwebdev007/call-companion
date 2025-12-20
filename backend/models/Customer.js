@@ -7,6 +7,7 @@ const customerSchema = new mongoose.Schema({
   phone_number: { type: String, required: true },
   next_call_date: { type: String, required: true, default: () => new Date().toISOString().split('T')[0] }, // Keeping as string to match frontend format "yyyy-MM-dd"
   next_call_time: { type: String, default: '' }, // New field for time (e.g., "14:30")
+  last_call_date: { type: String, default: '' }, // New field for last call date
   remark: { type: String, default: '' },
   color: { type: String, enum: ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', null], default: null },
   position: { type: Number, default: 0 } // For drag and drop ordering
