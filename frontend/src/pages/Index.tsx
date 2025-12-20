@@ -93,7 +93,35 @@ const Index = () => {
     mutationFn: async ({ id, field, value }: { id: string; field: string; value: string }) => {
       await updateCustomer(id, { [field]: value });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
+    onMutate: async ({ id, field, value }) => {
+      // Cancel any outgoing refetches to prevent overwriting our optimistic update
+      await queryClient.cancelQueries({ queryKey: ["customers"] });
+      
+      // Snapshot the previous value
+      const previousCustomers = queryClient.getQueryData<Customer[]>(["customers"]);
+      
+      // Optimistically update to the new value
+      queryClient.setQueryData<Customer[]>(["customers"], old => {
+        if (!old) return old;
+        return old.map(customer => 
+          customer.id === id ? { ...customer, [field]: value } : customer
+        );
+      });
+      
+      // Return a context object with the snapshotted value
+      return { previousCustomers };
+    },
+    onError: (err, variables, context) => {
+      // Rollback to the previous value if mutation fails
+      if (context?.previousCustomers) {
+        queryClient.setQueryData(["customers"], context.previousCustomers);
+      }
+      toast({ title: "Failed to update customer", variant: "destructive" });
+    },
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
   });
 
   // Delete customer mutation
@@ -715,9 +743,33 @@ function SpreadsheetRow({
     }
   };
 
-  // Handle color change
+  // Handle color change with optimistic update
   const handleColorChange = (color: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null) => {
-    onCellChange(customer.id, "color", color === null ? null : color);
+    // Optimistically update the UI
+    queryClient.setQueryData<Customer[]>(["customers"], old => {
+      if (!old) return old;
+      return old.map(customerItem => 
+        customerItem.id === customer.id ? { ...customerItem, color: color === null ? null : color } : customerItem
+      );
+    });
+    
+    // Then update the database
+    updateMutation.mutate({ 
+      id: customer.id, 
+      field: "color", 
+      value: color === null ? "" : color 
+    }, {
+      onError: () => {
+        // Rollback on error
+        queryClient.setQueryData<Customer[]>(["customers"], old => {
+          if (!old) return old;
+          return old.map(customerItem => 
+            customerItem.id === customer.id ? { ...customerItem, color: customer.color } : customerItem
+          );
+        });
+        toast({ title: "Failed to update color", variant: "destructive" });
+      }
+    });
   };
 
   return (
