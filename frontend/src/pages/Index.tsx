@@ -301,44 +301,35 @@ const Index = () => {
       {/* Fixed Header Section */}
       <div className="flex-shrink-0">
         {/* Main Header */}
-        <header className="bg-gradient-to-r from-card to-card/80 backdrop-blur-sm border-b border-border/50 px-6 py-4 flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-foreground bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
-              Calling CRM
-            </h1>
-            <div className="h-6 w-px bg-border" />
-            <span className="text-sm font-medium text-muted-foreground">
-              Welcome, {user?.username}
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground animate-pulse">
-              {format(new Date(), "EEEE, MMMM do, yyyy")}
-            </span>
-            <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={logout}
-              className="transition-all duration-300 hover:shadow-lg hover:scale-105 border-border/50 bg-background/50"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
+        <header className="bg-card border-b border-border px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-semibold text-foreground">Calling CRM</h1>
+              <span className="text-sm text-muted-foreground">Welcome, {user?.username}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                {format(new Date(), "EEEE, MMMM do, yyyy")}
+              </span>
+              <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
+              <Button variant="outline" size="sm" onClick={logout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </header>
 
         {/* Sheet Tabs */}
-        <div className="bg-card/80 backdrop-blur-sm border-b border-border/50 px-6 py-3 flex items-center gap-6">
-          <div className="flex items-center gap-3">
+        <div className="bg-card border-b border-border px-4 py-2 flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Button
-              variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "outline"}
+              variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
               size="sm"
               onClick={() => {
                 setViewMode("date");
                 setSelectedDate(new Date());
               }}
-              className="rounded-full px-4 transition-all duration-300 hover:shadow-md border-border/50"
             >
               Today
             </Button>
@@ -346,10 +337,10 @@ const Index = () => {
             <Popover>
               <PopoverTrigger asChild>
                 <Button
-                  variant={viewMode === "date" ? "secondary" : "outline"}
+                  variant={viewMode === "date" ? "secondary" : "ghost"}
                   size="sm"
                   className={cn(
-                    "gap-2 rounded-full px-4 transition-all duration-300 hover:shadow-md border-border/50",
+                    "gap-2",
                     viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
                   )}
                 >
@@ -357,7 +348,7 @@ const Index = () => {
                   {format(selectedDate, "PPP")}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 rounded-xl shadow-lg border-border/50" align="start">
+              <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
                   selected={selectedDate}
@@ -368,19 +359,17 @@ const Index = () => {
                     }
                   }}
                   initialFocus
-                  className="rounded-xl"
                 />
               </PopoverContent>
             </Popover>
           </div>
 
-          <div className="h-6 w-px bg-border/50" />
+          <div className="h-6 w-px bg-border" />
 
           <Button
-            variant={viewMode === "all" ? "secondary" : "outline"}
+            variant={viewMode === "all" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => setViewMode("all")}
-            className="rounded-full px-4 transition-all duration-300 hover:shadow-md border-border/50"
           >
             All Customers ({customers.length})
           </Button>
@@ -449,12 +438,12 @@ const Index = () => {
 
 
       {/* Spreadsheet - Only this section should scroll */}
-      <div className="flex-1 flex flex-col p-4 bg-background/50">
-        <ResizableTable className="w-full border-collapse rounded-xl overflow-hidden shadow-lg flex-1 flex flex-col">
-          <ResizableTableHeader className="bg-muted/80 backdrop-blur-sm sticky top-0 shadow-md z-10 border-b border-border/50">
+      <div className="flex-1 overflow-auto">
+        <ResizableTable className="w-full border-collapse">
+          <ResizableTableHeader className="bg-muted sticky top-0 shadow-sm z-10">
             <ResizableTableRow>
               <ResizableTableHead 
-                className="border border-border px-3 py-3 text-left text-xs font-semibold text-muted-foreground w-12 bg-card/80"
+                className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10"
                 resizable={false}
               >
                 {/* Row numbers header */}
@@ -508,9 +497,8 @@ const Index = () => {
               )}
             </ResizableTableRow>
           </ResizableTableHeader>
-          <div className="flex-1 overflow-auto">
-            <ResizableTableBody>
-              {isLoading ? (
+          <ResizableTableBody>
+            {isLoading ? (
               <ResizableTableRow>
                 <ResizableTableCell colSpan={showCheckboxes ? 10 : 9} className="border border-border px-3 py-8 text-center text-muted-foreground">
                   Loading...
@@ -608,7 +596,7 @@ const Index = () => {
                   </Fragment>
                 ))}
                 {/* New Row Input */}
-                <ResizableTableRow className="bg-primary/10 backdrop-blur-sm border-t-2 border-primary/30 hover:bg-primary/15 transition-all duration-300">
+                <ResizableTableRow className="bg-primary/5">
                   <ResizableTableCell className="border border-border px-3 py-1 text-xs text-primary font-medium text-center">
                     NEW
                   </ResizableTableCell>
@@ -616,7 +604,7 @@ const Index = () => {
                     <div className="flex items-center h-9">
                       <Popover>
                         <PopoverTrigger asChild>
-                          <button className="ml-2 w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-110" 
+                          <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
                             style={{ backgroundColor: newRow.color && newRow.color !== "" ? newRow.color : 'white' }} />
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-2" align="start">
@@ -626,7 +614,7 @@ const Index = () => {
                                 key={color || 'none'}
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 w-7 p-0 transition-all duration-300 hover:scale-110 hover:shadow-md"
+                                className="h-6 w-6 p-0"
                                 onClick={() => setNewRow({ ...newRow, color: color as any })}
                               >
                                 <div 
@@ -721,7 +709,7 @@ const Index = () => {
                       size="sm"
                       onClick={handleAddRow}
                       disabled={addMutation.isPending}
-                      className="h-8 px-4 text-xs font-medium transition-all duration-300 hover:shadow-lg hover:scale-105 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground"
+                      className="h-7 px-3 text-xs"
                     >
                       {addMutation.isPending ? "..." : "Add"}
                     </Button>
@@ -730,7 +718,6 @@ const Index = () => {
               </>
             )}
           </ResizableTableBody>
-        </div>
         </ResizableTable>
       </div>
     </div>
@@ -814,12 +801,12 @@ function SpreadsheetRow({
 
   return (
     <ResizableTableRow 
-      className={`hover:bg-muted/30 transition-all duration-300 group backdrop-blur-sm ${
-        isSelected ? "bg-primary/20 border-l-4 border-primary" : ""
+      className={`hover:bg-muted/50 transition-all duration-200 group ${
+        isSelected ? "bg-primary/10" : ""
       } ${
-        isDragging ? "opacity-70 scale-98 shadow-xl" : ""
+        isDragging ? "opacity-50 scale-95 shadow-lg" : ""
       } ${
-        dropTarget === customer.id ? "border-2 border-dashed border-primary shadow-md" : ""
+        dropTarget === customer.id ? "border-2 border-dashed border-primary" : ""
       }`}
       onDragOver={onDragOver}
       onDragEnter={(e) => onDragEnter(e, customer.id)}
@@ -839,7 +826,7 @@ function SpreadsheetRow({
         <div className="flex items-center h-8">
           <Popover>
             <PopoverTrigger asChild>
-              <button className="ml-2 w-5 h-5 rounded-full border-2 border-muted-foreground/30 flex-shrink-0 shadow-sm hover:shadow-md transition-all duration-300 hover:scale-110" 
+              <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
                 style={{ backgroundColor: localColor && localColor !== "" ? localColor : 'white' }} />
             </PopoverTrigger>
             <PopoverContent className="w-auto p-2" align="start">
@@ -849,7 +836,7 @@ function SpreadsheetRow({
                     key={color || 'none'}
                     variant="ghost"
                     size="sm"
-                    className="h-7 w-7 p-0 transition-all duration-300 hover:scale-110 hover:shadow-md"
+                    className="h-6 w-6 p-0"
                     onClick={() => handleColorChange(color as any)}
                   >
                     <div 
@@ -944,7 +931,7 @@ function SpreadsheetRow({
             const whatsappUrl = `https://wa.me/${phoneNumber}`;
             window.open(whatsappUrl, '_blank');
           }}
-          className="h-7 w-7 p-0 text-muted-foreground hover:text-green-500 transition-all duration-300 hover:scale-110 hover:shadow-md"
+          className="h-6 w-6 p-0 text-muted-foreground hover:text-green-600"
         >
           <MessageCircle className="h-3 w-3" />
         </Button>
