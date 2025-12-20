@@ -8,7 +8,7 @@ import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare 
 import { format, isToday, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers } from "@/lib/api";
 
 import { useAuth } from "@/context/AuthContext";
 import { LogOut } from "lucide-react";

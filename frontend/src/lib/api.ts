@@ -76,6 +76,3 @@ export const bulkDeleteCustomers = async (ids: string[]): Promise<{ deletedCount
   return response.data;
 };
 
-export const reorderCustomers = async (customerIds: string[]): Promise<void> => {
-  await axios.post(`${API_URL}/reorder`, { customerIds });
-};

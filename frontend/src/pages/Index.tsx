@@ -8,7 +8,7 @@ import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare 
 import { format, isToday, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers } from "@/lib/api";
 
 import { useAuth } from "@/context/AuthContext";
 import { LogOut } from "lucide-react";
@@ -26,9 +26,7 @@ const Index = () => {
   // Bulk selection state
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
 
-  // Drag and drop state
-  const [draggedItem, setDraggedItem] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
+
 
   // New row state
   const [newRow, setNewRow] = useState({
@@ -132,22 +130,7 @@ const Index = () => {
     },
   });
 
-  // Reorder customers mutation
-  const reorderMutation = useMutation({
-    mutationFn: reorderCustomers,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
-    },
-    onError: (error: unknown) => {
-      let errorMessage = "Failed to reorder customers";
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-      toast({ title: "Error reordering customers", description: errorMessage, variant: "destructive" });
-    },
-  });
+
 
   const displayedCustomers = useMemo(() => {
     if (!customers) return [];
@@ -189,61 +172,17 @@ const Index = () => {
     }
   };
 
-  // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    e.dataTransfer.setData("text/plain", id);
-    setDraggedItem(id);
-    e.dataTransfer.effectAllowed = "move";
-  };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  };
 
-  const handleDragEnter = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    setDropTarget(targetId);
-  };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    // Only clear drop target if we're leaving the table
-    if (e.currentTarget.contains(e.relatedTarget as Node)) {
-      return;
-    }
-    setDropTarget(null);
-  };
 
-  const handleDrop = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    const draggedId = e.dataTransfer.getData("text/plain");
-    
-    if (draggedId !== targetId) {
-      // Reorder the customers
-      const newOrder = [...displayedCustomers];
-      const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
-      const targetIndex = newOrder.findIndex(c => c.id === targetId);
-      
-      if (draggedIndex !== -1 && targetIndex !== -1) {
-        // Remove the dragged item
-        const [removed] = newOrder.splice(draggedIndex, 1);
-        // Insert it at the new position
-        newOrder.splice(targetIndex, 0, removed);
-        
-        // Get the IDs in the new order
-        const reorderedIds = newOrder.map(c => c.id);
-        reorderMutation.mutate(reorderedIds);
-      }
-    }
-    
-    setDraggedItem(null);
-    setDropTarget(null);
-  };
 
-  const handleDragEnd = () => {
-    setDraggedItem(null);
-    setDropTarget(null);
-  };
+
+
+
+
+
+
 
   // Render different states based on conditions
   if (!user) {
@@ -496,17 +435,9 @@ const Index = () => {
                       customer={customer}
                       index={index + 1}
                       isSelected={selectedCustomers.has(customer.id)}
-                      isDragging={draggedItem === customer.id}
-                      dropTarget={dropTarget}
                       onToggleSelect={toggleCustomerSelection}
                       onCellChange={handleCellChange}
                       onDelete={() => deleteMutation.mutate(customer.id)}
-                      onDragStart={handleDragStart}
-                      onDragOver={handleDragOver}
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onDragEnd={handleDragEnd}
                     />
                     
                     {/* Drop zone after last row */}
@@ -639,27 +570,13 @@ function SpreadsheetRow({
   onToggleSelect,
   onCellChange,
   onDelete,
-  onDragStart,
-  onDragOver,
-  onDragEnter,
-  onDragLeave,
-  onDrop,
-  onDragEnd,
 }: {
   customer: Customer;
   index: number;
   isSelected: boolean;
-  isDragging: boolean;
-  dropTarget: string | null;
   onToggleSelect: (id: string) => void;
   onCellChange: (id: string, field: string, value: string) => void;
   onDelete: () => void;
-  onDragStart: (e: React.DragEvent, id: string) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDragEnter: (e: React.DragEvent, targetId: string) => void;
-  onDragLeave: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent, targetId: string) => void;
-  onDragEnd: () => void;
 }) {
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
@@ -676,18 +593,7 @@ function SpreadsheetRow({
     <ResizableTableRow 
       className={`hover:bg-muted/50 transition-all duration-200 ${
         isSelected ? "bg-primary/10" : ""
-      } ${
-        isDragging ? "opacity-50 scale-95 shadow-lg" : ""
-      } ${
-        dropTarget === customer.id ? "border-2 border-dashed border-primary" : ""
       }`}
-      draggable
-      onDragStart={(e) => onDragStart(e, customer.id)}
-      onDragOver={onDragOver}
-      onDragEnter={(e) => onDragEnter(e, customer.id)}
-      onDragLeave={onDragLeave}
-      onDrop={(e) => onDrop(e, customer.id)}
-      onDragEnd={onDragEnd}
     >
       <ResizableTableCell className="border border-border px-3 py-1 text-xs text-muted-foreground text-center">
         <Button
@@ -704,10 +610,9 @@ function SpreadsheetRow({
         </Button>
       </ResizableTableCell>
       <ResizableTableCell 
-        className="border border-border px-1 py-1 text-center cursor-move group"
-        title="Drag to reorder"
+        className="border border-border px-1 py-1 text-center"
       >
-        <GripVertical className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+        {/* Empty cell */}
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <Input

@@ -22,6 +22,7 @@ export interface Customer {
   remark: string | null;
   created_at?: string;
   updated_at?: string;
+  position?: number;
 }
 
 export const fetchCustomers = async (): Promise<Customer[]> => {

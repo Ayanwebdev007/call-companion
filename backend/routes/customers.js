@@ -9,7 +9,7 @@ const router = express.Router();
 // GET all customers for logged in user
 router.get('/', auth, async (req, res) => {
   try {
-    const customers = await Customer.find({ user_id: req.user.id }).sort({ next_call_date: 1, next_call_time: 1 });
+    const customers = await Customer.find({ user_id: req.user.id }).sort({ position: 1, next_call_date: 1, next_call_time: 1 });
     res.json(customers);
   } catch (err) {
     res.status(500).json({ message: err.message });
