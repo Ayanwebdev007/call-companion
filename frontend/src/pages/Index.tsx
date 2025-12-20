@@ -689,6 +689,7 @@ function SpreadsheetRow({
   isSelected,
   isDragging,
   dropTarget,
+  selectedCustomers,
   onToggleSelect,
   onCellChange,
   onDelete,
@@ -755,7 +756,7 @@ function SpreadsheetRow({
       onDrop={(e) => onDrop(e, customer.id)}
       onDragEnd={onDragEnd}
     >
-      <ResizableTableCell className={`border border-border px-3 py-1 text-xs text-muted-foreground text-center opacity-0 group-hover:opacity-100 transition-opacity ${selectedCustomers.size > 0 ? 'opacity-100' : ''}`}>
+      <ResizableTableCell className={`border border-border px-3 py-1 text-xs text-muted-foreground text-center opacity-0 group-hover:opacity-100 transition-opacity ${selectedCustomers && selectedCustomers.size > 0 ? 'opacity-100' : ''}`}>
         <Button
           variant="ghost"
           size="sm"
