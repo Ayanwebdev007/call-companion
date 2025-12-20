@@ -25,6 +25,7 @@ const Index = () => {
   
   // Bulk selection state
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
+  const [showCheckboxes, setShowCheckboxes] = useState(false);
 
   // Drag and drop state
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
@@ -371,10 +372,20 @@ const Index = () => {
           >
             All Customers ({customers.length})
           </Button>
+          <div className="h-6 w-px bg-border" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCheckboxes(true)}
+            className="h-7 px-2 text-xs flex items-center gap-1"
+          >
+            <Trash2 className="h-3 w-3" />
+            Delete
+          </Button>
         </div>
 
         {/* Bulk Actions Bar */}
-        {selectedCustomers.size > 0 && (
+        {(showCheckboxes || selectedCustomers.size > 0) && (
           <div className="bg-primary/10 border-b border-border px-4 py-2 flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-primary">
@@ -393,11 +404,31 @@ const Index = () => {
             <Button 
               variant="destructive" 
               size="sm" 
-              onClick={handleBulkDelete}
+              onClick={() => {
+                if (window.confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)?`)) {
+                  bulkDeleteMutation.mutate(Array.from(selectedCustomers), {
+                    onSuccess: () => {
+                      setShowCheckboxes(false);
+                      setSelectedCustomers(new Set());
+                    }
+                  });
+                }
+              }}
               disabled={bulkDeleteMutation.isPending}
               className="h-7 px-2 text-xs"
             >
               {bulkDeleteMutation.isPending ? "Deleting..." : "Delete Selected"}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => {
+                setShowCheckboxes(false);
+                setSelectedCustomers(new Set());
+              }}
+              className="h-7 px-2 text-xs ml-auto"
+            >
+              Cancel
             </Button>
           </div>
         )}
@@ -428,10 +459,11 @@ const Index = () => {
                 </Button>
               </ResizableTableHead>
               <ResizableTableHead 
-                className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-8"
+                className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-8 cursor-move"
                 resizable={false}
+                title="Drag to reorder"
               >
-                {/* Drag handle column header */}
+                {/* Hidden drag handle column */}
               </ResizableTableHead>
               <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
                 Customer Name
@@ -520,6 +552,7 @@ const Index = () => {
                       isDragging={draggedItem === customer.id}
                       dropTarget={dropTarget}
                       selectedCustomers={selectedCustomers}
+                      showCheckboxes={showCheckboxes}
                       onToggleSelect={toggleCustomerSelection}
                       onCellChange={handleCellChange}
                       onDelete={() => deleteMutation.mutate(customer.id)}
@@ -715,6 +748,7 @@ function SpreadsheetRow({
   onDragLeave: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, targetId: string) => void;
   onDragEnd: () => void;
+  showCheckboxes: boolean;
 }) {
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
@@ -756,7 +790,9 @@ function SpreadsheetRow({
       onDrop={(e) => onDrop(e, customer.id)}
       onDragEnd={onDragEnd}
     >
-      <ResizableTableCell className={`border border-border px-3 py-1 text-xs text-muted-foreground text-center opacity-0 group-hover:opacity-100 transition-opacity ${selectedCustomers && selectedCustomers.size > 0 ? 'opacity-100' : ''}`}>
+      <ResizableTableCell 
+        className="border border-border px-3 py-1 text-xs text-muted-foreground text-center ${(showCheckboxes || (selectedCustomers && selectedCustomers.size > 0)) ? '' : 'hidden'}"
+      >
         <Button
           variant="ghost"
           size="sm"
@@ -771,12 +807,12 @@ function SpreadsheetRow({
         </Button>
       </ResizableTableCell>
       <ResizableTableCell 
-        className="border border-border px-1 py-1 text-center cursor-move group opacity-0 group-hover:opacity-100 transition-opacity"
+        className="border border-border px-1 py-1 text-center cursor-move"
         title="Drag to reorder"
         draggable
         onDragStart={(e) => onDragStart(e, customer.id)}
       >
-        <GripVertical className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+        {/* Hidden drag handle */}
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <div className="flex items-center h-8">
@@ -873,16 +909,7 @@ function SpreadsheetRow({
           <MessageCircle className="h-3 w-3" />
         </Button>
       </ResizableTableCell>
-      <ResizableTableCell className="border border-border p-1 text-center opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onDelete}
-          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
-      </ResizableTableCell>
+      {/* Individual delete button removed per user request */}
     </ResizableTableRow>
   );
 }
