@@ -220,7 +220,7 @@ const Index = () => {
     const draggedId = e.dataTransfer.getData("text/plain");
     
     if (draggedId !== targetId) {
-      // Reorder the customers
+      // Optimistically update the UI immediately
       const newOrder = [...displayedCustomers];
       const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
       const targetIndex = newOrder.findIndex(c => c.id === targetId);
@@ -231,9 +231,18 @@ const Index = () => {
         // Insert it at the new position
         newOrder.splice(targetIndex, 0, removed);
         
+        // Update UI immediately
+        queryClient.setQueryData(["customers"], newOrder);
+        
         // Get the IDs in the new order
         const reorderedIds = newOrder.map(c => c.id);
-        reorderMutation.mutate(reorderedIds);
+        reorderMutation.mutate(reorderedIds, {
+          onError: () => {
+            // Rollback on error
+            queryClient.setQueryData(["customers"], displayedCustomers);
+            toast({ title: "Failed to reorder customers", variant: "destructive" });
+          }
+        });
       }
     }
     
