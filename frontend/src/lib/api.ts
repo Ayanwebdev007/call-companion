@@ -70,6 +70,7 @@ export const deleteCustomer = async (id: string): Promise<void> => {
 };
 
 export const bulkDeleteCustomers = async (ids: string[]): Promise<{ deletedCount: number }> => {
-  const response = await axios.delete(`${API_URL}/bulk`, { data: { ids } });
+  // Use axios.post instead of axios.delete with data to avoid potential issues
+  const response = await axios.post(`${API_URL}/bulk-delete`, { ids });
   return response.data;
 };

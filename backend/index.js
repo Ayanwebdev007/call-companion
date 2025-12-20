@@ -41,6 +41,7 @@ app.use(cors({
   credentials: true
 }));
 
+// Parse JSON bodies for all requests, including DELETE
 app.use(express.json());
 
 // Only apply fileUpload middleware to routes that need it

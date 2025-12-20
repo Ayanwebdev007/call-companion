@@ -207,8 +207,8 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// BULK DELETE customers
-router.delete('/bulk', auth, async (req, res) => {
+// BULK DELETE customers (using POST instead of DELETE with data)
+router.post('/bulk-delete', auth, async (req, res) => {
   try {
     console.log('Bulk delete request received');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
