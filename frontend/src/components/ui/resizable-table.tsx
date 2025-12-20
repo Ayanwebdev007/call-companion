@@ -8,13 +8,13 @@ interface ResizableTableProps extends React.TableHTMLAttributes<HTMLTableElement
 
 const ResizableTable = React.forwardRef<HTMLTableElement, ResizableTableProps>(
   ({ className, containerClassName, ...props }, ref) => (
-    <div className={cn("relative w-full h-full", containerClassName)}>
-      <div className="h-full overflow-auto">
-      <table
-        ref={ref}
-        className={cn("w-full caption-bottom text-sm", className)}
-        {...props}
-      />
+    <div className={cn("relative w-full h-full flex flex-col", containerClassName)}>
+      <div className="flex-grow overflow-y-auto">
+        <table
+          ref={ref}
+          className={cn("w-full caption-bottom text-sm", className)}
+          {...props}
+        />
       </div>
     </div>
   )
@@ -25,7 +25,7 @@ const ResizableTableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+  <thead ref={ref} className={cn("[&_tr]:border-b sticky top-0 z-10", className)} {...props} />
 ));
 ResizableTableHeader.displayName = "ResizableTableHeader";
 

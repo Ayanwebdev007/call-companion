@@ -157,5 +157,6 @@
     position: sticky;
     top: 0;
     background: hsl(var(--muted));
+    z-index: 20;
   }
 }
