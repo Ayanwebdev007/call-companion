@@ -707,24 +707,6 @@ function SpreadsheetRow({
     }
   };
 
-  // Determine row color based on manual selection
-  const getRowColorClass = () => {
-    if (isSelected) return "bg-primary/10"; // Keep selection color as priority
-    
-    // Map color names to Tailwind classes
-    const colorMap: Record<string, string> = {
-      red: "bg-red-100 dark:bg-red-900/50",
-      orange: "bg-orange-100 dark:bg-orange-900/50",
-      yellow: "bg-yellow-100 dark:bg-yellow-900/50",
-      green: "bg-green-100 dark:bg-green-900/50",
-      blue: "bg-blue-100 dark:bg-blue-900/50",
-      purple: "bg-purple-100 dark:bg-purple-900/50",
-      pink: "bg-pink-100 dark:bg-pink-900/50",
-    };
-    
-    return customer.color && customer.color !== "" ? colorMap[customer.color] : "";
-  };
-
   // Handle color change
   const handleColorChange = (color: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null) => {
     onCellChange(customer.id, "color", color === null ? null : color);
@@ -732,7 +714,9 @@ function SpreadsheetRow({
 
   return (
     <ResizableTableRow 
-      className={`hover:bg-muted/50 transition-all duration-200 ${getRowColorClass()} ${
+      className={`hover:bg-muted/50 transition-all duration-200 ${
+        isSelected ? "bg-primary/10" : ""
+      } ${
         isDragging ? "opacity-50 scale-95 shadow-lg" : ""
       } ${
         dropTarget === customer.id ? "border-2 border-dashed border-primary" : ""
