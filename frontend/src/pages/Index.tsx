@@ -596,17 +596,6 @@ const Index = () => {
                   <ResizableTableCell className="border border-border px-3 py-1 text-xs text-primary font-medium text-center">
                     NEW
                   </ResizableTableCell>
-                  <ResizableTableCell 
-                    className="border border-border px-1 py-1 text-center cursor-move group"
-                    title="Drag to reorder"
-                    draggable
-                    onDragStart={(e) => {
-                      e.dataTransfer.setData("text/plain", "new-row");
-                      setDraggedItem("new-row");
-                    }}
-                  >
-                    <GripVertical className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                  </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
                     <div className="flex items-center h-9">
                       <Popover>
@@ -637,7 +626,7 @@ const Index = () => {
                         value={newRow.customer_name}
                         onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
                         className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset flex-grow"
-                        placeholder="Enter customer name..."
+                        placeholder="Customer Name"
                       />
                     </div>
                   </ResizableTableCell>
@@ -646,7 +635,7 @@ const Index = () => {
                       value={newRow.company_name}
                       onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
                       className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
-                      placeholder="Enter company..."
+                      placeholder="Company Name"
                     />
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
@@ -654,7 +643,7 @@ const Index = () => {
                       value={newRow.phone_number}
                       onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
                       className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
-                      placeholder="Enter phone..."
+                      placeholder="Phone Number"
                     />
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
@@ -689,7 +678,7 @@ const Index = () => {
                   value={newRow.remark}
                       onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
                       className="border-0 rounded-none h-9 text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset"
-                      placeholder="Enter remark..."
+                      placeholder="Remark"
                     />
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-1 text-center">
