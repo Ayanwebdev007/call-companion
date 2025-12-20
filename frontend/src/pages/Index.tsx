@@ -565,7 +565,7 @@ const Index = () => {
                       <Popover>
                         <PopoverTrigger asChild>
                           <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
-                            style={{ backgroundColor: newRow.color || 'white' }} />
+                            style={{ backgroundColor: newRow.color && newRow.color !== "" ? newRow.color : 'white' }} />
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-2" align="start">
                           <div className="grid grid-cols-4 gap-1">
@@ -722,12 +722,12 @@ function SpreadsheetRow({
       pink: "bg-pink-100 dark:bg-pink-900/50",
     };
     
-    return customer.color ? colorMap[customer.color] : "";
+    return customer.color && customer.color !== "" ? colorMap[customer.color] : "";
   };
 
   // Handle color change
   const handleColorChange = (color: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null) => {
-    onCellChange(customer.id, "color", color || "");
+    onCellChange(customer.id, "color", color === null ? null : color);
   };
 
   return (
@@ -770,7 +770,7 @@ function SpreadsheetRow({
           <Popover>
             <PopoverTrigger asChild>
               <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
-                style={{ backgroundColor: customer.color || 'white' }} />
+                style={{ backgroundColor: customer.color && customer.color !== "" ? customer.color : 'white' }} />
             </PopoverTrigger>
             <PopoverContent className="w-auto p-2" align="start">
               <div className="grid grid-cols-4 gap-1">

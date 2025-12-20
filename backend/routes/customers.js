@@ -30,6 +30,7 @@ router.post('/', auth, async (req, res) => {
     next_call_date: req.body.next_call_date,
     next_call_time: req.body.next_call_time,
     remark: req.body.remark,
+    color: req.body.color || null,
     position: newPosition
   });
 
@@ -125,6 +126,7 @@ router.post('/bulk-import', auth, async (req, res) => {
         next_call_date: nextCallDate,
         next_call_time: (row['next_call_time'] || row['nextcalltime'] || '').toString().trim(),
         remark: (row['remark'] || '').toString().trim(),
+        color: null, // Default to null for imported customers
         position: currentPosition++
       };
 
@@ -159,7 +161,8 @@ router.get('/download-template', auth, async (req, res) => {
       'phone_number': '+1234567890',
       'next_call_date': '2023-12-25',
       'next_call_time': '14:30',
-      'remark': 'Important client'
+      'remark': 'Important client',
+      'color': ''
     }];
 
     // Create workbook and worksheet
