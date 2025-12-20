@@ -449,8 +449,8 @@ const Index = () => {
 
 
       {/* Spreadsheet - Only this section should scroll */}
-      <div className="flex-1 overflow-auto p-4 bg-background/50">
-        <ResizableTable className="w-full border-collapse rounded-xl overflow-hidden shadow-lg">
+      <div className="flex-1 flex flex-col p-4 bg-background/50">
+        <ResizableTable className="w-full border-collapse rounded-xl overflow-hidden shadow-lg flex-1 flex flex-col">
           <ResizableTableHeader className="bg-muted/80 backdrop-blur-sm sticky top-0 shadow-md z-10 border-b border-border/50">
             <ResizableTableRow>
               <ResizableTableHead 
@@ -508,8 +508,9 @@ const Index = () => {
               )}
             </ResizableTableRow>
           </ResizableTableHeader>
-          <ResizableTableBody>
-            {isLoading ? (
+          <div className="flex-1 overflow-auto">
+            <ResizableTableBody>
+              {isLoading ? (
               <ResizableTableRow>
                 <ResizableTableCell colSpan={showCheckboxes ? 10 : 9} className="border border-border px-3 py-8 text-center text-muted-foreground">
                   Loading...
@@ -729,6 +730,7 @@ const Index = () => {
               </>
             )}
           </ResizableTableBody>
+        </div>
         </ResizableTable>
       </div>
     </div>
