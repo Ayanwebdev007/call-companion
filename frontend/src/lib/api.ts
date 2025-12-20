@@ -52,6 +52,7 @@ export const bulkImportCustomers = async (file: File): Promise<BulkImportRespons
   });
   return response.data;
 };
+
 export const downloadTemplate = async (): Promise<Blob> => {
   const response = await axios.get(`${API_URL}/download-template`, {
     responseType: 'blob',
@@ -66,4 +67,9 @@ export const updateCustomer = async (id: string, updates: Partial<Customer>): Pr
 
 export const deleteCustomer = async (id: string): Promise<void> => {
   await axios.delete(`${API_URL}/${id}`);
+};
+
+export const bulkDeleteCustomers = async (ids: string[]): Promise<{ deletedCount: number }> => {
+  const response = await axios.delete(`${API_URL}/bulk`, { data: { ids } });
+  return response.data;
 };

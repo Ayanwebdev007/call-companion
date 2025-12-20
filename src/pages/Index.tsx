@@ -1,10 +1,13 @@
+// Add a comment to force redeployment
+// Redeploy bulk delete feature - 2025-12-20
+
 import { useState, useMemo, useRef, useEffect, memo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Download, Upload, Trash } from "lucide-react";
 import { format, isToday, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +26,7 @@ const Index = () => {
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
   
-  // Bulk selection state
+  // State for selected customers for bulk delete
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
 
   // New row state
@@ -108,7 +111,7 @@ const Index = () => {
       toast({ title: "Error deleting customer", description: errorMessage, variant: "destructive" });
     },
   });
-
+  
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
     mutationFn: bulkDeleteCustomers,
@@ -139,31 +142,38 @@ const Index = () => {
     return customers.filter((c) => c.next_call_date === targetDateStr);
   }, [customers, viewMode, selectedDate]);
 
-  // Toggle customer selection
+  // Handle customer selection for bulk delete
   const toggleCustomerSelection = (customerId: string) => {
-    const newSelected = new Set(selectedCustomers);
-    if (newSelected.has(customerId)) {
-      newSelected.delete(customerId);
-    } else {
-      newSelected.add(customerId);
-    }
-    setSelectedCustomers(newSelected);
+    setSelectedCustomers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(customerId)) {
+        newSet.delete(customerId);
+      } else {
+        newSet.add(customerId);
+      }
+      return newSet;
+    });
   };
 
   // Select all customers
   const selectAllCustomers = () => {
     if (selectedCustomers.size === displayedCustomers.length && displayedCustomers.length > 0) {
+      // Deselect all
       setSelectedCustomers(new Set());
     } else {
+      // Select all
       setSelectedCustomers(new Set(displayedCustomers.map(c => c.id)));
     }
   };
 
   // Handle bulk delete
   const handleBulkDelete = () => {
-    if (selectedCustomers.size === 0) return;
+    if (selectedCustomers.size === 0) {
+      toast({ title: "No customers selected", description: "Please select customers to delete", variant: "destructive" });
+      return;
+    }
     
-    if (window.confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)?`)) {
+    if (confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)? This action cannot be undone.`)) {
       bulkDeleteMutation.mutate(Array.from(selectedCustomers));
     }
   };
@@ -276,36 +286,20 @@ const Index = () => {
         >
           All Customers ({customers.length})
         </Button>
-      </div>
-
-      {/* Bulk Actions Bar */}
-      {selectedCustomers.size > 0 && (
-        <div className="bg-primary/10 border-b border-border px-4 py-2 flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-primary">
-              {selectedCustomers.size} selected
-            </span>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={selectAllCustomers}
-              className="h-7 px-2 text-xs"
-            >
-              {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
-            </Button>
-          </div>
-          <div className="h-4 w-px bg-border" />
-          <Button 
-            variant="destructive" 
-            size="sm" 
+        
+        {/* Bulk Delete Button - Always visible when there are customers */}
+        {displayedCustomers.length > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
             onClick={handleBulkDelete}
-            disabled={bulkDeleteMutation.isPending}
-            className="h-7 px-2 text-xs"
+            disabled={bulkDeleteMutation.isPending || selectedCustomers.size === 0}
           >
-            {bulkDeleteMutation.isPending ? "Deleting..." : "Delete Selected"}
+            <Trash className="h-4 w-4 mr-2" />
+            Delete {selectedCustomers.size > 0 ? `${selectedCustomers.size} Selected` : "Selected"}
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Spreadsheet */}
       <div className="flex-1 overflow-auto">
@@ -316,18 +310,12 @@ const Index = () => {
                 className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10"
                 resizable={false}
               >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-4 w-4 p-0"
-                  onClick={selectAllCustomers}
-                >
-                  {selectedCustomers.size === displayedCustomers.length && displayedCustomers.length > 0 ? (
-                    <CheckSquare className="h-3 w-3" />
-                  ) : (
-                    <Square className="h-3 w-3" />
-                  )}
-                </Button>
+                <input
+                  type="checkbox"
+                  checked={selectedCustomers.size > 0 && selectedCustomers.size === displayedCustomers.length}
+                  onChange={selectAllCustomers}
+                  className="h-4 w-4"
+                />
               </ResizableTableHead>
               <ResizableTableHead className="border border-border px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px]">
                 Customer Name
@@ -384,10 +372,10 @@ const Index = () => {
                     key={customer.id}
                     customer={customer}
                     index={index + 1}
-                    isSelected={selectedCustomers.has(customer.id)}
-                    onToggleSelect={toggleCustomerSelection}
                     onCellChange={handleCellChange}
                     onDelete={() => deleteMutation.mutate(customer.id)}
+                    isSelected={selectedCustomers.has(customer.id)}
+                    onToggleSelect={() => toggleCustomerSelection(customer.id)}
                   />
                 ))}
                 {/* New Row Input */}
@@ -480,17 +468,17 @@ const Index = () => {
 function SpreadsheetRow({
   customer,
   index,
-  isSelected,
-  onToggleSelect,
   onCellChange,
   onDelete,
+  isSelected,
+  onToggleSelect,
 }: {
   customer: Customer;
   index: number;
-  isSelected: boolean;
-  onToggleSelect: (id: string) => void;
   onCellChange: (id: string, field: string, value: string) => void;
   onDelete: () => void;
+  isSelected: boolean;
+  onToggleSelect: () => void;
 }) {
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
@@ -504,20 +492,14 @@ function SpreadsheetRow({
   };
 
   return (
-    <ResizableTableRow className={`hover:bg-muted/50 ${isSelected ? "bg-primary/10" : ""}`}>
+    <ResizableTableRow className={`hover:bg-muted/50 ${isSelected ? 'bg-blue-50' : ''}`}>
       <ResizableTableCell className="border border-border px-3 py-1 text-xs text-muted-foreground text-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-4 w-4 p-0"
-          onClick={() => onToggleSelect(customer.id)}
-        >
-          {isSelected ? (
-            <CheckSquare className="h-3 w-3 text-primary" />
-          ) : (
-            <Square className="h-3 w-3" />
-          )}
-        </Button>
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          className="h-4 w-4"
+        />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <Input
