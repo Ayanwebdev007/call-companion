@@ -557,8 +557,16 @@ const Index = () => {
                   <ResizableTableCell className="border border-border px-3 py-1 text-xs text-primary font-medium text-center">
                     NEW
                   </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                    {/* Empty cell for drag handle column */}
+                  <ResizableTableCell 
+                    className="border border-border px-1 py-1 text-center cursor-move group"
+                    title="Drag to reorder"
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/plain", "new-row");
+                      setDraggedItem("new-row");
+                    }}
+                  >
+                    <GripVertical className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
                     <div className="flex items-center h-9">
@@ -721,8 +729,6 @@ function SpreadsheetRow({
       } ${
         dropTarget === customer.id ? "border-2 border-dashed border-primary" : ""
       }`}
-      draggable
-      onDragStart={(e) => onDragStart(e, customer.id)}
       onDragOver={onDragOver}
       onDragEnter={(e) => onDragEnter(e, customer.id)}
       onDragLeave={onDragLeave}
@@ -746,6 +752,8 @@ function SpreadsheetRow({
       <ResizableTableCell 
         className="border border-border px-1 py-1 text-center cursor-move group"
         title="Drag to reorder"
+        draggable
+        onDragStart={(e) => onDragStart(e, customer.id)}
       >
         <GripVertical className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
       </ResizableTableCell>
