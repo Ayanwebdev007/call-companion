@@ -85,6 +85,13 @@ export const downloadTemplate = async (): Promise<Blob> => {
   return response.data;
 };
 
+export const exportCustomers = async (spreadsheetId: string): Promise<Blob> => {
+  const response = await axios.get(`${API_URL}/export/${spreadsheetId}`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
 export const updateCustomer = async (id: string, updates: Partial<Customer>): Promise<Customer> => {
   const response = await axios.put(`${API_URL}/${id}`, updates);
   return response.data;

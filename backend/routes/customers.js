@@ -305,6 +305,73 @@ router.get('/download-template', auth, async (req, res) => {
   }
 });
 
+// EXPORT customer data for a specific spreadsheet
+router.get('/export/:spreadsheetId', auth, async (req, res) => {
+  try {
+    const { spreadsheetId } = req.params;
+    
+    // Validate spreadsheetId
+    if (!spreadsheetId || spreadsheetId === 'undefined') {
+      return res.status(400).json({ message: 'Valid spreadsheet ID is required' });
+    }
+    
+    // Check if user has access to this spreadsheet (either owner or shared with access)
+    const spreadsheet = await Spreadsheet.findById(spreadsheetId);
+    if (!spreadsheet) {
+      return res.status(404).json({ message: 'Spreadsheet not found' });
+    }
+    
+    // Check ownership or sharing permissions
+    const isOwner = spreadsheet.user_id.toString() === req.user.id;
+    const sharedRecord = await Sharing.findOne({
+      spreadsheet_id: spreadsheetId,
+      shared_with_user_id: req.user.id
+    });
+    
+    if (!isOwner && !sharedRecord) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+    
+    // Fetch customers for this spreadsheet
+    const customers = await Customer.find({ spreadsheet_id: spreadsheetId }).sort({ createdAt: 1 });
+    
+    // Transform customer data for export
+    const exportData = customers.map(customer => ({
+      'customer_name': customer.customer_name || '',
+      'company_name': customer.company_name || '',
+      'phone_number': customer.phone_number || '',
+      'last_call_date': customer.last_call_date ? customer.last_call_date.toISOString().split('T')[0] : '',
+      'next_call_date': customer.next_call_date ? customer.next_call_date.toISOString().split('T')[0] : '',
+      'next_call_time': customer.next_call_time || '',
+      'remark': customer.remark || '',
+      'color': customer.color || ''
+    }));
+    
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+    
+    // Write to buffer
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    
+    // Convert buffer for proper sending
+    const bufferArray = Buffer.from(buffer);
+    
+    // Set headers for download
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${spreadsheet.name.replace(/[^a-zA-Z0-9]/g, '_')}_export.xlsx"`);
+    
+    // Send the buffer
+    res.send(bufferArray);
+  } catch (err) {
+    console.error('Export error:', err);
+    res.status(500).json({ message: 'Error exporting data', error: err.message });
+  }
+});
+
 // UPDATE customer
 router.put('/:id', auth, async (req, res) => {
   try {

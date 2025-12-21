@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Download } from "lucide-react";
 import { format, isToday, parseISO, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers } from "@/lib/api";
 
 import { useAuth } from "@/context/AuthContext";
 import { LogOut } from "lucide-react";
@@ -371,6 +371,29 @@ const Index = () => {
                 </div>
               )}
               <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
+              <Button variant="outline" size="sm" onClick={async () => {
+                if (!spreadsheetId) return;
+                try {
+                  const blob = await exportCustomers(spreadsheetId);
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `customers_export.xlsx`;
+                  document.body.appendChild(a);
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                  document.body.removeChild(a);
+                } catch (error) {
+                  console.error('Export failed:', error);
+                  toast({
+                    title: "Export failed",
+                    description: "Failed to export customer data. Please try again.",
+                    variant: "destructive",
+                  });
+                }
+              }}>
+                <Download className="h-4 w-4" />
+              </Button>
               <Button variant="outline" size="sm" onClick={logout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
