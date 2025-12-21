@@ -868,23 +868,14 @@ function SpreadsheetRow({
   rowHeights: Record<string, number>;
   setRowHeights: React.Dispatch<React.SetStateAction<Record<string, number>>>;
 }) {
-  const rowRef = useRef<HTMLTableRowElement>(null);
-  
-  // Log ref for debugging
-  useEffect(() => {
-    console.log('Row ref for customer', customer.id, rowRef.current);
-  }, [customer.id]);
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
   );
 
   // Set initial row height
   useEffect(() => {
-    if (rowRef.current && rowHeights[customer.id]) {
-      console.log('Setting initial row height for', customer.id, 'to', rowHeights[customer.id]);
-      rowRef.current.style.height = `${rowHeights[customer.id]}px`;
-    }
-  }, [rowHeights, customer.id]);
+    // This will be handled by the parent component setting the style directly
+  }, []);
   const [lastCallDate, setLastCallDate] = useState<Date | undefined>(
     customer.last_call_date ? parseISO(customer.last_call_date) : undefined
   );
@@ -924,7 +915,6 @@ function SpreadsheetRow({
 
   return (
     <ResizableTableRow 
-      ref={rowRef}
       className={`hover:bg-muted/50 transition-all duration-200 group ${
         isSelected ? "bg-primary/10" : ""
       } ${
@@ -939,55 +929,44 @@ function SpreadsheetRow({
       onDragEnd={onDragEnd}
     >
       <ResizableTableCell 
-        className="border border-border px-3 py-1 text-xs text-muted-foreground text-center relative"
+        className="border border-border px-3 py-1 text-xs text-muted-foreground text-center relative group"
         style={{ height: '100%' }}
+        title="Drag to reorder"
+        draggable
+        onDragStart={(e) => onDragStart(e, customer.id)}
       >
-        {/* Drag handle area */}
-        <div 
-          className="absolute inset-0 cursor-move"
-          title="Drag to reorder"
-          draggable
-          onDragStart={(e) => onDragStart(e, customer.id)}
-        >
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            {index}
-          </div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          {index}
         </div>
-        
-        {/* Row resize handle */}
+        {/* Simple row resize handle */}
         <div 
-          className="absolute bottom-0 left-0 right-0 h-1 cursor-row-resize bg-muted-foreground/20 hover:bg-muted-foreground/50 group-hover:bg-muted-foreground/50"
+          className="absolute -bottom-1 left-0 right-0 h-2 cursor-row-resize opacity-0 group-hover:opacity-100 hover:opacity-100 hover:bg-muted-foreground/30"
           onMouseDown={(e) => {
-            console.log('Row resize handle clicked');
+            // Prevent drag event from firing
             e.preventDefault();
             e.stopPropagation();
             
+            const rowElement = e.currentTarget.closest('tr');
+            if (!rowElement) return;
+            
             const startY = e.clientY;
-            const startHeight = rowRef.current?.offsetHeight || 40;
-            console.log('Starting resize, startHeight:', startHeight);
+            const startHeight = rowElement.offsetHeight;
             
             const onMouseMove = (moveEvent: MouseEvent) => {
-              console.log('Mouse moving during resize');
-              if (!rowRef.current) return;
-              
-              // Calculate new height with snapping
               const deltaY = moveEvent.clientY - startY;
-              const newHeight = startHeight + deltaY;
-              const snappedHeight = Math.round(newHeight / 10) * 10; // Snap to nearest 10px
-              const clampedHeight = Math.max(40, snappedHeight); // Minimum height of 40px
+              const newHeight = Math.max(40, startHeight + deltaY);
+              rowElement.style.height = `${newHeight}px`;
               
-              rowRef.current.style.height = `${clampedHeight}px`;
-              
+              // Update state
               if (setRowHeights) {
                 setRowHeights(prev => ({
                   ...prev,
-                  [customer.id]: clampedHeight
+                  [customer.id]: newHeight
                 }));
               }
             };
             
             const onMouseUp = () => {
-              console.log('Mouse up, resize ended');
               document.removeEventListener('mousemove', onMouseMove);
               document.removeEventListener('mouseup', onMouseUp);
             };
@@ -995,14 +974,7 @@ function SpreadsheetRow({
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
           }}
-          role="separator"
-          aria-orientation="horizontal"
-          tabIndex={0}
-        >
-          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 hidden group-hover:block">
-            <GripVertical className="h-3 w-3 text-muted-foreground rotate-90" />
-          </div>
-        </div>
+        ></div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <div className="flex items-center h-8">
