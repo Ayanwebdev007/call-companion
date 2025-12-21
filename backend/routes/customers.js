@@ -13,6 +13,8 @@ router.get('/', auth, async (req, res) => {
   try {
     const { spreadsheetId } = req.query;
     
+    console.log('Received spreadsheetId:', spreadsheetId);
+    
     if (!spreadsheetId) {
       return res.status(400).json({ message: 'spreadsheetId is required' });
     }

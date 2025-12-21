@@ -23,12 +23,23 @@ const Dashboard = () => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
-  // Fetch spreadsheets
-  const { data: spreadsheets = [], isLoading, error } = useQuery({
-    queryKey: ["spreadsheets"],
+  // Fetch spreadsheets (owned and shared)
+  const { data: ownedSpreadsheets = [], isLoading: isLoadingOwned, error: ownedError } = useQuery({
+    queryKey: ["ownedSpreadsheets"],
     queryFn: fetchSpreadsheets,
     enabled: !!user, // Only fetch when user is available
   });
+
+  const { data: sharedSpreadsheets = [], isLoading: isLoadingShared, error: sharedError } = useQuery({
+    queryKey: ["sharedSpreadsheets"],
+    queryFn: fetchSharedSpreadsheets,
+    enabled: !!user, // Only fetch when user is available
+  });
+
+  // Combine owned and shared spreadsheets
+  const spreadsheets = [...ownedSpreadsheets, ...sharedSpreadsheets];
+  const isLoading = isLoadingOwned || isLoadingShared;
+  const error = ownedError || sharedError;
 
   // Create spreadsheet mutation
   const createMutation = useMutation({

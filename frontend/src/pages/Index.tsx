@@ -61,6 +61,13 @@ const Index = () => {
     queryFn: async () => {
       try {
         console.log("Fetching customers for spreadsheet:", spreadsheetId);
+        // Validate spreadsheetId before making the request
+        if (!spreadsheetId) {
+          throw new Error("No spreadsheet ID provided");
+        }
+        if (spreadsheetId === "undefined" || spreadsheetId === "null") {
+          throw new Error(`Invalid spreadsheet ID: ${spreadsheetId}`);
+        }
         const data = await fetchCustomers(spreadsheetId);
         console.log("Customers fetched:", data);
         if (!Array.isArray(data)) {
