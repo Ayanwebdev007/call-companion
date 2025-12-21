@@ -970,7 +970,11 @@ function SpreadsheetRow({
       } ${
         dropTarget === customer.id ? "border-2 border-dashed border-primary" : ""
       }`}
-      style={{ height: rowHeights[customer.id] ? `${rowHeights[customer.id]}px` : '40px' }}
+      style={{ 
+        height: rowHeights[customer.id] ? `${rowHeights[customer.id]}px` : '40px',
+        minHeight: rowHeights[customer.id] ? `${rowHeights[customer.id]}px` : '40px',
+        maxHeight: 'none'
+      }}
       onDragOver={onDragOver}
       onDragEnter={(e) => onDragEnter(e, customer.id)}
       onDragLeave={onDragLeave}
@@ -980,7 +984,7 @@ function SpreadsheetRow({
       {/* DEBUG: Row height is {rowHeights[customer.id] ? `${rowHeights[customer.id]}px` : '40px'} */}
       <ResizableTableCell 
         className="border border-border px-3 py-1 text-xs text-muted-foreground text-center relative group"
-        style={{ height: '100%' }}
+        style={{ height: '100%', minHeight: '100%', maxHeight: 'none' }}
         title="Drag to reorder"
         draggable
         onDragStart={(e) => onDragStart(e, customer.id)}
@@ -1033,7 +1037,7 @@ function SpreadsheetRow({
         ></div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
-        <div className="flex items-center h-full w-full">
+        <div className="flex items-center h-full w-full" style={{ height: '100%', minHeight: '100%', maxHeight: 'none' }}>
           <Popover>
             <PopoverTrigger asChild>
               <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0 self-center" 
@@ -1058,23 +1062,23 @@ function SpreadsheetRow({
               </div>
             </PopoverContent>
           </Popover>
-          <div className="flex-grow h-full flex items-center">
+          <div className="flex-grow h-full flex items-center" style={{ height: '100%', minHeight: '100%', maxHeight: 'none' }}>
             <Input
               defaultValue={customer.customer_name}
               onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
               className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
-              style={{ minHeight: '100%' }}
+              style={{ minHeight: '100%', height: '100%' }}
             />
           </div>
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
-        <div className="h-full flex items-center">
+        <div className="h-full flex items-center" style={{ height: '100%', minHeight: '100%', maxHeight: 'none' }}>
           <Input
             defaultValue={customer.company_name}
             onBlur={(e) => onCellChange(customer.id, "company_name", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
-            style={{ minHeight: '100%' }}
+            style={{ minHeight: '100%', height: '100%' }}
           />
         </div>
       </ResizableTableCell>
