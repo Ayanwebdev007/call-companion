@@ -910,14 +910,6 @@ function SpreadsheetRow({
 
   return (
     <ResizableTableRow 
-      resizable={true}
-      initialHeight={rowHeights[customer.id]}
-      onResize={(height) => {
-        setRowHeights(prev => ({
-          ...prev,
-          [customer.id]: height
-        }));
-      }}
       className={`hover:bg-muted/50 transition-all duration-200 group ${
         isSelected ? "bg-primary/10" : ""
       } ${
@@ -932,7 +924,7 @@ function SpreadsheetRow({
       onDragEnd={onDragEnd}
     >
       <ResizableTableCell 
-        className="border border-border px-3 py-1 text-xs text-muted-foreground text-center cursor-move relative"
+        className="border border-border px-3 py-1 text-xs text-muted-foreground text-center cursor-move relative group"
         title="Drag to reorder"
         draggable
         onDragStart={(e) => onDragStart(e, customer.id)}
@@ -940,6 +932,51 @@ function SpreadsheetRow({
       >
         <div className="absolute inset-0 flex items-center justify-center">
           {index}
+        </div>
+        {/* Row resize handle */}
+        <div 
+          className="absolute bottom-0 left-0 right-0 h-1 cursor-row-resize bg-muted-foreground/20 hover:bg-muted-foreground/50 group-hover:bg-muted-foreground/50"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const startY = e.clientY;
+            const startHeight = e.currentTarget.parentElement?.parentElement?.offsetHeight || 40;
+            
+            const onMouseMove = (moveEvent: MouseEvent) => {
+              if (!e.currentTarget.parentElement?.parentElement) return;
+              
+              // Calculate new height with snapping
+              const deltaY = moveEvent.clientY - startY;
+              const newHeight = startHeight + deltaY;
+              const snappedHeight = Math.round(newHeight / 10) * 10; // Snap to nearest 10px
+              const clampedHeight = Math.max(40, snappedHeight); // Minimum height of 40px
+              
+              e.currentTarget.parentElement.parentElement.style.height = `${clampedHeight}px`;
+              
+              if (setRowHeights) {
+                setRowHeights(prev => ({
+                  ...prev,
+                  [customer.id]: clampedHeight
+                }));
+              }
+            };
+            
+            const onMouseUp = () => {
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+            };
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+          }}
+          role="separator"
+          aria-orientation="horizontal"
+          tabIndex={0}
+        >
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 hidden group-hover:block">
+            <GripVertical className="h-3 w-3 text-muted-foreground rotate-90" />
+          </div>
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
