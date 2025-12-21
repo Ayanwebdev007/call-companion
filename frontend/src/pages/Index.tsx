@@ -919,6 +919,11 @@ function SpreadsheetRow({
   useEffect(() => {
     // This will be handled by the parent component setting the style directly
   }, []);
+  
+  // Log row height changes for debugging
+  useEffect(() => {
+    console.log('Row height for customer', customer.id, ':', rowHeights[customer.id]);
+  }, [rowHeights, customer.id]);
   const [lastCallDate, setLastCallDate] = useState<Date | undefined>(
     customer.last_call_date ? parseISO(customer.last_call_date) : undefined
   );
@@ -972,6 +977,7 @@ function SpreadsheetRow({
       onDrop={(e) => onDrop(e, customer.id)}
       onDragEnd={onDragEnd}
     >
+      {/* DEBUG: Row height is {rowHeights[customer.id] ? `${rowHeights[customer.id]}px` : '40px'} */}
       <ResizableTableCell 
         className="border border-border px-3 py-1 text-xs text-muted-foreground text-center relative group"
         style={{ height: '100%' }}
@@ -986,20 +992,25 @@ function SpreadsheetRow({
         <div 
           className="absolute -bottom-1 left-0 right-0 h-2 cursor-row-resize opacity-0 group-hover:opacity-100 hover:opacity-100 hover:bg-muted-foreground/30"
           onMouseDown={(e) => {
+            console.log('Row resize handle clicked');
             // Prevent drag event from firing
             e.preventDefault();
             e.stopPropagation();
             
             const rowElement = e.currentTarget.closest('tr');
+            console.log('Row element found:', rowElement);
             if (!rowElement) return;
             
             const startY = e.clientY;
             const startHeight = rowElement.offsetHeight;
+            console.log('Starting resize, startHeight:', startHeight);
             
             const onMouseMove = (moveEvent: MouseEvent) => {
+              console.log('Mouse moving during resize');
               const deltaY = moveEvent.clientY - startY;
               const newHeight = Math.max(40, startHeight + deltaY);
               rowElement.style.height = `${newHeight}px`;
+              console.log('Setting row height to:', newHeight);
               
               // Update state
               if (setRowHeights) {
@@ -1011,6 +1022,7 @@ function SpreadsheetRow({
             };
             
             const onMouseUp = () => {
+              console.log('Mouse up, resize ended');
               document.removeEventListener('mousemove', onMouseMove);
               document.removeEventListener('mouseup', onMouseUp);
             };
