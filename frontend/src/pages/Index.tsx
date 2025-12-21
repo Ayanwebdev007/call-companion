@@ -822,7 +822,7 @@ const Index = () => {
                           onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
                           className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
                           placeholder="Customer Name"
-                          style={{ minHeight: '100%' }}
+                          style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
                         />
                       </div>
                     </div>
@@ -834,7 +834,7 @@ const Index = () => {
                         onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
                         className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
                         placeholder="Company Name"
-                        style={{ minHeight: '100%' }}
+                        style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
                       />
                     </div>
                   </ResizableTableCell>
@@ -845,7 +845,7 @@ const Index = () => {
                         onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
                         className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
                         placeholder="Phone Number"
-                        style={{ minHeight: '100%' }}
+                        style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
                       />
                     </div>
                   </ResizableTableCell>
@@ -1126,7 +1126,7 @@ function SpreadsheetRow({
                   >
                     <div 
                       className={`w-4 h-4 rounded-full border ${color ? 'border-muted-foreground/50' : 'border-dashed border-muted-foreground/50'}`} 
-                      style={{ backgroundColor: color || 'transparent' }} 
+                      style={{ backgroundColor: color || 'transparent' }}
                     />
                   </Button>
                 ))}
@@ -1138,7 +1138,7 @@ function SpreadsheetRow({
               defaultValue={customer.customer_name}
               onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
               className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
-              style={{ minHeight: '100%', height: '100%' }}
+              style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
             />
           </div>
         </div>
@@ -1159,7 +1159,7 @@ function SpreadsheetRow({
             defaultValue={customer.phone_number}
             onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
-            style={{ minHeight: '100%' }}
+            style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
           />
         </div>
       </ResizableTableCell>
@@ -1208,7 +1208,7 @@ function SpreadsheetRow({
             defaultValue={customer.next_call_time || ""}
             onBlur={(e) => onCellChange(customer.id, "next_call_time", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
-            style={{ minHeight: '100%' }}
+            style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
           />
         </div>
       </ResizableTableCell>
@@ -1218,7 +1218,7 @@ function SpreadsheetRow({
             defaultValue={customer.remark || ""}
             onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
-            style={{ minHeight: '100%' }}
+            style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
           />
         </div>
       </ResizableTableCell>
