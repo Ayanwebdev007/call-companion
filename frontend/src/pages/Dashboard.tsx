@@ -32,7 +32,17 @@ const Dashboard = () => {
 
   const { data: sharedSpreadsheets = [], isLoading: isLoadingShared, error: sharedError } = useQuery({
     queryKey: ["sharedSpreadsheets"],
-    queryFn: fetchSharedSpreadsheets,
+    queryFn: async () => {
+      console.log('Fetching shared spreadsheets...');
+      try {
+        const result = await fetchSharedSpreadsheets();
+        console.log('Shared spreadsheets result:', result);
+        return result;
+      } catch (error) {
+        console.error('Error fetching shared spreadsheets:', error);
+        throw error;
+      }
+    },
     enabled: !!user, // Only fetch when user is available
   });
 
@@ -40,6 +50,14 @@ const Dashboard = () => {
   const spreadsheets = [...ownedSpreadsheets, ...sharedSpreadsheets];
   const isLoading = isLoadingOwned || isLoadingShared;
   const error = ownedError || sharedError;
+  
+  // Log errors for debugging
+  if (ownedError) {
+    console.error('Owned spreadsheets error:', ownedError);
+  }
+  if (sharedError) {
+    console.error('Shared spreadsheets error:', sharedError);
+  }
 
   // Create spreadsheet mutation
   const createMutation = useMutation({

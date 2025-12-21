@@ -67,9 +67,17 @@ router.post('/spreadsheets/:id/share', auth, async (req, res) => {
 // GET /api/shared-spreadsheets - Get spreadsheets shared with current user
 router.get('/shared-spreadsheets', auth, async (req, res) => {
   try {
+    console.log('Fetching shared spreadsheets for user:', req.user.id);
     const sharedRecords = await Sharing.find({ shared_with_user_id: req.user.id })
       .populate('spreadsheet_id')
-      .populate('owner_user_id', 'username');
+      .populate('owner_user_id', 'username')
+      .catch(err => {
+        console.error('Population error:', err);
+        throw err;
+      });
+    
+    console.log('Shared records found:', sharedRecords.length);
+    console.log('Shared records:', JSON.stringify(sharedRecords, null, 2));
 
     const sharedSpreadsheets = sharedRecords
       .filter(record => record.spreadsheet_id && record.owner_user_id) // Filter out records with null references
