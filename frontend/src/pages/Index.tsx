@@ -458,43 +458,51 @@ const Index = () => {
             id="debug-test-row"
             className="border border-gray-300 bg-white"
             style={{ height: '60px', position: 'relative' }}
+            ref={(el) => {
+              if (el) {
+                // Add event listener directly to DOM element to bypass React event system
+                const handle = el.querySelector('.resize-handle');
+                if (handle) {
+                  handle.addEventListener('mousedown', (event) => {
+                    console.log('=== DIRECT DOM EVENT HANDLER WORKING ===');
+                    event.preventDefault();
+                    
+                    const rowElement = document.getElementById('debug-test-row');
+                    if (!rowElement) {
+                      console.error('ERROR: Could not find test row element');
+                      return;
+                    }
+                    
+                    const startY = event.clientY;
+                    const startHeight = rowElement.offsetHeight;
+                    console.log('Direct DOM handler - Start height:', startHeight);
+                    
+                    const onMouseMove = (moveEvent: MouseEvent) => {
+                      const deltaY = moveEvent.clientY - startY;
+                      const newHeight = Math.max(40, startHeight + deltaY);
+                      rowElement.style.height = `${newHeight}px`;
+                      console.log('Direct DOM handler - New height:', newHeight);
+                    };
+                    
+                    const onMouseUp = () => {
+                      console.log('Direct DOM handler - Resize ended');
+                      document.removeEventListener('mousemove', onMouseMove);
+                      document.removeEventListener('mouseup', onMouseUp);
+                      console.log('=== DIRECT DOM EVENT HANDLER ENDED ===');
+                    };
+                    
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                  });
+                }
+              }
+            }}
           >
             <div className="p-2 h-full flex items-center">
               <span>This is a test row. Try to resize it using the handle below:</span>
             </div>
             <div 
-              className="absolute -bottom-1 left-0 right-0 h-2 bg-red-500 cursor-row-resize hover:bg-red-600"
-              onMouseDown={(e) => {
-                console.log('=== DEBUG TEST ROW RESIZE START ===');
-                e.preventDefault();
-                
-                const rowElement = document.getElementById('debug-test-row');
-                if (!rowElement) {
-                  console.error('ERROR: Could not find test row element');
-                  return;
-                }
-                
-                const startY = e.clientY;
-                const startHeight = rowElement.offsetHeight;
-                console.log('Start height:', startHeight);
-                
-                const onMouseMove = (moveEvent: MouseEvent) => {
-                  const deltaY = moveEvent.clientY - startY;
-                  const newHeight = Math.max(40, startHeight + deltaY);
-                  rowElement.style.height = `${newHeight}px`;
-                  console.log('New height:', newHeight);
-                };
-                
-                const onMouseUp = () => {
-                  console.log('Resize ended');
-                  document.removeEventListener('mousemove', onMouseMove);
-                  document.removeEventListener('mouseup', onMouseUp);
-                  console.log('=== DEBUG TEST ROW RESIZE END ===');
-                };
-                
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
-              }}
+              className="resize-handle absolute -bottom-1 left-0 right-0 h-2 bg-red-500 cursor-row-resize hover:bg-red-600"
             />
           </div>
         </div>
@@ -1043,45 +1051,59 @@ function SpreadsheetRow({
         </div>
         {/* Simple row resize handle */}
         <div 
-          className="absolute -bottom-1 left-0 right-0 h-2 cursor-row-resize opacity-0 group-hover:opacity-100 hover:opacity-100 hover:bg-muted-foreground/30"
-          onMouseDown={(e) => {
-            console.log('Row resize handle clicked');
-            // Prevent drag event from firing
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const rowElement = e.currentTarget.closest('tr');
-            console.log('Row element found:', rowElement);
-            if (!rowElement) return;
-            
-            const startY = e.clientY;
-            const startHeight = rowElement.offsetHeight;
-            console.log('Starting resize, startHeight:', startHeight);
-            
-            const onMouseMove = (moveEvent: MouseEvent) => {
-              console.log('Mouse moving during resize');
-              const deltaY = moveEvent.clientY - startY;
-              const newHeight = Math.max(40, startHeight + deltaY);
-              rowElement.style.height = `${newHeight}px`;
-              console.log('Setting row height to:', newHeight);
+          className="absolute -bottom-1 left-0 right-0 h-2 cursor-row-resize opacity-0 group-hover:opacity-100 hover:opacity-100 hover:bg-muted-foreground/30 row-resize-handle"
+          data-customer-id={customer.id}
+          ref={(el) => {
+            if (el) {
+              // Remove any existing event listeners to prevent duplicates
+              const clone = el.cloneNode(true);
+              el.parentNode?.replaceChild(clone, el);
               
-              // Update state
-              if (setRowHeights) {
-                setRowHeights(prev => ({
-                  ...prev,
-                  [customer.id]: newHeight
-                }));
-              }
-            };
-            
-            const onMouseUp = () => {
-              console.log('Mouse up, resize ended');
-              document.removeEventListener('mousemove', onMouseMove);
-              document.removeEventListener('mouseup', onMouseUp);
-            };
-            
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
+              // Add direct DOM event listener
+              clone.addEventListener('mousedown', (event) => {
+                console.log('=== DIRECT ROW RESIZE HANDLE CLICKED ===');
+                console.log('Customer ID:', customer.id);
+                event.preventDefault();
+                event.stopPropagation();
+                
+                const rowElement = clone.closest('tr');
+                console.log('Direct DOM - Row element found:', rowElement);
+                if (!rowElement) {
+                  console.error('Direct DOM - ERROR: Could not find row element');
+                  return;
+                }
+                
+                const startY = event.clientY;
+                const startHeight = rowElement.offsetHeight;
+                console.log('Direct DOM - Starting resize, startHeight:', startHeight);
+                
+                const onMouseMove = (moveEvent: MouseEvent) => {
+                  console.log('Direct DOM - Mouse moving during resize');
+                  const deltaY = moveEvent.clientY - startY;
+                  const newHeight = Math.max(40, startHeight + deltaY);
+                  rowElement.style.height = `${newHeight}px`;
+                  console.log('Direct DOM - Setting row height to:', newHeight);
+                  
+                  // Update state
+                  if (setRowHeights) {
+                    setRowHeights(prev => ({
+                      ...prev,
+                      [customer.id]: newHeight
+                    }));
+                  }
+                };
+                
+                const onMouseUp = () => {
+                  console.log('Direct DOM - Mouse up, resize ended');
+                  document.removeEventListener('mousemove', onMouseMove);
+                  document.removeEventListener('mouseup', onMouseUp);
+                  console.log('=== DIRECT ROW RESIZE HANDLE ENDED ===');
+                };
+                
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+              });
+            }
           }}
         ></div>
       </ResizableTableCell>
