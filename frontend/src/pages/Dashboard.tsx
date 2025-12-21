@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchSpreadsheets, createSpreadsheet, deleteSpreadsheet, shareSpreadsheet, Spreadsheet } from "@/lib/api";
+import { fetchSpreadsheets, fetchSharedSpreadsheets, createSpreadsheet, deleteSpreadsheet, shareSpreadsheet, Spreadsheet } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { LogOut, Plus, Trash2, Share2, User, Users } from "lucide-react";
 
