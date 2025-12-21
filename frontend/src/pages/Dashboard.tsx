@@ -331,17 +331,15 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {spreadsheets.map((spreadsheet: Spreadsheet) => {
-              console.log('Rendering spreadsheet:', spreadsheet);
-              return (
+            {spreadsheets.map((spreadsheet: Spreadsheet) => (
               <Card 
                 key={spreadsheet.id} 
                 className="hover:shadow-md transition-shadow cursor-pointer"
                 onClick={(e) => {
-                                  console.log('Card clicked, spreadsheet ID:', spreadsheet.id, 'is_shared:', spreadsheet.is_shared);
-                                  e.preventDefault();
-                                  handleOpenSpreadsheet(spreadsheet.id);
-                                }}
+                  console.log('Card clicked, spreadsheet ID:', spreadsheet.id, 'is_shared:', spreadsheet.is_shared);
+                  e.preventDefault();
+                  handleOpenSpreadsheet(spreadsheet.id);
+                }}
               >
                 <CardHeader>
                   <div className="flex justify-between items-start">
