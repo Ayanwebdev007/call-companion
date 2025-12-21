@@ -25,14 +25,25 @@ router.get('/', auth, async (req, res) => {
     
     console.log('Shared records found:', sharedRecords.length);
     
+    // Debug logging for shared records
+    console.log('Shared records before processing:', sharedRecords.map(record => ({
+      spreadsheet_id: record.spreadsheet_id ? record.spreadsheet_id._id : 'null',
+      spreadsheet_obj: record.spreadsheet_id ? record.spreadsheet_id.toObject() : 'null'
+    })));
+    
     const sharedSpreadsheets = sharedRecords
       .filter(record => record.spreadsheet_id && record.owner_user_id) // Filter out records with null references
-      .map(record => ({
-        ...record.spreadsheet_id.toObject(),
-        permission_level: record.permission_level,
-        owner: record.owner_user_id.username,
-        is_shared: true
-      }));
+      .map(record => {
+        const spreadsheetObj = record.spreadsheet_id.toObject();
+        console.log('Spreadsheet object:', spreadsheetObj);
+        return {
+          ...spreadsheetObj,
+          id: spreadsheetObj.id || record.spreadsheet_id._id.toString(), // Ensure we have an ID
+          permission_level: record.permission_level,
+          owner: record.owner_user_id.username,
+          is_shared: true
+        };
+      });
     
     // Debug logging
     console.log('Owned spreadsheets:', ownedSpreadsheets.map(s => ({id: s.id, name: s.name})));
