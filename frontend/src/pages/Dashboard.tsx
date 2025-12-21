@@ -26,18 +26,11 @@ const Dashboard = () => {
   // Fetch all spreadsheets (owned and shared)
   const { data: spreadsheets = [], isLoading, error } = useQuery({
     queryKey: ["spreadsheets"],
-    queryFn: async () => {
-      const result = await fetchSpreadsheets();
-      console.log('Fetched spreadsheets:', result);
-      return result;
-    },
+    queryFn: fetchSpreadsheets,
     enabled: !!user, // Only fetch when user is available
   });
   
-  // Log errors for debugging
-  if (error) {
-    console.error('Spreadsheets error:', error);
-  }
+
 
   // Create spreadsheet mutation
   const createMutation = useMutation({
@@ -136,21 +129,7 @@ const Dashboard = () => {
     });
   };
 
-  const handleOpenSpreadsheet = (id: string, isShared: boolean = false) => {
-    console.log('Opening spreadsheet with ID:', id, 'isShared:', isShared);
-    if (!id) {
-      console.error('No spreadsheet ID provided');
-      return;
-    }
-    if (id === 'undefined') {
-      console.error('Spreadsheet ID is literally "undefined"');
-      return;
-    }
-    if (id === 'null') {
-      console.error('Spreadsheet ID is literally "null"');
-      return;
-    }
-    console.log('Navigating to:', `/spreadsheet/${id}`);
+  const handleOpenSpreadsheet = (id: string) => {
     navigate(`/spreadsheet/${id}`);
   };
 
@@ -314,22 +293,6 @@ const Dashboard = () => {
             <span className="text-sm text-muted-foreground">
               {spreadsheets.length} {spreadsheets.length === 1 ? 'spreadsheet' : 'spreadsheets'}
             </span>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                console.log('Test navigation button clicked');
-                // Try to navigate to the first spreadsheet if available
-                if (spreadsheets.length > 0) {
-                  console.log('Navigating to first spreadsheet:', spreadsheets[0].id);
-                  navigate(`/spreadsheet/${spreadsheets[0].id}`);
-                } else {
-                  console.log('No spreadsheets available');
-                }
-              }}
-            >
-              Test Nav
-            </Button>
           </div>
         </div>
 
@@ -351,11 +314,7 @@ const Dashboard = () => {
               <Card 
                 key={spreadsheet.id} 
                 className="hover:shadow-md transition-shadow cursor-pointer"
-                onClick={(e) => {
-                  console.log('Card clicked, spreadsheet ID:', spreadsheet.id, 'is_shared:', spreadsheet.is_shared);
-                  e.preventDefault();
-                  handleOpenSpreadsheet(spreadsheet.id);
-                }}
+                onClick={() => handleOpenSpreadsheet(spreadsheet.id)}
               >
                 <CardHeader>
                   <div className="flex justify-between items-start">
@@ -425,9 +384,8 @@ const Dashboard = () => {
                     variant="outline" 
                     size="sm"
                     onClick={(e) => {
-                      console.log('Open button clicked, spreadsheet ID:', spreadsheet.id, 'is_shared:', spreadsheet.is_shared);
                       e.stopPropagation();
-                      handleOpenSpreadsheet(spreadsheet.id, spreadsheet.is_shared);
+                      handleOpenSpreadsheet(spreadsheet.id);
                     }}
                   >
                     Open

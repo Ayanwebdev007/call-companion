@@ -17,27 +17,13 @@ import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
 
 const Index = () => {
-  console.log("Index component rendering");
   const { id: spreadsheetId } = useParams<{ id: string }>();
-  console.log("Spreadsheet ID from params:", spreadsheetId);
   const navigate = useNavigate();
-  
-  // Log when component mounts
-  useEffect(() => {
-    console.log("Index component mounted");
-    return () => {
-      console.log("Index component unmounted");
-    };
-  }, []);
   
   // Redirect if no valid spreadsheetId
   useEffect(() => {
-    console.log("useEffect triggered, spreadsheetId:", spreadsheetId);
     if (!spreadsheetId || spreadsheetId === "undefined" || spreadsheetId === "null") {
-      console.warn("Invalid spreadsheetId, redirecting to dashboard");
       navigate("/");
-    } else {
-      console.log("Valid spreadsheetId, continuing with page load");
     }
   }, [spreadsheetId, navigate]);
   const [viewMode, setViewMode] = useState<"date" | "all">("date");
@@ -51,13 +37,11 @@ const Index = () => {
     queryKey: ["sharedUsers", spreadsheetId],
     queryFn: async () => {
       if (!spreadsheetId || spreadsheetId === "undefined" || spreadsheetId === "null") {
-        console.warn('Invalid spreadsheetId:', spreadsheetId);
         return [];
       }
       try {
         return await fetchSharedUsers(spreadsheetId);
       } catch (error) {
-        console.error('Error fetching shared users:', error);
         return [];
       }
     },
