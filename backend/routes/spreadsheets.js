@@ -9,20 +9,30 @@ const router = express.Router();
 // GET all spreadsheets for logged in user (owned and shared)
 router.get('/', auth, async (req, res) => {
   try {
+    console.log('Fetching spreadsheets for user:', req.user.id);
     // Get owned spreadsheets
     const ownedSpreadsheets = await Spreadsheet.find({ user_id: req.user.id }).sort({ created_at: -1 });
+    console.log('Owned spreadsheets:', ownedSpreadsheets.length);
     
     // Get shared spreadsheets
     const sharedRecords = await Sharing.find({ shared_with_user_id: req.user.id })
       .populate('spreadsheet_id')
-      .populate('owner_user_id', 'username');
+      .populate('owner_user_id', 'username')
+      .catch(err => {
+        console.error('Population error:', err);
+        throw err;
+      });
     
-    const sharedSpreadsheets = sharedRecords.map(record => ({
-      ...record.spreadsheet_id.toObject(),
-      permission_level: record.permission_level,
-      owner: record.owner_user_id.username,
-      is_shared: true
-    }));
+    console.log('Shared records found:', sharedRecords.length);
+    
+    const sharedSpreadsheets = sharedRecords
+      .filter(record => record.spreadsheet_id && record.owner_user_id) // Filter out records with null references
+      .map(record => ({
+        ...record.spreadsheet_id.toObject(),
+        permission_level: record.permission_level,
+        owner: record.owner_user_id.username,
+        is_shared: true
+      }));
     
     // Combine owned and shared spreadsheets
     const allSpreadsheets = [...ownedSpreadsheets, ...sharedSpreadsheets];
