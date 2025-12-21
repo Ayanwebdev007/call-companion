@@ -1074,11 +1074,11 @@ function SpreadsheetRow({
         />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
-        <textarea
+        <Input
           defaultValue={customer.remark || ""}
           onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
-          className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full resize-none"
-          style={{ height: '100%', minHeight: 'auto' }}
+          className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full"
+          style={{ height: '100%' }}
         />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-1 text-center">
