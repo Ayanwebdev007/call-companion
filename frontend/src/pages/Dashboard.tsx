@@ -136,8 +136,8 @@ const Dashboard = () => {
     });
   };
 
-  const handleOpenSpreadsheet = (id: string) => {
-    console.log('Opening spreadsheet with ID:', id);
+  const handleOpenSpreadsheet = (id: string, isShared: boolean = false) => {
+    console.log('Opening spreadsheet with ID:', id, 'isShared:', isShared);
     if (!id) {
       console.error('No spreadsheet ID provided');
       return;
@@ -409,9 +409,9 @@ const Dashboard = () => {
                     variant="outline" 
                     size="sm"
                     onClick={(e) => {
-                      console.log('Open button clicked, spreadsheet ID:', spreadsheet.id);
+                      console.log('Open button clicked, spreadsheet ID:', spreadsheet.id, 'is_shared:', spreadsheet.is_shared);
                       e.stopPropagation();
-                      handleOpenSpreadsheet(spreadsheet.id);
+                      handleOpenSpreadsheet(spreadsheet.id, spreadsheet.is_shared);
                     }}
                   >
                     Open
