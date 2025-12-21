@@ -869,6 +869,11 @@ function SpreadsheetRow({
   setRowHeights: React.Dispatch<React.SetStateAction<Record<string, number>>>;
 }) {
   const rowRef = useRef<HTMLTableRowElement>(null);
+  
+  // Log ref for debugging
+  useEffect(() => {
+    console.log('Row ref for customer', customer.id, rowRef.current);
+  }, [customer.id]);
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
   );
@@ -876,6 +881,7 @@ function SpreadsheetRow({
   // Set initial row height
   useEffect(() => {
     if (rowRef.current && rowHeights[customer.id]) {
+      console.log('Setting initial row height for', customer.id, 'to', rowHeights[customer.id]);
       rowRef.current.style.height = `${rowHeights[customer.id]}px`;
     }
   }, [rowHeights, customer.id]);
@@ -933,26 +939,35 @@ function SpreadsheetRow({
       onDragEnd={onDragEnd}
     >
       <ResizableTableCell 
-        className="border border-border px-3 py-1 text-xs text-muted-foreground text-center cursor-move relative group"
-        title="Drag to reorder"
-        draggable
-        onDragStart={(e) => onDragStart(e, customer.id)}
+        className="border border-border px-3 py-1 text-xs text-muted-foreground text-center relative"
         style={{ height: '100%' }}
       >
-        <div className="absolute inset-0 flex items-center justify-center">
-          {index}
+        {/* Drag handle area */}
+        <div 
+          className="absolute inset-0 cursor-move"
+          title="Drag to reorder"
+          draggable
+          onDragStart={(e) => onDragStart(e, customer.id)}
+        >
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            {index}
+          </div>
         </div>
+        
         {/* Row resize handle */}
         <div 
           className="absolute bottom-0 left-0 right-0 h-1 cursor-row-resize bg-muted-foreground/20 hover:bg-muted-foreground/50 group-hover:bg-muted-foreground/50"
           onMouseDown={(e) => {
+            console.log('Row resize handle clicked');
             e.preventDefault();
             e.stopPropagation();
             
             const startY = e.clientY;
             const startHeight = rowRef.current?.offsetHeight || 40;
+            console.log('Starting resize, startHeight:', startHeight);
             
             const onMouseMove = (moveEvent: MouseEvent) => {
+              console.log('Mouse moving during resize');
               if (!rowRef.current) return;
               
               // Calculate new height with snapping
@@ -972,6 +987,7 @@ function SpreadsheetRow({
             };
             
             const onMouseUp = () => {
+              console.log('Mouse up, resize ended');
               document.removeEventListener('mousemove', onMouseMove);
               document.removeEventListener('mouseup', onMouseUp);
             };
