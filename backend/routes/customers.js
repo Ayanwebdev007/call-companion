@@ -17,6 +17,12 @@ router.get('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'spreadsheetId is required' });
     }
     
+    // Validate that spreadsheetId is a valid ObjectId
+    const mongoose = await import('mongoose');
+    if (!mongoose.default.isValidObjectId(spreadsheetId)) {
+      return res.status(400).json({ message: 'Invalid spreadsheet ID' });
+    }
+    
     // Check if user has access to this spreadsheet (owner or shared)
     const spreadsheet = await Spreadsheet.findOne({ _id: spreadsheetId });
     if (!spreadsheet) {
@@ -42,6 +48,7 @@ router.get('/', auth, async (req, res) => {
     const customers = await Customer.find({ spreadsheet_id: spreadsheetId }).sort({ position: 1, next_call_date: 1, next_call_time: 1 });
     res.json(customers);
   } catch (err) {
+    console.error('Error loading customers:', err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -52,6 +59,12 @@ router.post('/', auth, async (req, res) => {
   
   if (!spreadsheet_id) {
     return res.status(400).json({ message: 'spreadsheet_id is required' });
+  }
+  
+  // Validate that spreadsheet_id is a valid ObjectId
+  const mongoose = await import('mongoose');
+  if (!mongoose.default.isValidObjectId(spreadsheet_id)) {
+    return res.status(400).json({ message: 'Invalid spreadsheet ID' });
   }
   
   // Check if user has write access to this spreadsheet
@@ -114,6 +127,12 @@ router.post('/bulk-import', auth, async (req, res) => {
     const { spreadsheetId } = req.body;
     if (!spreadsheetId) {
       return res.status(400).json({ message: 'Spreadsheet ID is required' });
+    }
+    
+    // Validate that spreadsheetId is a valid ObjectId
+    const mongoose = await import('mongoose');
+    if (!mongoose.default.isValidObjectId(spreadsheetId)) {
+      return res.status(400).json({ message: 'Invalid spreadsheet ID' });
     }
 
     // Check if user has write access to this spreadsheet
