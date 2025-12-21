@@ -56,8 +56,21 @@ const Index = () => {
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
-  // Row height state
-  const [rowHeights, setRowHeights] = useState<Record<string, number>>({});
+  // Row height state with localStorage persistence
+  const [rowHeights, setRowHeights] = useState<Record<string, number>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`rowHeights-${spreadsheetId}`);
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
+  });
+
+  // Persist row heights to localStorage
+  useEffect(() => {
+    if (spreadsheetId) {
+      localStorage.setItem(`rowHeights-${spreadsheetId}`, JSON.stringify(rowHeights));
+    }
+  }, [rowHeights, spreadsheetId]);
 
   // New row state
   const [newRow, setNewRow] = useState({
@@ -109,6 +122,26 @@ const Index = () => {
     },
     enabled: !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null",
   });
+
+  // Initialize row heights when customers are loaded
+  useEffect(() => {
+    if (customers && Array.isArray(customers) && customers.length > 0) {
+      // Set default row height to 40px for all customers if not already set
+      const newRowHeights: Record<string, number> = {};
+      let needsUpdate = false;
+      
+      customers.forEach(customer => {
+        if (rowHeights[customer.id] === undefined) {
+          newRowHeights[customer.id] = 40; // Default row height
+          needsUpdate = true;
+        }
+      });
+      
+      if (needsUpdate) {
+        setRowHeights(prev => ({ ...prev, ...newRowHeights }));
+      }
+    }
+  }, [customers, rowHeights]);
 
   // Add customer mutation
   const addMutation = useMutation({
