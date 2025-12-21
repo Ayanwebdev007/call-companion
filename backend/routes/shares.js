@@ -11,6 +11,12 @@ router.post('/spreadsheets/:id/share', auth, async (req, res) => {
   try {
     const { username, permission_level } = req.body;
     const spreadsheetId = req.params.id;
+    
+    // Validate that spreadsheetId is a valid ObjectId
+    const mongoose = await import('mongoose');
+    if (!mongoose.default.isValidObjectId(spreadsheetId)) {
+      return res.status(400).json({ message: 'Invalid spreadsheet ID' });
+    }
 
     // Check if spreadsheet exists and user is the owner
     const spreadsheet = await Spreadsheet.findOne({ 
@@ -65,11 +71,14 @@ router.get('/shared-spreadsheets', auth, async (req, res) => {
       .populate('spreadsheet_id')
       .populate('owner_user_id', 'username');
 
-    const sharedSpreadsheets = sharedRecords.map(record => ({
-      ...record.spreadsheet_id.toObject(),
-      permission_level: record.permission_level,
-      owner: record.owner_user_id.username
-    }));
+    const sharedSpreadsheets = sharedRecords
+      .filter(record => record.spreadsheet_id && record.owner_user_id) // Filter out records with null references
+      .map(record => ({
+        ...record.spreadsheet_id.toObject(),
+        permission_level: record.permission_level,
+        owner: record.owner_user_id.username,
+        is_shared: true
+      }));
 
     res.json(sharedSpreadsheets);
   } catch (err) {
@@ -83,6 +92,12 @@ router.delete('/spreadsheets/:id/share/:username', auth, async (req, res) => {
   try {
     const spreadsheetId = req.params.id;
     const username = req.params.username;
+    
+    // Validate that spreadsheetId is a valid ObjectId
+    const mongoose = await import('mongoose');
+    if (!mongoose.default.isValidObjectId(spreadsheetId)) {
+      return res.status(400).json({ message: 'Invalid spreadsheet ID' });
+    }
 
     // Find the user
     const userToRemove = await User.findOne({ username });
@@ -123,6 +138,12 @@ router.put('/spreadsheets/:id/share/:username', auth, async (req, res) => {
     const { permission_level } = req.body;
     const spreadsheetId = req.params.id;
     const username = req.params.username;
+    
+    // Validate that spreadsheetId is a valid ObjectId
+    const mongoose = await import('mongoose');
+    if (!mongoose.default.isValidObjectId(spreadsheetId)) {
+      return res.status(400).json({ message: 'Invalid spreadsheet ID' });
+    }
 
     // Validate permission level
     if (!['read-only', 'read-write'].includes(permission_level)) {
@@ -173,15 +194,36 @@ router.put('/spreadsheets/:id/share/:username', auth, async (req, res) => {
 router.get('/spreadsheets/:id/shared-users', auth, async (req, res) => {
   try {
     const spreadsheetId = req.params.id;
+    
+    // Validate that spreadsheetId is a valid ObjectId
+    const mongoose = await import('mongoose');
+    if (!mongoose.default.isValidObjectId(spreadsheetId)) {
+      return res.status(400).json({ message: 'Invalid spreadsheet ID' });
+    }
 
-    // Check if spreadsheet exists and user is the owner or has access
-    const spreadsheet = await Spreadsheet.findOne({ 
-      _id: spreadsheetId,
-      $or: [
-        { user_id: req.user.id },
-        { _id: { $in: await Sharing.find({ shared_with_user_id: req.user.id }).distinct('spreadsheet_id') } }
-      ]
-    });
+    // First check if the spreadsheet exists
+    const spreadsheetExists = await Spreadsheet.findById(spreadsheetId);
+    if (!spreadsheetExists) {
+      return res.status(404).json({ message: 'Spreadsheet not found' });
+    }
+    
+    // Check if user is the owner or has access
+    let hasAccess = spreadsheetExists.user_id.toString() === req.user.id;
+    
+    if (!hasAccess) {
+      // Check if shared with this user
+      const sharingRecord = await Sharing.findOne({ 
+        spreadsheet_id: spreadsheetId, 
+        shared_with_user_id: req.user.id 
+      });
+      hasAccess = !!sharingRecord;
+    }
+    
+    if (!hasAccess) {
+      return res.status(403).json({ message: 'You do not have access to this spreadsheet' });
+    }
+    
+    const spreadsheet = spreadsheetExists;
 
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found or you do not have access to it' });
