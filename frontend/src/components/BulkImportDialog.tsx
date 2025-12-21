@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { 
@@ -21,6 +22,7 @@ interface BulkImportDialogProps {
 }
 
 export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
+  const { id: spreadsheetId } = useParams<{ id: string }>();
   const [isOpen, setIsOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -64,9 +66,18 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
       return;
     }
 
+    if (!spreadsheetId) {
+      toast({ 
+        title: "No spreadsheet selected", 
+        description: "Please select a spreadsheet before importing",
+        variant: "destructive" 
+      });
+      return;
+    }
+
     setIsUploading(true);
     try {
-      const result = await bulkImportCustomers(file);
+      const result = await bulkImportCustomers(file, spreadsheetId);
       toast({ 
         title: "Import successful!", 
         description: `${result.importedCount || 0} customers imported successfully` 

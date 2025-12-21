@@ -9,7 +9,14 @@ const router = express.Router();
 // GET all customers for logged in user
 router.get('/', auth, async (req, res) => {
   try {
-    const customers = await Customer.find({ user_id: req.user.id }).sort({ position: 1, next_call_date: 1, next_call_time: 1 });
+    const { spreadsheetId } = req.query;
+    
+    let query = { user_id: req.user.id };
+    if (spreadsheetId) {
+      query.spreadsheet_id = spreadsheetId;
+    }
+    
+    const customers = await Customer.find(query).sort({ position: 1, next_call_date: 1, next_call_time: 1 });
     res.json(customers);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -19,11 +26,15 @@ router.get('/', auth, async (req, res) => {
 // POST new customer
 router.post('/', auth, async (req, res) => {
   // First get the highest position value
-  const maxPositionCustomer = await Customer.findOne({ user_id: req.user.id }).sort({ position: -1 });
+  const maxPositionCustomer = await Customer.findOne({ 
+    user_id: req.user.id, 
+    spreadsheet_id: req.body.spreadsheet_id 
+  }).sort({ position: -1 });
   const newPosition = maxPositionCustomer ? maxPositionCustomer.position + 1 : 0;
   
   const customer = new Customer({
     user_id: req.user.id,
+    spreadsheet_id: req.body.spreadsheet_id,
     customer_name: req.body.customer_name,
     company_name: req.body.company_name,
     phone_number: req.body.phone_number,
@@ -48,6 +59,11 @@ router.post('/bulk-import', auth, async (req, res) => {
   try {
     if (!req.files || !req.files.file) {
       return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const { spreadsheetId } = req.body;
+    if (!spreadsheetId) {
+      return res.status(400).json({ message: 'Spreadsheet ID is required' });
     }
 
     const file = req.files.file;
@@ -88,8 +104,11 @@ router.post('/bulk-import', auth, async (req, res) => {
       return normalized;
     };
 
-    // Get the highest position value for this user
-    const maxPositionCustomer = await Customer.findOne({ user_id: req.user.id }).sort({ position: -1 });
+    // Get the highest position value for this user and spreadsheet
+    const maxPositionCustomer = await Customer.findOne({ 
+      user_id: req.user.id, 
+      spreadsheet_id: spreadsheetId 
+    }).sort({ position: -1 });
     let currentPosition = maxPositionCustomer ? maxPositionCustomer.position + 1 : 0;
 
     for (let i = 0; i < data.length; i++) {
@@ -121,6 +140,7 @@ router.post('/bulk-import', auth, async (req, res) => {
 
       const customerData = {
         user_id: req.user.id,
+        spreadsheet_id: spreadsheetId,
         customer_name: customerName.toString().trim(),
         company_name: companyName.toString().trim(),
         phone_number: phoneNumber.toString().trim(),

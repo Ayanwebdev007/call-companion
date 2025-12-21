@@ -1,10 +1,11 @@
 import { useState, useMemo, useRef, useEffect, memo, Fragment } from "react";
+import { useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft } from "lucide-react";
 import { format, isToday, parseISO, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTabl
 
 const Index = () => {
   console.log("Index component rendering");
+  const { id: spreadsheetId } = useParams<{ id: string }>();
   const [viewMode, setViewMode] = useState<"date" | "all">("date");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { toast } = useToast();
@@ -45,11 +47,11 @@ const Index = () => {
 
   // Fetch customers
   const { data: customers = [], isLoading, error } = useQuery({
-    queryKey: ["customers"],
+    queryKey: ["customers", spreadsheetId],
     queryFn: async () => {
       try {
-        console.log("Fetching customers...");
-        const data = await fetchCustomers();
+        console.log("Fetching customers for spreadsheet:", spreadsheetId);
+        const data = await fetchCustomers(spreadsheetId);
         console.log("Customers fetched:", data);
         if (!Array.isArray(data)) {
           throw new Error("API response is not an array");
@@ -60,14 +62,14 @@ const Index = () => {
         throw err;
       }
     },
-    enabled: !!user, // Only fetch when user is available
+    enabled: !!user && !!spreadsheetId, // Only fetch when user and spreadsheetId are available
   });
 
   // Add customer mutation
   const addMutation = useMutation({
-    mutationFn: addCustomer,
+    mutationFn: (customerData: any) => addCustomer({ ...customerData, spreadsheet_id: spreadsheetId }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
       toast({ title: "Customer added successfully!" });
       // Reset new row
       setNewRow({
@@ -75,8 +77,10 @@ const Index = () => {
         company_name: "",
         phone_number: "",
         next_call_date: format(new Date(), "yyyy-MM-dd"),
+        last_call_date: "",
         next_call_time: "",
         remark: "",
+        color: null,
       });
     },
     onError: (error: unknown) => {
@@ -95,14 +99,14 @@ const Index = () => {
     mutationFn: async ({ id, field, value }: { id: string; field: string; value: string }) => {
       await updateCustomer(id, { [field]: value });
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] }),
   });
 
   // Delete customer mutation
   const deleteMutation = useMutation({
     mutationFn: deleteCustomer,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
       toast({ title: "Customer deleted" });
     },
     onError: (error: unknown) => {
@@ -120,7 +124,7 @@ const Index = () => {
   const bulkDeleteMutation = useMutation({
     mutationFn: bulkDeleteCustomers,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
       setSelectedCustomers(new Set()); // Clear selection
       toast({ title: `${data.deletedCount} customers deleted successfully` });
     },
@@ -139,7 +143,7 @@ const Index = () => {
   const reorderMutation = useMutation({
     mutationFn: reorderCustomers,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
     },
     onError: (error: unknown) => {
       let errorMessage = "Failed to reorder customers";
@@ -304,6 +308,10 @@ const Index = () => {
         <header className="bg-card border-b border-border px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboards
+              </Button>
               <h1 className="text-xl font-semibold text-foreground">Calling CRM</h1>
               <span className="text-sm text-muted-foreground">Welcome, {user?.username}</span>
             </div>
@@ -311,7 +319,7 @@ const Index = () => {
               <span className="text-sm text-muted-foreground">
                 {format(new Date(), "EEEE, MMMM do, yyyy")}
               </span>
-              <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers"] })} />
+              <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
               <Button variant="outline" size="sm" onClick={logout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout

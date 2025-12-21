@@ -1,0 +1,21 @@
+import mongoose from 'mongoose';
+
+const spreadsheetSchema = new mongoose.Schema({
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  name: { type: String, required: true },
+  description: { type: String, default: '' },
+  created_at: { type: Date, default: Date.now },
+  updated_at: { type: Date, default: Date.now }
+});
+
+// Map _id to id
+spreadsheetSchema.set('toJSON', {
+  virtuals: true,
+  versionKey: false,
+  transform: function (doc, ret) {
+    ret.id = ret._id;
+    delete ret._id;
+  }
+});
+
+export default mongoose.model('Spreadsheet', spreadsheetSchema);

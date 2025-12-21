@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const API_URL = `${API_BASE_URL}/api/customers`;
+const SPREADSHEETS_API_URL = `${API_BASE_URL}/api/spreadsheets`;
 
 // Add interceptor to include token
 axios.interceptors.request.use((config) => {
@@ -27,12 +28,24 @@ export interface Customer {
   position?: number;
 }
 
-export const fetchCustomers = async (): Promise<Customer[]> => {
-  const response = await axios.get(API_URL);
+export interface Spreadsheet {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const fetchCustomers = async (spreadsheetId?: string): Promise<Customer[]> => {
+  const url = spreadsheetId 
+    ? `${API_URL}?spreadsheetId=${spreadsheetId}`
+    : API_URL;
+  const response = await axios.get(url);
   return response.data;
 };
 
-export const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<Customer> => {
+export const addCustomer = async (customer: Omit<Customer, 'id'> & { spreadsheet_id: string }): Promise<Customer> => {
   const response = await axios.post(API_URL, customer);
   return response.data;
 };
@@ -44,9 +57,10 @@ export interface BulkImportResponse {
   errors?: string[];
 }
 
-export const bulkImportCustomers = async (file: File): Promise<BulkImportResponse> => {
+export const bulkImportCustomers = async (file: File, spreadsheetId: string): Promise<BulkImportResponse> => {
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('spreadsheetId', spreadsheetId);
   
   const response = await axios.post<BulkImportResponse>(`${API_URL}/bulk-import`, formData, {
     headers: {
@@ -80,4 +94,24 @@ export const bulkDeleteCustomers = async (ids: string[]): Promise<{ deletedCount
 
 export const reorderCustomers = async (customerIds: string[]): Promise<void> => {
   await axios.post(`${API_URL}/reorder`, { customerIds });
+};
+
+// Spreadsheet API functions
+export const fetchSpreadsheets = async (): Promise<Spreadsheet[]> => {
+  const response = await axios.get(SPREADSHEETS_API_URL);
+  return response.data;
+};
+
+export const createSpreadsheet = async (spreadsheet: Omit<Spreadsheet, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<Spreadsheet> => {
+  const response = await axios.post(SPREADSHEETS_API_URL, spreadsheet);
+  return response.data;
+};
+
+export const updateSpreadsheet = async (id: string, updates: Partial<Spreadsheet>): Promise<Spreadsheet> => {
+  const response = await axios.put(`${SPREADSHEETS_API_URL}/${id}`, updates);
+  return response.data;
+};
+
+export const deleteSpreadsheet = async (id: string): Promise<void> => {
+  await axios.delete(`${SPREADSHEETS_API_URL}/${id}`);
 };

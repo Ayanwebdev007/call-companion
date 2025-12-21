@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const customerSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  spreadsheet_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Spreadsheet', required: true },
   customer_name: { type: String, required: true },
   company_name: { type: String, required: true },
   phone_number: { type: String, required: true },
