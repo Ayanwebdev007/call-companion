@@ -318,11 +318,17 @@ const Dashboard = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {spreadsheets.map((spreadsheet: Spreadsheet) => (
+            {spreadsheets.map((spreadsheet: Spreadsheet) => {
+              console.log('Rendering spreadsheet:', spreadsheet);
+              return (
               <Card 
                 key={spreadsheet.id} 
                 className="hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => handleOpenSpreadsheet(spreadsheet.id)}
+                onClick={(e) => {
+                                  console.log('Card clicked, spreadsheet ID:', spreadsheet.id, 'is_shared:', spreadsheet.is_shared);
+                                  e.preventDefault();
+                                  handleOpenSpreadsheet(spreadsheet.id);
+                                }}
               >
                 <CardHeader>
                   <div className="flex justify-between items-start">
@@ -392,6 +398,7 @@ const Dashboard = () => {
                     variant="outline" 
                     size="sm"
                     onClick={(e) => {
+                      console.log('Open button clicked, spreadsheet ID:', spreadsheet.id);
                       e.stopPropagation();
                       handleOpenSpreadsheet(spreadsheet.id);
                     }}
