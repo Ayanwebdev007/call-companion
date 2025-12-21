@@ -34,13 +34,23 @@ router.get('/', auth, async (req, res) => {
         is_shared: true
       }));
     
+    // Debug logging
+    console.log('Owned spreadsheets:', ownedSpreadsheets.map(s => ({id: s.id, name: s.name})));
+    console.log('Shared spreadsheets:', sharedSpreadsheets.map(s => ({id: s.id, name: s.name})));
+    
     // Combine owned and shared spreadsheets
     const allSpreadsheets = [...ownedSpreadsheets, ...sharedSpreadsheets];
     
-    // Sort by created_at descending
-    allSpreadsheets.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    // Remove duplicates by ID
+    const uniqueSpreadsheets = allSpreadsheets.filter((spreadsheet, index, self) => 
+      index === self.findIndex(s => s.id === spreadsheet.id)
+    );
     
-    res.json(allSpreadsheets);
+    // Sort by created_at descending
+    uniqueSpreadsheets.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    console.log('Final spreadsheets count:', uniqueSpreadsheets.length);
+    res.json(uniqueSpreadsheets);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

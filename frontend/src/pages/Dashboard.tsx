@@ -23,40 +23,16 @@ const Dashboard = () => {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
-  // Fetch spreadsheets (owned and shared)
-  const { data: ownedSpreadsheets = [], isLoading: isLoadingOwned, error: ownedError } = useQuery({
-    queryKey: ["ownedSpreadsheets"],
+  // Fetch all spreadsheets (owned and shared)
+  const { data: spreadsheets = [], isLoading, error } = useQuery({
+    queryKey: ["spreadsheets"],
     queryFn: fetchSpreadsheets,
     enabled: !!user, // Only fetch when user is available
   });
-
-  const { data: sharedSpreadsheets = [], isLoading: isLoadingShared, error: sharedError } = useQuery({
-    queryKey: ["sharedSpreadsheets"],
-    queryFn: async () => {
-      console.log('Fetching shared spreadsheets...');
-      try {
-        const result = await fetchSharedSpreadsheets();
-        console.log('Shared spreadsheets result:', result);
-        return result;
-      } catch (error) {
-        console.error('Error fetching shared spreadsheets:', error);
-        throw error;
-      }
-    },
-    enabled: !!user, // Only fetch when user is available
-  });
-
-  // Combine owned and shared spreadsheets
-  const spreadsheets = [...ownedSpreadsheets, ...sharedSpreadsheets];
-  const isLoading = isLoadingOwned || isLoadingShared;
-  const error = ownedError || sharedError;
   
   // Log errors for debugging
-  if (ownedError) {
-    console.error('Owned spreadsheets error:', ownedError);
-  }
-  if (sharedError) {
-    console.error('Shared spreadsheets error:', sharedError);
+  if (error) {
+    console.error('Spreadsheets error:', error);
   }
 
   // Create spreadsheet mutation
@@ -157,6 +133,11 @@ const Dashboard = () => {
   };
 
   const handleOpenSpreadsheet = (id: string) => {
+    console.log('Opening spreadsheet with ID:', id);
+    if (!id || id === 'undefined' || id === 'null') {
+      console.error('Invalid spreadsheet ID:', id);
+      return;
+    }
     navigate(`/spreadsheet/${id}`);
   };
 
