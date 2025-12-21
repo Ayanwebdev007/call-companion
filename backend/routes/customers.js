@@ -336,16 +336,51 @@ router.get('/export/:spreadsheetId', auth, async (req, res) => {
     const customers = await Customer.find({ spreadsheet_id: spreadsheetId }).sort({ createdAt: 1 });
     
     // Transform customer data for export
-    const exportData = customers.map(customer => ({
-      'customer_name': customer.customer_name || '',
-      'company_name': customer.company_name || '',
-      'phone_number': customer.phone_number || '',
-      'last_call_date': customer.last_call_date ? customer.last_call_date.toISOString().split('T')[0] : '',
-      'next_call_date': customer.next_call_date ? customer.next_call_date.toISOString().split('T')[0] : '',
-      'next_call_time': customer.next_call_time || '',
-      'remark': customer.remark || '',
-      'color': customer.color || ''
-    }));
+    const exportData = customers.map(customer => {
+      // Handle date conversion safely
+      let lastCallDate = '';
+      if (customer.last_call_date) {
+        if (customer.last_call_date instanceof Date) {
+          lastCallDate = customer.last_call_date.toISOString().split('T')[0];
+        } else if (typeof customer.last_call_date === 'string') {
+          // If it's already a string, use it as is
+          lastCallDate = customer.last_call_date;
+        } else {
+          // Try to convert to date
+          const date = new Date(customer.last_call_date);
+          if (!isNaN(date.getTime())) {
+            lastCallDate = date.toISOString().split('T')[0];
+          }
+        }
+      }
+      
+      let nextCallDate = '';
+      if (customer.next_call_date) {
+        if (customer.next_call_date instanceof Date) {
+          nextCallDate = customer.next_call_date.toISOString().split('T')[0];
+        } else if (typeof customer.next_call_date === 'string') {
+          // If it's already a string, use it as is
+          nextCallDate = customer.next_call_date;
+        } else {
+          // Try to convert to date
+          const date = new Date(customer.next_call_date);
+          if (!isNaN(date.getTime())) {
+            nextCallDate = date.toISOString().split('T')[0];
+          }
+        }
+      }
+      
+      return {
+        'customer_name': customer.customer_name || '',
+        'company_name': customer.company_name || '',
+        'phone_number': customer.phone_number || '',
+        'last_call_date': lastCallDate,
+        'next_call_date': nextCallDate,
+        'next_call_time': customer.next_call_time || '',
+        'remark': customer.remark || '',
+        'color': customer.color || ''
+      };
+    });
     
     // Create workbook and worksheet
     const workbook = XLSX.utils.book_new();
