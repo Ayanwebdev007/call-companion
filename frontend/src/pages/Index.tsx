@@ -9,7 +9,7 @@ import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare,
 import { format, isToday, parseISO, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet } from "@/lib/api";
 
 import { useAuth } from "@/context/AuthContext";
 import { LogOut } from "lucide-react";
@@ -93,6 +93,18 @@ const Index = () => {
       }
     },
     enabled: !!user && !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null", // Only fetch when user and spreadsheetId are available
+  });
+
+  // Fetch spreadsheet details
+  const { data: spreadsheet } = useQuery({
+    queryKey: ["spreadsheet", spreadsheetId],
+    queryFn: async () => {
+      if (!spreadsheetId || spreadsheetId === "undefined" || spreadsheetId === "null") {
+        return null;
+      }
+      return await fetchSpreadsheet(spreadsheetId);
+    },
+    enabled: !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null",
   });
 
   // Add customer mutation
@@ -339,10 +351,11 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboards
+                <ArrowLeft className="h-4 w-4" />
               </Button>
-              <h1 className="text-xl font-semibold text-foreground">Calling CRM</h1>
+              <h1 className="text-xl font-semibold text-foreground">
+                {spreadsheet ? spreadsheet.name : 'Calling CRM'}
+              </h1>
               <span className="text-sm text-muted-foreground">Welcome, {user?.username}</span>
             </div>
             <div className="flex items-center gap-4">

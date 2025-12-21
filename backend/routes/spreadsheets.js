@@ -86,10 +86,25 @@ router.post('/', auth, async (req, res) => {
 // GET specific spreadsheet
 router.get('/:id', auth, async (req, res) => {
   try {
-    const spreadsheet = await Spreadsheet.findOne({ _id: req.params.id, user_id: req.user.id });
+    // First check if user owns the spreadsheet
+    let spreadsheet = await Spreadsheet.findOne({ _id: req.params.id, user_id: req.user.id });
+    
+    // If not owned, check if it's shared with the user
+    if (!spreadsheet) {
+      const sharedRecord = await Sharing.findOne({
+        spreadsheet_id: req.params.id,
+        shared_with_user_id: req.user.id
+      }).populate('spreadsheet_id');
+      
+      if (sharedRecord) {
+        spreadsheet = sharedRecord.spreadsheet_id;
+      }
+    }
+    
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
+    
     res.json(spreadsheet);
   } catch (err) {
     res.status(500).json({ message: err.message });

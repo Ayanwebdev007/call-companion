@@ -123,6 +123,11 @@ export const fetchSpreadsheets = async (): Promise<Spreadsheet[]> => {
   return response.data;
 };
 
+export const fetchSpreadsheet = async (id: string): Promise<Spreadsheet> => {
+  const response = await axios.get(`${SPREADSHEETS_API_URL}/${id}`);
+  return response.data;
+};
+
 export const fetchSharedSpreadsheets = async (): Promise<Spreadsheet[]> => {
   console.log('Fetching shared spreadsheets from:', `${API_BASE_URL}/api/shared-spreadsheets`);
   const token = localStorage.getItem('token');
