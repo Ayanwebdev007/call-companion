@@ -19,13 +19,17 @@ import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTabl
 const Index = () => {
   console.log("Index component rendering");
   const { id: spreadsheetId } = useParams<{ id: string }>();
+  console.log("Spreadsheet ID from params:", spreadsheetId);
   const navigate = useNavigate();
   
   // Redirect if no valid spreadsheetId
   useEffect(() => {
+    console.log("useEffect triggered, spreadsheetId:", spreadsheetId);
     if (!spreadsheetId || spreadsheetId === "undefined" || spreadsheetId === "null") {
       console.warn("Invalid spreadsheetId, redirecting to dashboard");
       navigate("/");
+    } else {
+      console.log("Valid spreadsheetId, continuing with page load");
     }
   }, [spreadsheetId, navigate]);
   const [viewMode, setViewMode] = useState<"date" | "all">("date");
