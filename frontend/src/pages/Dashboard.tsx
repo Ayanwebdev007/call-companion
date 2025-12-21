@@ -26,7 +26,11 @@ const Dashboard = () => {
   // Fetch all spreadsheets (owned and shared)
   const { data: spreadsheets = [], isLoading, error } = useQuery({
     queryKey: ["spreadsheets"],
-    queryFn: fetchSpreadsheets,
+    queryFn: async () => {
+      const result = await fetchSpreadsheets();
+      console.log('Fetched spreadsheets:', result);
+      return result;
+    },
     enabled: !!user, // Only fetch when user is available
   });
   
@@ -134,10 +138,19 @@ const Dashboard = () => {
 
   const handleOpenSpreadsheet = (id: string) => {
     console.log('Opening spreadsheet with ID:', id);
-    if (!id || id === 'undefined' || id === 'null') {
-      console.error('Invalid spreadsheet ID:', id);
+    if (!id) {
+      console.error('No spreadsheet ID provided');
       return;
     }
+    if (id === 'undefined') {
+      console.error('Spreadsheet ID is literally "undefined"');
+      return;
+    }
+    if (id === 'null') {
+      console.error('Spreadsheet ID is literally "null"');
+      return;
+    }
+    console.log('Navigating to:', `/spreadsheet/${id}`);
     navigate(`/spreadsheet/${id}`);
   };
 
