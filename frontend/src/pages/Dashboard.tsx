@@ -314,6 +314,22 @@ const Dashboard = () => {
             <span className="text-sm text-muted-foreground">
               {spreadsheets.length} {spreadsheets.length === 1 ? 'spreadsheet' : 'spreadsheets'}
             </span>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                console.log('Test navigation button clicked');
+                // Try to navigate to the first spreadsheet if available
+                if (spreadsheets.length > 0) {
+                  console.log('Navigating to first spreadsheet:', spreadsheets[0].id);
+                  navigate(`/spreadsheet/${spreadsheets[0].id}`);
+                } else {
+                  console.log('No spreadsheets available');
+                }
+              }}
+            >
+              Test Nav
+            </Button>
           </div>
         </div>
 

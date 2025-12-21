@@ -22,6 +22,14 @@ const Index = () => {
   console.log("Spreadsheet ID from params:", spreadsheetId);
   const navigate = useNavigate();
   
+  // Log when component mounts
+  useEffect(() => {
+    console.log("Index component mounted");
+    return () => {
+      console.log("Index component unmounted");
+    };
+  }, []);
+  
   // Redirect if no valid spreadsheetId
   useEffect(() => {
     console.log("useEffect triggered, spreadsheetId:", spreadsheetId);
