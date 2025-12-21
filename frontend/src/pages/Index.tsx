@@ -868,9 +868,17 @@ function SpreadsheetRow({
   rowHeights: Record<string, number>;
   setRowHeights: React.Dispatch<React.SetStateAction<Record<string, number>>>;
 }) {
+  const rowRef = useRef<HTMLTableRowElement>(null);
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
   );
+
+  // Set initial row height
+  useEffect(() => {
+    if (rowRef.current && rowHeights[customer.id]) {
+      rowRef.current.style.height = `${rowHeights[customer.id]}px`;
+    }
+  }, [rowHeights, customer.id]);
   const [lastCallDate, setLastCallDate] = useState<Date | undefined>(
     customer.last_call_date ? parseISO(customer.last_call_date) : undefined
   );
@@ -910,6 +918,7 @@ function SpreadsheetRow({
 
   return (
     <ResizableTableRow 
+      ref={rowRef}
       className={`hover:bg-muted/50 transition-all duration-200 group ${
         isSelected ? "bg-primary/10" : ""
       } ${
@@ -941,10 +950,10 @@ function SpreadsheetRow({
             e.stopPropagation();
             
             const startY = e.clientY;
-            const startHeight = e.currentTarget.parentElement?.parentElement?.offsetHeight || 40;
+            const startHeight = rowRef.current?.offsetHeight || 40;
             
             const onMouseMove = (moveEvent: MouseEvent) => {
-              if (!e.currentTarget.parentElement?.parentElement) return;
+              if (!rowRef.current) return;
               
               // Calculate new height with snapping
               const deltaY = moveEvent.clientY - startY;
@@ -952,7 +961,7 @@ function SpreadsheetRow({
               const snappedHeight = Math.round(newHeight / 10) * 10; // Snap to nearest 10px
               const clampedHeight = Math.max(40, snappedHeight); // Minimum height of 40px
               
-              e.currentTarget.parentElement.parentElement.style.height = `${clampedHeight}px`;
+              rowRef.current.style.height = `${clampedHeight}px`;
               
               if (setRowHeights) {
                 setRowHeights(prev => ({
