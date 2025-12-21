@@ -660,6 +660,8 @@ const Index = () => {
                       onDrop={handleDrop}
                       onDragEnd={handleDragEnd}
                       showCheckboxes={showCheckboxes}
+                      rowHeights={rowHeights}
+                      setRowHeights={setRowHeights}
                     />
                     
                     {/* Drop zone after last row */}
@@ -844,6 +846,8 @@ function SpreadsheetRow({
   onDrop,
   onDragEnd,
   showCheckboxes,
+  rowHeights,
+  setRowHeights
 }: {
   customer: Customer;
   index: number;
@@ -861,6 +865,8 @@ function SpreadsheetRow({
   onDrop: (e: React.DragEvent, targetId: string) => void;
   onDragEnd: () => void;
   showCheckboxes: boolean;
+  rowHeights: Record<string, number>;
+  setRowHeights: React.Dispatch<React.SetStateAction<Record<string, number>>>;
 }) {
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
