@@ -701,10 +701,10 @@ const Index = () => {
                     NEW
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
-                    <div className="flex items-center h-9">
+                    <div className="flex items-center h-full">
                       <Popover>
                         <PopoverTrigger asChild>
-                          <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
+                          <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0 self-center" 
                             style={{ backgroundColor: newRow.color && newRow.color !== "" ? newRow.color : 'white' }} />
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-2" align="start">
@@ -977,10 +977,10 @@ function SpreadsheetRow({
         ></div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
-        <div className="flex items-center h-8">
+        <div className="flex items-center h-full">
           <Popover>
             <PopoverTrigger asChild>
-              <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
+              <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0 self-center" 
                 style={{ backgroundColor: localColor && localColor !== "" ? localColor : 'white' }} />
             </PopoverTrigger>
             <PopoverContent className="w-auto p-2" align="start">
