@@ -56,19 +56,85 @@ const ResizableTableFooter = React.forwardRef<
 ));
 ResizableTableFooter.displayName = "ResizableTableFooter";
 
-const ResizableTableRow = React.forwardRef<
-  HTMLTableRowElement,
-  React.HTMLAttributes<HTMLTableRowElement>
->(({ className, ...props }, ref) => (
-  <tr
-    ref={ref}
-    className={cn(
-      "border-b transition-colors data-[state=selected]:bg-muted hover:bg-muted/50",
-      className
-    )}
-    {...props}
-  />
-));
+interface ResizableTableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
+  resizable?: boolean;
+  onResize?: (height: number) => void;
+  initialHeight?: number;
+}
+
+const ResizableTableRow = React.forwardRef<HTMLTableRowElement, ResizableTableRowProps>(
+  ({ className, resizable = false, onResize, initialHeight, ...props }, ref) => {
+    const rowRef = React.useRef<HTMLTableRowElement>(null);
+    const [isResizing, setIsResizing] = React.useState(false);
+    const startY = React.useRef(0);
+    const startHeight = React.useRef(0);
+
+    // Set initial height if provided
+    React.useEffect(() => {
+      if (initialHeight && rowRef.current) {
+        rowRef.current.style.height = `${initialHeight}px`;
+      }
+    }, [initialHeight]);
+
+    const initResize = React.useCallback((e: React.MouseEvent) => {
+      if (!resizable || !rowRef.current) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
+      setIsResizing(true);
+      startY.current = e.clientY;
+      startHeight.current = rowRef.current.offsetHeight;
+      
+      const onMouseMove = (moveEvent: MouseEvent) => {
+        if (!rowRef.current) return;
+        
+        const newHeight = startHeight.current + (moveEvent.clientY - startY.current);
+        const clampedHeight = Math.max(40, newHeight); // Minimum height of 40px
+        rowRef.current.style.height = `${clampedHeight}px`;
+        
+        if (onResize) {
+          onResize(clampedHeight);
+        }
+      };
+      
+      const onMouseUp = () => {
+        setIsResizing(false);
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+      
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    }, [resizable, onResize]);
+
+    return (
+      <tr
+        ref={rowRef}
+        className={cn(
+          "border-b transition-colors data-[state=selected]:bg-muted hover:bg-muted/50 relative",
+          className,
+          resizable && "group"
+        )}
+        {...props}
+      >
+        {props.children}
+        {resizable && (
+          <div 
+            className="absolute bottom-0 left-0 right-0 h-1 cursor-row-resize bg-muted-foreground/20 hover:bg-muted-foreground/50 group-hover:bg-muted-foreground/50"
+            onMouseDown={initResize}
+            role="separator"
+            aria-orientation="horizontal"
+            tabIndex={0}
+          >
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 hidden group-hover:block">
+              <GripVertical className="h-3 w-3 text-muted-foreground rotate-90" />
+            </div>
+          </div>
+        )}
+      </tr>
+    );
+  }
+);
 ResizableTableRow.displayName = "ResizableTableRow";
 
 interface ResizableTableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
