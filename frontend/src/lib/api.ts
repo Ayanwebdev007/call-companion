@@ -41,6 +41,11 @@ export interface Spreadsheet {
 }
 
 export const fetchCustomers = async (spreadsheetId?: string): Promise<Customer[]> => {
+  // Validate spreadsheetId if provided
+  if (spreadsheetId && (spreadsheetId === 'undefined' || spreadsheetId === 'null')) {
+    throw new Error('Invalid spreadsheet ID provided');
+  }
+  
   const url = spreadsheetId 
     ? `${API_URL}?spreadsheetId=${spreadsheetId}`
     : API_URL;
@@ -136,6 +141,9 @@ export const updateSharePermission = async (spreadsheetId: string, username: str
 };
 
 export const fetchSharedUsers = async (spreadsheetId: string): Promise<SharedUser[]> => {
+  if (!spreadsheetId || spreadsheetId === 'undefined' || spreadsheetId === 'null') {
+    throw new Error('Valid spreadsheet ID is required');
+  }
   const response = await axios.get(`${SPREADSHEETS_API_URL}/${spreadsheetId}/shared-users`);
   return response.data;
 };

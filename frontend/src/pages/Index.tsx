@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, memo, Fragment } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,15 @@ import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTabl
 const Index = () => {
   console.log("Index component rendering");
   const { id: spreadsheetId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  
+  // Redirect if no valid spreadsheetId
+  useEffect(() => {
+    if (!spreadsheetId || spreadsheetId === "undefined" || spreadsheetId === "null") {
+      console.warn("Invalid spreadsheetId, redirecting to dashboard");
+      navigate("/");
+    }
+  }, [spreadsheetId, navigate]);
   const [viewMode, setViewMode] = useState<"date" | "all">("date");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { toast } = useToast();
@@ -29,10 +38,18 @@ const Index = () => {
   const { data: sharedUsers = [], isLoading: sharedUsersLoading } = useQuery({
     queryKey: ["sharedUsers", spreadsheetId],
     queryFn: async () => {
-      if (!spreadsheetId) return [];
-      return fetchSharedUsers(spreadsheetId);
+      if (!spreadsheetId || spreadsheetId === "undefined" || spreadsheetId === "null") {
+        console.warn('Invalid spreadsheetId:', spreadsheetId);
+        return [];
+      }
+      try {
+        return await fetchSharedUsers(spreadsheetId);
+      } catch (error) {
+        console.error('Error fetching shared users:', error);
+        return [];
+      }
     },
-    enabled: !!spreadsheetId,
+    enabled: !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null",
   });
   
   // Bulk selection state
@@ -79,7 +96,7 @@ const Index = () => {
         throw err;
       }
     },
-    enabled: !!user && !!spreadsheetId, // Only fetch when user and spreadsheetId are available
+    enabled: !!user && !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null", // Only fetch when user and spreadsheetId are available
   });
 
   // Add customer mutation
