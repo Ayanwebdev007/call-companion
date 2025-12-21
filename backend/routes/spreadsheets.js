@@ -1,15 +1,36 @@
 import express from 'express';
 import Spreadsheet from '../models/Spreadsheet.js';
 import Customer from '../models/Customer.js';
+import Sharing from '../models/Sharing.js';
 import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
-// GET all spreadsheets for logged in user
+// GET all spreadsheets for logged in user (owned and shared)
 router.get('/', auth, async (req, res) => {
   try {
-    const spreadsheets = await Spreadsheet.find({ user_id: req.user.id }).sort({ created_at: -1 });
-    res.json(spreadsheets);
+    // Get owned spreadsheets
+    const ownedSpreadsheets = await Spreadsheet.find({ user_id: req.user.id }).sort({ created_at: -1 });
+    
+    // Get shared spreadsheets
+    const sharedRecords = await Sharing.find({ shared_with_user_id: req.user.id })
+      .populate('spreadsheet_id')
+      .populate('owner_user_id', 'username');
+    
+    const sharedSpreadsheets = sharedRecords.map(record => ({
+      ...record.spreadsheet_id.toObject(),
+      permission_level: record.permission_level,
+      owner: record.owner_user_id.username,
+      is_shared: true
+    }));
+    
+    // Combine owned and shared spreadsheets
+    const allSpreadsheets = [...ownedSpreadsheets, ...sharedSpreadsheets];
+    
+    // Sort by created_at descending
+    allSpreadsheets.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    res.json(allSpreadsheets);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

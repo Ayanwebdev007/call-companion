@@ -7,6 +7,7 @@ import path from 'path';
 import customerRoutes from './routes/customers.js';
 import authRoutes from './routes/auth.js';
 import spreadsheetRoutes from './routes/spreadsheets.js';
+import shareRoutes from './routes/shares.js';
 
 dotenv.config();
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/customers', fileUpload({
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/spreadsheets', spreadsheetRoutes);
+app.use('/api', shareRoutes);
 
 // Test DELETE route
 app.delete('/api/test-delete', (req, res) => {

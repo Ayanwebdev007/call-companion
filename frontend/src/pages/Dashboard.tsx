@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -6,13 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchSpreadsheets, createSpreadsheet, deleteSpreadsheet, Spreadsheet } from "@/lib/api";
+import { fetchSpreadsheets, createSpreadsheet, deleteSpreadsheet, shareSpreadsheet, Spreadsheet } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, Plus, Trash2 } from "lucide-react";
+import { LogOut, Plus, Trash2, Share2, User, Users } from "lucide-react";
 
 const Dashboard = () => {
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [selectedSpreadsheetId, setSelectedSpreadsheetId] = useState("");
+  const [shareUsername, setShareUsername] = useState("");
+  const [sharePermission, setSharePermission] = useState<"read-only" | "read-write">("read-only");
   const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
   const [newSpreadsheetDescription, setNewSpreadsheetDescription] = useState("");
   const { toast } = useToast();
@@ -82,6 +85,46 @@ const Dashboard = () => {
     if (window.confirm(`Are you sure you want to delete the spreadsheet "${name}"? This will permanently delete all customer data in this spreadsheet.`)) {
       deleteMutation.mutate(id);
     }
+  };
+
+  // Share spreadsheet mutation
+  const shareMutation = useMutation({
+    mutationFn: ({ spreadsheetId, username, permission }: { spreadsheetId: string; username: string; permission: "read-only" | "read-write" }) => 
+      shareSpreadsheet(spreadsheetId, username, permission),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["spreadsheets"] });
+      toast({ title: "Spreadsheet shared successfully!" });
+      setIsShareDialogOpen(false);
+      setShareUsername("");
+      setSharePermission("read-only");
+    },
+    onError: (error: unknown) => {
+      let errorMessage = "Failed to share spreadsheet";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      toast({ title: "Error sharing spreadsheet", description: errorMessage, variant: "destructive" });
+    },
+  });
+
+  const handleShareSpreadsheet = (spreadsheetId: string) => {
+    setSelectedSpreadsheetId(spreadsheetId);
+    setIsShareDialogOpen(true);
+  };
+
+  const handleConfirmShare = () => {
+    if (!shareUsername.trim()) {
+      toast({ title: "Please enter a username", variant: "destructive" });
+      return;
+    }
+    
+    shareMutation.mutate({ 
+      spreadsheetId: selectedSpreadsheetId, 
+      username: shareUsername, 
+      permission: sharePermission 
+    });
   };
 
   const handleOpenSpreadsheet = (id: string) => {
@@ -165,6 +208,73 @@ const Dashboard = () => {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Share Spreadsheet</DialogTitle>
+                  <DialogDescription>
+                    Share this spreadsheet with another user by entering their username.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div>
+                    <label htmlFor="username" className="block text-sm font-medium mb-1">
+                      Username *
+                    </label>
+                    <Input
+                      id="username"
+                      value={shareUsername}
+                      onChange={(e) => setShareUsername(e.target.value)}
+                      placeholder="Enter username"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Permission
+                    </label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="permission"
+                          value="read-only"
+                          checked={sharePermission === "read-only"}
+                          onChange={() => setSharePermission("read-only")}
+                          className="mr-2"
+                        />
+                        Read Only
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          name="permission"
+                          value="read-write"
+                          checked={sharePermission === "read-write"}
+                          onChange={() => setSharePermission("read-write")}
+                          className="mr-2"
+                        />
+                        Read & Write
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsShareDialogOpen(false)}
+                    disabled={shareMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleConfirmShare}
+                    disabled={shareMutation.isPending || !shareUsername.trim()}
+                  >
+                    {shareMutation.isPending ? "Sharing..." : "Share"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Button variant="outline" size="sm" onClick={logout}>
               <LogOut className="h-4 w-4 mr-2" />
               Logout
@@ -206,29 +316,66 @@ const Dashboard = () => {
               >
                 <CardHeader>
                   <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg truncate">{spreadsheet.name}</CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteSpreadsheet(spreadsheet.id, spreadsheet.name);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-lg truncate">{spreadsheet.name}</CardTitle>
+                      {spreadsheet.is_shared && (
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <User className="h-3 w-3" />
+                          <span>{spreadsheet.owner}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
+                      {!spreadsheet.is_shared && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShareSpreadsheet(spreadsheet.id);
+                          }}
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {!spreadsheet.is_shared && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSpreadsheet(spreadsheet.id, spreadsheet.name);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   {spreadsheet.description && (
                     <CardDescription className="truncate">
                       {spreadsheet.description}
                     </CardDescription>
                   )}
+                  {spreadsheet.is_shared && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {spreadsheet.permission_level === 'read-write' ? 'Can edit' : 'View only'}
+                      </span>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="text-sm text-muted-foreground">
                     Created: {new Date(spreadsheet.created_at).toLocaleDateString()}
                   </div>
+                  {spreadsheet.is_shared && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Shared by {spreadsheet.owner}
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter className="flex justify-between">
                   <Button 

@@ -35,6 +35,9 @@ export interface Spreadsheet {
   description: string;
   created_at: string;
   updated_at: string;
+  permission_level?: 'read-only' | 'read-write';
+  owner?: string;
+  is_shared?: boolean;
 }
 
 export const fetchCustomers = async (spreadsheetId?: string): Promise<Customer[]> => {
@@ -96,9 +99,40 @@ export const reorderCustomers = async (customerIds: string[]): Promise<void> => 
   await axios.post(`${API_URL}/reorder`, { customerIds });
 };
 
+export interface SharedUser {
+  username: string;
+  permission_level: 'read-only' | 'read-write';
+  created_at: string;
+}
+
 // Spreadsheet API functions
 export const fetchSpreadsheets = async (): Promise<Spreadsheet[]> => {
   const response = await axios.get(SPREADSHEETS_API_URL);
+  return response.data;
+};
+
+export const fetchSharedSpreadsheets = async (): Promise<Spreadsheet[]> => {
+  const response = await axios.get(`${API_BASE_URL}/api/shared-spreadsheets`);
+  return response.data;
+};
+
+export const shareSpreadsheet = async (spreadsheetId: string, username: string, permissionLevel: 'read-only' | 'read-write' = 'read-only'): Promise<any> => {
+  const response = await axios.post(`${SPREADSHEETS_API_URL}/${spreadsheetId}/share`, { username, permission_level: permissionLevel });
+  return response.data;
+};
+
+export const unshareSpreadsheet = async (spreadsheetId: string, username: string): Promise<any> => {
+  const response = await axios.delete(`${SPREADSHEETS_API_URL}/${spreadsheetId}/share/${username}`);
+  return response.data;
+};
+
+export const updateSharePermission = async (spreadsheetId: string, username: string, permissionLevel: 'read-only' | 'read-write'): Promise<any> => {
+  const response = await axios.put(`${SPREADSHEETS_API_URL}/${spreadsheetId}/share/${username}`, { permission_level: permissionLevel });
+  return response.data;
+};
+
+export const fetchSharedUsers = async (spreadsheetId: string): Promise<SharedUser[]> => {
+  const response = await axios.get(`${SPREADSHEETS_API_URL}/${spreadsheetId}/shared-users`);
   return response.data;
 };
 

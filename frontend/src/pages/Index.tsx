@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User } from "lucide-react";
 import { format, isToday, parseISO, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser } from "@/lib/api";
 
 import { useAuth } from "@/context/AuthContext";
 import { LogOut } from "lucide-react";
@@ -24,6 +24,16 @@ const Index = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
+  
+  // Fetch shared users for this spreadsheet
+  const { data: sharedUsers = [], isLoading: sharedUsersLoading } = useQuery({
+    queryKey: ["sharedUsers", spreadsheetId],
+    queryFn: async () => {
+      if (!spreadsheetId) return [];
+      return fetchSharedUsers(spreadsheetId);
+    },
+    enabled: !!spreadsheetId,
+  });
   
   // Bulk selection state
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
@@ -319,6 +329,27 @@ const Index = () => {
               <span className="text-sm text-muted-foreground">
                 {format(new Date(), "EEEE, MMMM do, yyyy")}
               </span>
+              {sharedUsers.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Share2 className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex -space-x-2">
+                    {sharedUsers.slice(0, 3).map((sharedUser, index) => (
+                      <div 
+                        key={sharedUser.username} 
+                        className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs"
+                        title={`${sharedUser.username} (${sharedUser.permission_level})`}
+                      >
+                        <User className="h-3 w-3" />
+                      </div>
+                    ))}
+                    {sharedUsers.length > 3 && (
+                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs">
+                        +{sharedUsers.length - 3}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
               <Button variant="outline" size="sm" onClick={logout}>
                 <LogOut className="h-4 w-4 mr-2" />
