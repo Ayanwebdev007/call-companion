@@ -80,9 +80,10 @@ router.get('/shared-spreadsheets', auth, async (req, res) => {
     console.log('Shared records:', JSON.stringify(sharedRecords, null, 2));
 
     const sharedSpreadsheets = sharedRecords
-      .filter(record => record.spreadsheet_id && record.owner_user_id) // Filter out records with null references
+      .filter(record => record.spreadsheet_id && record.owner_user_id && record.spreadsheet_id._id) // Filter out records with null references
       .map(record => ({
         ...record.spreadsheet_id.toObject(),
+        id: record.spreadsheet_id.id || record.spreadsheet_id._id.toString(), // Ensure we have an ID
         permission_level: record.permission_level,
         owner: record.owner_user_id.username,
         is_shared: true
