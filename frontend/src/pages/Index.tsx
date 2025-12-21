@@ -922,6 +922,7 @@ function SpreadsheetRow({
       } ${
         dropTarget === customer.id ? "border-2 border-dashed border-primary" : ""
       }`}
+      style={{ height: rowHeights[customer.id] ? `${rowHeights[customer.id]}px` : 'auto' }}
       onDragOver={onDragOver}
       onDragEnter={(e) => onDragEnter(e, customer.id)}
       onDragLeave={onDragLeave}
