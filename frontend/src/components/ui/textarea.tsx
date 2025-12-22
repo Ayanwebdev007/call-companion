@@ -17,19 +17,20 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Reset dimensions to auto to calculate sizes correctly
+    // Store current styles to restore later
+    const originalStyle = {
+      height: textarea.style.height,
+      minHeight: textarea.style.minHeight,
+      overflowY: textarea.style.overflowY,
+    };
+    
+    // Reset to natural height to calculate content size correctly
     textarea.style.height = 'auto';
+    textarea.style.minHeight = '0';
+    textarea.style.overflowY = 'hidden';
     
     // Get the natural size of the content
     let newHeight = textarea.scrollHeight;
-    
-    // Ensure minimum height is at least the line height for single-line text
-    const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
-    const minHeight = lineHeight + 2; // Add small padding
-    
-    if (newHeight < minHeight) {
-      newHeight = minHeight;
-    }
     
     // Apply max height constraint
     if (maxHeight && newHeight > maxHeight) {
@@ -41,6 +42,11 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     
     // Set the new height
     textarea.style.height = `${newHeight}px`;
+    
+    // Restore original minHeight if it was set
+    if (originalStyle.minHeight && originalStyle.minHeight !== '0px') {
+      textarea.style.minHeight = originalStyle.minHeight;
+    }
   }, [maxHeight]);
 
   React.useEffect(() => {
@@ -60,6 +66,17 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
       clearTimeout(timer);
     };
   }, [props.value, resizeTextarea]);
+
+  // Additional effect to handle initial render resize
+  React.useEffect(() => {
+    // Ensure resize happens when component mounts
+    if (textareaRef.current) {
+      // Use a microtask to ensure DOM is fully rendered
+      Promise.resolve().then(() => {
+        resizeTextarea();
+      });
+    }
+  }, [resizeTextarea]);
 
   // Observe changes to the parent element's size
   React.useEffect(() => {
@@ -89,7 +106,7 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
         className,
       )}
       onInput={resizeTextarea}
-      style={{ minHeight: 'auto', ...props.style }}
+      style={props.style}
       {...props}
     />
   );
