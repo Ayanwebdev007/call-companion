@@ -67,25 +67,27 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
       if (!textarea.value) {
         newHeight = singleLineHeight;
       } else {
-        // For content, use the scrollHeight which accounts for visual wrapping
-        // but ensure it's at least the height for the number of logical lines
-        // Only apply logical line calculation if there are actual newlines in the text
-        if (logicalLines > 1) {
+        // For content, determine if text actually spans multiple visual lines
+        // by checking if scrollHeight is greater than single line height
+        const isMultiline = scrollHeight > singleLineHeight * 1.5; // 1.5 factor to account for potential rounding differences
+        
+        if (logicalLines > 1 || isMultiline) {
+          // For multiline content, use the larger of scrollHeight or logical line calculation
           newHeight = Math.max(scrollHeight, singleLineHeight * logicalLines);
         } else {
-          // For single line content, just use scrollHeight
-          newHeight = scrollHeight;
+          // For single line content, use single line height
+          newHeight = singleLineHeight;
         }
       }
       
-      // Apply min height constraint only if it's greater than the calculated single line height
-      // This prevents the textarea from jumping to a larger height when there's only one line of text
-      if (logicalLines <= 1 && scrollHeight < minHeight) {
-        // For single line content, don't force the minHeight if scrollHeight is smaller
-        // But ensure it's at least the single line height
+      // Apply min height constraint appropriately
+      // For single line content that doesn't need the minHeight, use the calculated height
+      // But ensure it's at least the single line height
+      if (logicalLines <= 1 && !isMultiline) {
+        // For truly single line content, use calculated height but ensure it's at least single line height
         newHeight = Math.max(newHeight, singleLineHeight);
       } else {
-        // For multiple lines or when content is larger than minHeight, apply constraints
+        // For multiline content or when minHeight is needed, apply constraints
         newHeight = Math.max(newHeight, minHeight);
       }
       
