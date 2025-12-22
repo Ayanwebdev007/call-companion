@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchSpreadsheets, fetchSharedSpreadsheets, createSpreadsheet, deleteSpreadsheet, shareSpreadsheet, Spreadsheet } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, Plus, Trash2, Share2, User, Users } from "lucide-react";
+import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet } from "lucide-react";
 
 const Dashboard = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -147,18 +147,28 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted/10">
       {/* Header */}
-      <header className="bg-card border-b border-border px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold text-foreground">Calling CRM</h1>
-            <span className="text-sm text-muted-foreground">Welcome, {user?.username}</span>
+      <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md px-4 py-3 shadow-sm">
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary/10 p-2 rounded-xl">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Calling CRM</h1>
+              <p className="text-xs text-muted-foreground">Manage your customer outreach</p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 bg-secondary/50 rounded-full border border-border/50">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">{user?.username}</span>
+            </div>
+            
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
                   <Plus className="h-4 w-4 mr-2" />
                   New Spreadsheet
                 </Button>
@@ -278,9 +288,8 @@ const Dashboard = () => {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" size="sm" onClick={logout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
+            <Button variant="ghost" size="icon" onClick={logout} className="text-muted-foreground hover:text-destructive transition-colors">
+              <LogOut className="h-5 w-5" />
             </Button>
           </div>
         </div>
@@ -288,30 +297,43 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Your Spreadsheets</h2>
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+            <p className="text-muted-foreground mt-1">
+              You have {spreadsheets.length} {spreadsheets.length === 1 ? 'spreadsheet' : 'spreadsheets'}
+            </p>
+          </div>
+          
           <div className="flex gap-2">
-            <span className="text-sm text-muted-foreground">
-              {spreadsheets.length} {spreadsheets.length === 1 ? 'spreadsheet' : 'spreadsheets'}
-            </span>
+            {/* Filter/Search placeholders could go here */}
           </div>
         </div>
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="h-32">
+              <Card key={i} className="h-48">
                 <CardHeader>
                   <Skeleton className="h-6 w-3/4 mb-2" />
                   <Skeleton className="h-4 w-1/2" />
                 </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-20 w-full" />
+                </CardContent>
               </Card>
             ))}
           </div>
         ) : spreadsheets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
-            <p className="text-muted-foreground mb-4">No spreadsheets yet. Create your first one!</p>
-            <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <div className="flex flex-col items-center justify-center h-[60vh] border-2 border-dashed border-border/50 rounded-xl bg-card/50">
+            <div className="bg-primary/10 p-4 rounded-full mb-4">
+              <FileSpreadsheet className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">No spreadsheets yet</h3>
+            <p className="text-muted-foreground mb-6 max-w-sm text-center">
+              Create your first spreadsheet to start organizing your customer data and calls.
+            </p>
+            <Button onClick={() => setIsCreateDialogOpen(true)} size="lg" className="shadow-lg shadow-primary/20">
               <Plus className="h-4 w-4 mr-2" />
               Create Spreadsheet
             </Button>
@@ -321,39 +343,45 @@ const Dashboard = () => {
             {spreadsheets.map((spreadsheet: Spreadsheet) => (
               <Card 
                 key={spreadsheet.id} 
-                className="hover:shadow-md transition-shadow cursor-pointer"
+                className="group relative overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-border/50 bg-card/50 backdrop-blur-sm cursor-pointer"
                 onClick={() => handleOpenSpreadsheet(spreadsheet.id)}
               >
-                <CardHeader>
+                <div className={`absolute top-0 left-0 w-1 h-full ${spreadsheet.is_shared ? 'bg-blue-500' : 'bg-primary'} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                
+                <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-lg truncate">{spreadsheet.name}</CardTitle>
-                      {spreadsheet.is_shared && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <User className="h-3 w-3" />
-                          <span>{spreadsheet.owner}</span>
-                        </div>
-                      )}
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${spreadsheet.is_shared ? 'bg-blue-500/10 text-blue-600' : 'bg-primary/10 text-primary'}`}>
+                        {spreadsheet.is_shared ? <Users className="h-4 w-4" /> : <FileSpreadsheet className="h-4 w-4" />}
+                      </div>
+                      <div className="space-y-1">
+                        <CardTitle className="text-base font-semibold leading-none truncate max-w-[150px]">{spreadsheet.name}</CardTitle>
+                        {spreadsheet.is_shared && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <span>by {spreadsheet.owner}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       {!spreadsheet.is_shared && (
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-background/80"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleShareSpreadsheet(spreadsheet.id);
                           }}
                         >
-                          <Share2 className="h-4 w-4" />
+                          <Share2 className="h-4 w-4 text-muted-foreground" />
                         </Button>
                       )}
                       {!spreadsheet.is_shared && (
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteSpreadsheet(spreadsheet.id, spreadsheet.name);
@@ -364,40 +392,29 @@ const Dashboard = () => {
                       )}
                     </div>
                   </div>
-                  {spreadsheet.description && (
-                    <CardDescription className="truncate">
+                </CardHeader>
+                <CardContent className="pb-2">
+                  {spreadsheet.description ? (
+                    <CardDescription className="line-clamp-2 text-xs">
                       {spreadsheet.description}
                     </CardDescription>
+                  ) : (
+                     <p className="text-xs text-muted-foreground italic">No description</p>
                   )}
-                  {spreadsheet.is_shared && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {spreadsheet.is_shared && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                         {spreadsheet.permission_level === 'read-write' ? 'Can edit' : 'View only'}
                       </span>
-                    </div>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm text-muted-foreground">
-                    Created: {new Date(spreadsheet.created_at).toLocaleDateString()}
+                    )}
                   </div>
-                  {spreadsheet.is_shared && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Shared by {spreadsheet.owner}
-                    </div>
-                  )}
                 </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenSpreadsheet(spreadsheet.id);
-                    }}
-                  >
-                    Open
-                  </Button>
+                <CardFooter className="pt-2 border-t border-border/50 bg-muted/20">
+                   <div className="w-full flex justify-between items-center text-xs text-muted-foreground">
+                      <span>{new Date(spreadsheet.created_at).toLocaleDateString()}</span>
+                      <span className="group-hover:text-primary transition-colors">Open &rarr;</span>
+                   </div>
                 </CardFooter>
               </Card>
             ))}

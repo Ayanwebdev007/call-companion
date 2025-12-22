@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { Phone } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -50,48 +51,71 @@ const Login = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <Card className="w-[350px]">
-        <CardHeader>
-          <CardTitle>Login</CardTitle>
-          <CardDescription>Enter your credentials to access your account.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit}>
-            <div className="grid w-full items-center gap-4">
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="username">Username</Label>
-                <Input 
-                  id="username" 
-                  placeholder="Your username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="password">Password</Label>
-                <Input 
-                  id="password" 
-                  type="password"
-                  placeholder="Your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto grid w-full max-w-[350px] gap-6">
+          <div className="flex flex-col items-center gap-2 text-center">
+            <div className="p-3 bg-primary/10 rounded-full">
+              <Phone className="h-6 w-6 text-primary" />
             </div>
-            <Button className="w-full mt-4" type="submit" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex justify-center">
-          <p className="text-sm text-muted-foreground">
-            Don't have an account? <Link to="/register" className="text-primary hover:underline">Register</Link>
+            <h1 className="text-3xl font-bold">Welcome back</h1>
+            <p className="text-balance text-muted-foreground">
+              Enter your credentials to access your account
+            </p>
+          </div>
+          <Card className="border-0 shadow-none sm:border sm:shadow-sm">
+            <CardContent className="pt-6">
+              <form onSubmit={handleSubmit}>
+                <div className="grid w-full items-center gap-4">
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor="username">Username</Label>
+                    <Input 
+                      id="username" 
+                      placeholder="Enter your username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                    </div>
+                    <Input 
+                      id="password" 
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="h-10"
+                    />
+                  </div>
+                  <Button className="w-full h-10 mt-2" type="submit" disabled={loading}>
+                    {loading ? "Logging in..." : "Login"}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+            <CardFooter className="flex justify-center border-t p-4 sm:p-6">
+              <p className="text-sm text-muted-foreground">
+                Don't have an account? <Link to="/register" className="text-primary hover:underline font-medium">Register</Link>
+              </p>
+            </CardFooter>
+          </Card>
+        </div>
+      </div>
+      <div className="hidden bg-muted lg:block relative overflow-hidden">
+        <div className="absolute inset-0 bg-primary/90" />
+        <div className="relative z-10 flex flex-col items-center justify-center h-full text-white p-12 text-center">
+          <h2 className="text-4xl font-bold mb-4">Manage your calls efficiently</h2>
+          <p className="text-lg text-primary-foreground/80 max-w-md">
+            Track customer interactions, schedule follow-ups, and grow your business with our intuitive calling CRM.
           </p>
-        </CardFooter>
-      </Card>
+        </div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-white/10 rounded-full blur-3xl" />
+      </div>
     </div>
   );
 };
