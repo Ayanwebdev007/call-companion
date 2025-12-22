@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Download } from "lucide-react";
@@ -805,7 +806,7 @@ const Index = () => {
                 />
               </ResizableTableCell>
               <ResizableTableCell className="border border-border p-0" autoHeight>
-                <Input
+                <Textarea
                   value={newRow.remark}
                       onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
                       className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
@@ -1086,7 +1087,7 @@ function SpreadsheetRow({
         />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0" autoHeight>
-        <Input
+        <Textarea
           defaultValue={customer.remark || ""}
           onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
           className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
