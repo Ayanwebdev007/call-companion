@@ -56,17 +56,14 @@ const ResizableTableFooter = React.forwardRef<
 ));
 ResizableTableFooter.displayName = "ResizableTableFooter";
 
-interface ResizableTableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
-  autoHeight?: boolean;
-}
+interface ResizableTableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {}
 
 const ResizableTableRow = React.forwardRef<HTMLTableRowElement, ResizableTableRowProps>(
-  ({ className, autoHeight = false, ...props }, ref) => {
+  ({ className, ...props }, ref) => {
     return (
       <tr
         className={cn(
           "border-b transition-colors data-[state=selected]:bg-muted hover:bg-muted/50 relative",
-          autoHeight && "h-full",
           className
         )}
         {...props}
@@ -164,20 +161,14 @@ ResizableTableHead.displayName = "ResizableTableHead";
 
 interface ResizableTableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
   resizable?: boolean;
-  autoHeight?: boolean;
 }
 
-interface ResizableTableCellPropsWithHeight extends ResizableTableCellProps {
-  autoHeight?: boolean;
-}
-
-const ResizableTableCell = React.forwardRef<HTMLTableCellElement, ResizableTableCellPropsWithHeight>(
-  ({ className, resizable = true, autoHeight = false, ...props }, ref) => (
+const ResizableTableCell = React.forwardRef<HTMLTableCellElement, ResizableTableCellProps>(
+  ({ className, resizable = true, ...props }, ref) => (
     <td
       ref={ref}
       className={cn(
-        "[&:has([role=checkbox])]:pr-0 relative",
-        autoHeight ? "p-0 h-full align-top" : "p-4 align-middle",
+        "p-4 align-middle [&:has([role=checkbox])]:pr-0 relative",
         className,
         resizable && "overflow-hidden"
       )}
