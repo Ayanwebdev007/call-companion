@@ -56,9 +56,7 @@ const ResizableTableFooter = React.forwardRef<
 ));
 ResizableTableFooter.displayName = "ResizableTableFooter";
 
-interface ResizableTableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {}
-
-const ResizableTableRow = React.forwardRef<HTMLTableRowElement, ResizableTableRowProps>(
+const ResizableTableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTMLTableRowElement>>(
   ({ className, ...props }, ref) => {
     return (
       <tr

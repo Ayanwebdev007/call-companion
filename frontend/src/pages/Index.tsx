@@ -75,10 +75,17 @@ const Index = () => {
 
   // Search query state
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [debouncedQuery, setDebouncedQuery] = useState<string>("");
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedQuery(searchQuery.trim());
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   // Fetch customers
   const { data: customers = [], isLoading, error } = useQuery({
-    queryKey: ["customers", spreadsheetId, searchQuery],
+    queryKey: ["customers", spreadsheetId, debouncedQuery],
     queryFn: async () => {
       try {
         console.log("Fetching customers for spreadsheet:", spreadsheetId);
@@ -89,7 +96,7 @@ const Index = () => {
         if (spreadsheetId === "undefined" || spreadsheetId === "null") {
           throw new Error(`Invalid spreadsheet ID: ${spreadsheetId}`);
         }
-        const data = await fetchCustomers(spreadsheetId, searchQuery && searchQuery.trim().length > 0 ? searchQuery.trim() : undefined);
+        const data = await fetchCustomers(spreadsheetId, debouncedQuery || undefined);
         console.log("Customers fetched:", data);
         if (!Array.isArray(data)) {
           throw new Error("API response is not an array");
@@ -117,7 +124,7 @@ const Index = () => {
 
   // Add customer mutation
   const addMutation = useMutation({
-    mutationFn: (customerData: any) => addCustomer({ ...customerData, spreadsheet_id: spreadsheetId }),
+    mutationFn: (customerData: Omit<Customer, 'id'>) => addCustomer({ ...customerData, spreadsheet_id: spreadsheetId! }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
       toast({ title: "Customer added successfully!" });
@@ -318,15 +325,14 @@ const Index = () => {
 
   if (error) {
     console.error("Query Error:", error);
-    // Type guard to check if error has response property (e.g., Axios errors)
-    const hasResponse = (error as any).response;
+    const errResp = (error as { response?: { status?: number; data?: unknown } }).response;
     
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h2 className="text-xl font-bold text-red-600">Error loading customers</h2>
-        <p className="text-gray-600">{error.message}</p>
-        {hasResponse && (
-          <p className="text-gray-600 mt-2">Status: {hasResponse.status} - {JSON.stringify(hasResponse.data)}</p>
+        <p className="text-gray-600">{error instanceof Error ? error.message : "Unknown error"}</p>
+        {errResp && (
+          <p className="text-gray-600 mt-2">Status: {errResp.status} - {JSON.stringify(errResp.data)}</p>
         )}
         <Button onClick={() => window.location.reload()} className="mt-4">
           Retry
@@ -343,7 +349,7 @@ const Index = () => {
     // Remove color field if it's null to avoid sending unnecessary data
     const { color, ...newRowWithoutNullColor } = newRow;
     const rowData = color ? newRow : newRowWithoutNullColor;
-    addMutation.mutate(rowData as any);
+    addMutation.mutate(rowData as Omit<Customer, 'id'>);
   };
 
   const handleCellChange = (id: string, field: string, value: string) => {
@@ -532,7 +538,7 @@ const Index = () => {
             <div className="h-4 w-px bg-border/50" />
             <Button 
               variant="destructive" 
-              size="sm" 
+              size="icon" 
               onClick={() => {
                 if (window.confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)?`)) {
                   bulkDeleteMutation.mutate(Array.from(selectedCustomers), {
@@ -544,9 +550,10 @@ const Index = () => {
                 }
               }}
               disabled={bulkDeleteMutation.isPending}
-              className="h-7 px-2 text-xs"
+              className="h-7 w-7"
+              aria-label="Delete selected customers"
             >
-              {bulkDeleteMutation.isPending ? "Deleting..." : "Delete Selected"}
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
             <Button 
               variant="ghost" 
@@ -643,7 +650,7 @@ const Index = () => {
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform"
-                            onClick={() => setNewRow({ ...newRow, color: color as any })}
+                          onClick={() => setNewRow({ ...newRow, color: color as Customer['color'] })}
                           >
                             <div 
                               className={`w-6 h-6 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`} 
@@ -1006,7 +1013,7 @@ function SpreadsheetRow({
                     variant="ghost"
                     size="sm"
                     className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform"
-                    onClick={() => handleColorChange(color as any)}
+                    onClick={() => handleColorChange(color as Customer['color'])}
                   >
                     <div 
                       className={`w-6 h-6 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`} 

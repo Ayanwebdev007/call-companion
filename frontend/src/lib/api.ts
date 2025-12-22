@@ -138,17 +138,17 @@ export const fetchSharedSpreadsheets = async (): Promise<Spreadsheet[]> => {
   return response.data;
 };
 
-export const shareSpreadsheet = async (spreadsheetId: string, username: string, permissionLevel: 'read-only' | 'read-write' = 'read-only'): Promise<any> => {
+export const shareSpreadsheet = async (spreadsheetId: string, username: string, permissionLevel: 'read-only' | 'read-write' = 'read-only'): Promise<unknown> => {
   const response = await axios.post(`${SPREADSHEETS_API_URL}/${spreadsheetId}/share`, { username, permission_level: permissionLevel });
   return response.data;
 };
 
-export const unshareSpreadsheet = async (spreadsheetId: string, username: string): Promise<any> => {
+export const unshareSpreadsheet = async (spreadsheetId: string, username: string): Promise<unknown> => {
   const response = await axios.delete(`${SPREADSHEETS_API_URL}/${spreadsheetId}/share/${username}`);
   return response.data;
 };
 
-export const updateSharePermission = async (spreadsheetId: string, username: string, permissionLevel: 'read-only' | 'read-write'): Promise<any> => {
+export const updateSharePermission = async (spreadsheetId: string, username: string, permissionLevel: 'read-only' | 'read-write'): Promise<unknown> => {
   const response = await axios.put(`${SPREADSHEETS_API_URL}/${spreadsheetId}/share/${username}`, { permission_level: permissionLevel });
   return response.data;
 };
