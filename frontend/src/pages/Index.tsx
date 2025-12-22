@@ -919,6 +919,13 @@ function SpreadsheetRow({
     onCellChange(customer.id, "color", color || "");
   };
 
+  // Debug logging for row height
+  React.useEffect(() => {
+    if (rowHeights[customer.id]) {
+      console.log(`Row ${customer.id} height set to: ${rowHeights[customer.id]}px`);
+    }
+  }, [rowHeights, customer.id]);
+
   return (
     <ResizableTableRow 
       className={`hover:bg-muted/50 transition-all duration-200 group ${
@@ -965,6 +972,9 @@ function SpreadsheetRow({
               const deltaY = moveEvent.clientY - startY;
               const newHeight = Math.max(40, startHeight + deltaY);
               rowElement.style.height = `${newHeight}px`;
+              
+              // Debug logging
+              console.log(`Resizing row ${customer.id} to ${newHeight}px`);
               
               // Update state
               if (setRowHeights) {

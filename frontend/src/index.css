@@ -122,6 +122,18 @@
     min-height: 100% !important;
   }
   
+  /* Ensure table rows and cells properly inherit heights */
+  tr[h-full], td[h-full], th[h-full] {
+    height: 100%;
+  }
+  
+  /* Fix for textarea in resizable cells */
+  td.resizable textarea[h-full] {
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 100%;
+  }
+  
   /* Allow vertical resizing */
   .resizable-cell {
     resize: both;
