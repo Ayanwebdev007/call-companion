@@ -14,6 +14,11 @@ const customerSchema = new mongoose.Schema({
   position: { type: Number, default: 0 } // For drag and drop ordering
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
+// Indexes to support search within a spreadsheet
+customerSchema.index({ spreadsheet_id: 1, customer_name: 1 });
+customerSchema.index({ spreadsheet_id: 1, company_name: 1 });
+customerSchema.index({ spreadsheet_id: 1, phone_number: 1 });
+
 // Map _id to id
 customerSchema.set('toJSON', {
   virtuals: true,

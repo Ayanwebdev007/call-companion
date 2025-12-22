@@ -8,10 +8,10 @@ import fs from 'fs';
 
 const router = express.Router();
 
-// GET all customers for logged in user
+// GET all customers for logged in user (supports search)
 router.get('/', auth, async (req, res) => {
   try {
-    const { spreadsheetId } = req.query;
+    const { spreadsheetId, q } = req.query;
     
     console.log('Received spreadsheetId:', spreadsheetId);
     
@@ -47,7 +47,24 @@ router.get('/', auth, async (req, res) => {
       return res.status(403).json({ message: 'You do not have access to this spreadsheet' });
     }
     
-    const customers = await Customer.find({ spreadsheet_id: spreadsheetId }).sort({ position: 1, next_call_date: 1, next_call_time: 1 });
+    // Build query
+    const baseFilter = { spreadsheet_id: spreadsheetId };
+    let filter = baseFilter;
+    if (q && typeof q === 'string' && q.trim().length > 0) {
+      // Escape regex special characters and build case-insensitive regex
+      const escaped = q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'i');
+      filter = {
+        ...baseFilter,
+        $or: [
+          { customer_name: regex },
+          { company_name: regex },
+          { phone_number: regex },
+        ]
+      };
+    }
+    
+    const customers = await Customer.find(filter).sort({ position: 1, next_call_date: 1, next_call_time: 1 });
     res.json(customers);
   } catch (err) {
     console.error('Error loading customers:', err);

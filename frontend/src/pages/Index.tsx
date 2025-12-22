@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AutoResizeTextarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search } from "lucide-react";
 import { format, isToday, parseISO, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -73,9 +73,12 @@ const Index = () => {
     color: null as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null,
   });
 
+  // Search query state
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
   // Fetch customers
   const { data: customers = [], isLoading, error } = useQuery({
-    queryKey: ["customers", spreadsheetId],
+    queryKey: ["customers", spreadsheetId, searchQuery],
     queryFn: async () => {
       try {
         console.log("Fetching customers for spreadsheet:", spreadsheetId);
@@ -86,7 +89,7 @@ const Index = () => {
         if (spreadsheetId === "undefined" || spreadsheetId === "null") {
           throw new Error(`Invalid spreadsheet ID: ${spreadsheetId}`);
         }
-        const data = await fetchCustomers(spreadsheetId);
+        const data = await fetchCustomers(spreadsheetId, searchQuery && searchQuery.trim().length > 0 ? searchQuery.trim() : undefined);
         console.log("Customers fetched:", data);
         if (!Array.isArray(data)) {
           throw new Error("API response is not an array");
@@ -487,16 +490,27 @@ const Index = () => {
           >
             All Customers ({customers.length})
           </Button>
-          <div className="h-6 w-px bg-border/50" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowCheckboxes(true)}
-            className="h-7 px-2 text-xs flex items-center gap-1 border-border/50"
-          >
-            <Trash2 className="h-3 w-3" />
-            Delete
-          </Button>
+          
+          <div className="ml-auto flex items-center gap-3">
+            <div className="relative w-[280px]">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search name, company, or phone"
+                className="pl-8 h-8"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowCheckboxes(true)}
+              className="h-7 w-7 border-border/50"
+              aria-label="Select rows to delete"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
 
         {/* Bulk Actions Bar */}
