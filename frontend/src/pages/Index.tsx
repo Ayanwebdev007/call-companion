@@ -696,12 +696,12 @@ const Index = () => {
                   </Fragment>
                 ))}
                 {/* New Row Input */}
-                <ResizableTableRow className="bg-primary/5">
-                  <ResizableTableCell className="border border-border px-3 py-1 text-xs text-primary font-medium text-center">
+                <ResizableTableRow className="bg-primary/5" autoHeight>
+                  <ResizableTableCell className="border border-border px-3 py-1 text-xs text-primary font-medium text-center" autoHeight>
                     NEW
                   </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                    <div className="flex items-center h-9">
+                  <ResizableTableCell className="border border-border p-0" autoHeight>
+                    <div className="flex items-center h-full">
                       <Popover>
                         <PopoverTrigger asChild>
                           <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
@@ -736,7 +736,7 @@ const Index = () => {
                       />
                     </div>
                   </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
+                  <ResizableTableCell className="border border-border p-0" autoHeight>
                     <Input
                       value={newRow.company_name}
                       onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
@@ -746,7 +746,7 @@ const Index = () => {
                       autoHeight
                     />
                   </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
+                  <ResizableTableCell className="border border-border p-0" autoHeight>
                     <Input
                       value={newRow.phone_number}
                       onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
@@ -756,7 +756,7 @@ const Index = () => {
                       autoHeight
                     />
                   </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
+                  <ResizableTableCell className="border border-border p-0" autoHeight>
                     <Popover>
                       <PopoverTrigger asChild>
                         <button className="w-full h-full px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
@@ -775,7 +775,7 @@ const Index = () => {
                       </PopoverContent>
                     </Popover>
                   </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
+                  <ResizableTableCell className="border border-border p-0" autoHeight>
                 <Popover>
                   <PopoverTrigger asChild>
                     <button className="w-full h-full px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
@@ -794,7 +794,7 @@ const Index = () => {
                   </PopoverContent>
                 </Popover>
               </ResizableTableCell>
-              <ResizableTableCell className="border border-border p-0">
+              <ResizableTableCell className="border border-border p-0" autoHeight>
                 <Input
                   type="time"
                   value={newRow.next_call_time}
@@ -804,7 +804,7 @@ const Index = () => {
                   autoHeight
                 />
               </ResizableTableCell>
-              <ResizableTableCell className="border border-border p-0">
+              <ResizableTableCell className="border border-border p-0" autoHeight>
                 <Input
                   value={newRow.remark}
                       onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
@@ -933,6 +933,7 @@ function SpreadsheetRow({
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, customer.id)}
       onDragEnd={onDragEnd}
+      autoHeight
     >
       <ResizableTableCell 
         className="border border-border px-3 py-1 text-xs text-muted-foreground text-center relative group"
@@ -940,6 +941,7 @@ function SpreadsheetRow({
         title="Drag to reorder"
         draggable
         onDragStart={(e) => onDragStart(e, customer.id)}
+        autoHeight
       >
         <div className="absolute inset-0 flex items-center justify-center">
           {index}
@@ -982,8 +984,8 @@ function SpreadsheetRow({
           }}
         ></div>
       </ResizableTableCell>
-      <ResizableTableCell className="border border-border p-0">
-        <div className="flex items-center h-full min-h-8">
+      <ResizableTableCell className="border border-border p-0" autoHeight>
+        <div className="flex items-center h-full">
           <Popover>
             <PopoverTrigger asChild>
               <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
@@ -1011,13 +1013,13 @@ function SpreadsheetRow({
           <Input
             defaultValue={customer.customer_name}
             onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
-            className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full"
+            className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
             style={{ height: '100%' }}
             autoHeight
           />
         </div>
       </ResizableTableCell>
-      <ResizableTableCell className="border border-border p-0">
+      <ResizableTableCell className="border border-border p-0" autoHeight>
         <Input
           defaultValue={customer.company_name}
           onBlur={(e) => onCellChange(customer.id, "company_name", e.target.value)}
@@ -1026,7 +1028,7 @@ function SpreadsheetRow({
           autoHeight
         />
       </ResizableTableCell>
-      <ResizableTableCell className="border border-border p-0">
+      <ResizableTableCell className="border border-border p-0" autoHeight>
         <Input
           defaultValue={customer.phone_number}
           onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
@@ -1035,7 +1037,7 @@ function SpreadsheetRow({
           autoHeight
         />
       </ResizableTableCell>
-      <ResizableTableCell className="border border-border p-0">
+      <ResizableTableCell className="border border-border p-0" autoHeight>
         <Popover>
           <PopoverTrigger asChild>
             <button className="w-full h-full px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
@@ -1054,7 +1056,7 @@ function SpreadsheetRow({
           </PopoverContent>
         </Popover>
       </ResizableTableCell>
-      <ResizableTableCell className="border border-border p-0">
+      <ResizableTableCell className="border border-border p-0" autoHeight>
         <Popover>
           <PopoverTrigger asChild>
             <button className="w-full h-full px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
@@ -1073,7 +1075,7 @@ function SpreadsheetRow({
           </PopoverContent>
         </Popover>
       </ResizableTableCell>
-      <ResizableTableCell className="border border-border p-0">
+      <ResizableTableCell className="border border-border p-0" autoHeight>
         <Input
           type="time"
           defaultValue={customer.next_call_time || ""}
@@ -1083,7 +1085,7 @@ function SpreadsheetRow({
           autoHeight
         />
       </ResizableTableCell>
-      <ResizableTableCell className="border border-border p-0">
+      <ResizableTableCell className="border border-border p-0" autoHeight>
         <Input
           defaultValue={customer.remark || ""}
           onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
@@ -1092,7 +1094,7 @@ function SpreadsheetRow({
           autoHeight
         />
       </ResizableTableCell>
-      <ResizableTableCell className="border border-border p-1 text-center">
+      <ResizableTableCell className="border border-border p-1 text-center" autoHeight>
         <Button
           variant="ghost"
           size="sm"
