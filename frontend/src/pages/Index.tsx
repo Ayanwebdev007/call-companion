@@ -734,7 +734,7 @@ const Index = () => {
                           className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full flex-grow"
                           placeholder="Customer Name"
                           style={{ minHeight: 'auto' }}
-                          minHeight={28}
+                          minHeight={24}
                         />
                       </div>
                     </div>
@@ -747,7 +747,7 @@ const Index = () => {
                         className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
                         placeholder="Company Name"
                         style={{ minHeight: 'auto' }}
-                        minHeight={28}
+                        minHeight={24}
                       />
                     </div>
                   </ResizableTableCell>
@@ -759,7 +759,7 @@ const Index = () => {
                         className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
                         placeholder="Phone Number"
                         style={{ minHeight: 'auto' }}
-                        minHeight={28}
+                        minHeight={24}
                       />
                     </div>
                   </ResizableTableCell>
@@ -818,7 +818,7 @@ const Index = () => {
                         className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
                         placeholder="Remark"
                         style={{ minHeight: 'auto' }}
-                        minHeight={28}
+                        minHeight={24}
                       />
                 </div>
               </ResizableTableCell>
@@ -985,7 +985,7 @@ function SpreadsheetRow({
             onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full flex-grow"
             style={{ minHeight: 'auto' }}
-            minHeight={28}
+            minHeight={24}
           />
         </div>
       </ResizableTableCell>
@@ -996,7 +996,7 @@ function SpreadsheetRow({
             onBlur={(e) => onCellChange(customer.id, "company_name", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full"
             style={{ minHeight: 'auto' }}
-            minHeight={28}
+            minHeight={24}
           />
         </div>
       </ResizableTableCell>
@@ -1007,7 +1007,7 @@ function SpreadsheetRow({
             onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full"
             style={{ minHeight: 'auto' }}
-            minHeight={28}
+            minHeight={24}
           />
         </div>
       </ResizableTableCell>
@@ -1065,7 +1065,7 @@ function SpreadsheetRow({
             onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full resize-none"
             style={{ minHeight: 'auto' }}
-            minHeight={28}
+            minHeight={24}
           />
         </div>
       </ResizableTableCell>
