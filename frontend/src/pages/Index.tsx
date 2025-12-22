@@ -450,63 +450,6 @@ const Index = () => {
             </div>
           </div>
         </header>
-        
-        {/* DEBUG TEST ROW */}
-        <div className="p-4 bg-yellow-100 border-b border-yellow-300">
-          <h3 className="font-bold mb-2">ROW RESIZING DEBUG TEST</h3>
-          <div 
-            id="debug-test-row"
-            className="border border-gray-300 bg-white"
-            style={{ height: '60px', position: 'relative' }}
-            ref={(el) => {
-              if (el) {
-                // Add event listener directly to DOM element to bypass React event system
-                const handle = el.querySelector('.resize-handle');
-                if (handle) {
-                  handle.addEventListener('mousedown', (event) => {
-                    console.log('=== DIRECT DOM EVENT HANDLER WORKING ===');
-                    event.preventDefault();
-                    
-                    const rowElement = document.getElementById('debug-test-row');
-                    if (!rowElement) {
-                      console.error('ERROR: Could not find test row element');
-                      return;
-                    }
-                    
-                    const startY = event.clientY;
-                    const startHeight = rowElement.offsetHeight;
-                    console.log('Direct DOM handler - Start height:', startHeight);
-                    
-                    const onMouseMove = (moveEvent: MouseEvent) => {
-                      const deltaY = moveEvent.clientY - startY;
-                      const newHeight = Math.max(40, startHeight + deltaY);
-                      rowElement.style.height = `${newHeight}px`;
-                      console.log('Direct DOM handler - New height:', newHeight);
-                    };
-                    
-                    const onMouseUp = () => {
-                      console.log('Direct DOM handler - Resize ended');
-                      document.removeEventListener('mousemove', onMouseMove);
-                      document.removeEventListener('mouseup', onMouseUp);
-                      console.log('=== DIRECT DOM EVENT HANDLER ENDED ===');
-                    };
-                    
-                    document.addEventListener('mousemove', onMouseMove);
-                    document.addEventListener('mouseup', onMouseUp);
-                  });
-                }
-              }
-            }}
-          >
-            <div className="p-2 h-full flex items-center">
-              <span>This is a test row. Try to resize it using the handle below:</span>
-            </div>
-            <div 
-              className="resize-handle absolute -bottom-1 left-0 right-0 h-2 bg-red-500 cursor-row-resize hover:bg-red-600"
-            />
-          </div>
-        </div>
-        {/* END DEBUG TEST ROW */}
 
         {/* Sheet Tabs */}
         <div className="bg-card border-b border-border px-4 py-2 flex items-center gap-4">
@@ -822,7 +765,7 @@ const Index = () => {
                           onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
                           className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
                           placeholder="Customer Name"
-                          style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
+                          style={{ minHeight: '100%' }}
                         />
                       </div>
                     </div>
@@ -834,7 +777,7 @@ const Index = () => {
                         onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
                         className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
                         placeholder="Company Name"
-                        style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
+                        style={{ minHeight: '100%' }}
                       />
                     </div>
                   </ResizableTableCell>
@@ -845,7 +788,7 @@ const Index = () => {
                         onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
                         className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
                         placeholder="Phone Number"
-                        style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
+                        style={{ minHeight: '100%' }}
                       />
                     </div>
                   </ResizableTableCell>
@@ -1051,59 +994,53 @@ function SpreadsheetRow({
         </div>
         {/* Simple row resize handle */}
         <div 
-          className="absolute -bottom-1 left-0 right-0 h-2 cursor-row-resize opacity-0 group-hover:opacity-100 hover:opacity-100 hover:bg-muted-foreground/30 row-resize-handle"
-          data-customer-id={customer.id}
-          ref={(el) => {
-            if (el) {
-              // Remove any existing event listeners to prevent duplicates
-              const clone = el.cloneNode(true);
-              el.parentNode?.replaceChild(clone, el);
+          className="absolute -bottom-1 left-0 right-0 h-2 cursor-row-resize opacity-0 group-hover:opacity-100 hover:opacity-100 hover:bg-muted-foreground/30"
+          onMouseDown={(e) => {
+            // Prevent drag event from firing
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const rowElement = e.currentTarget.closest('tr');
+            if (!rowElement) return;
+            
+            const startY = e.clientY;
+            const startHeight = rowElement.offsetHeight;
+            
+            // Force all inputs in this row to inherit height
+            const inputs = rowElement.querySelectorAll('input');
+            
+            const onMouseMove = (moveEvent: MouseEvent) => {
+              const deltaY = moveEvent.clientY - startY;
+              const newHeight = Math.max(40, startHeight + deltaY);
               
-              // Add direct DOM event listener
-              clone.addEventListener('mousedown', (event) => {
-                console.log('=== DIRECT ROW RESIZE HANDLE CLICKED ===');
-                console.log('Customer ID:', customer.id);
-                event.preventDefault();
-                event.stopPropagation();
-                
-                const rowElement = clone.closest('tr');
-                console.log('Direct DOM - Row element found:', rowElement);
-                if (!rowElement) {
-                  console.error('Direct DOM - ERROR: Could not find row element');
-                  return;
+              // Set row height
+              rowElement.style.height = `${newHeight}px`;
+              
+              // Force all inputs to inherit the new height
+              inputs.forEach(input => {
+                if (input.parentElement) {
+                  input.parentElement.style.height = '100%';
                 }
-                
-                const startY = event.clientY;
-                const startHeight = rowElement.offsetHeight;
-                console.log('Direct DOM - Starting resize, startHeight:', startHeight);
-                
-                const onMouseMove = (moveEvent: MouseEvent) => {
-                  console.log('Direct DOM - Mouse moving during resize');
-                  const deltaY = moveEvent.clientY - startY;
-                  const newHeight = Math.max(40, startHeight + deltaY);
-                  rowElement.style.height = `${newHeight}px`;
-                  console.log('Direct DOM - Setting row height to:', newHeight);
-                  
-                  // Update state
-                  if (setRowHeights) {
-                    setRowHeights(prev => ({
-                      ...prev,
-                      [customer.id]: newHeight
-                    }));
-                  }
-                };
-                
-                const onMouseUp = () => {
-                  console.log('Direct DOM - Mouse up, resize ended');
-                  document.removeEventListener('mousemove', onMouseMove);
-                  document.removeEventListener('mouseup', onMouseUp);
-                  console.log('=== DIRECT ROW RESIZE HANDLE ENDED ===');
-                };
-                
-                document.addEventListener('mousemove', onMouseMove);
-                document.addEventListener('mouseup', onMouseUp);
+                input.style.height = '100%';
+                input.style.minHeight = '100%';
               });
-            }
+              
+              // Update state
+              if (setRowHeights) {
+                setRowHeights(prev => ({
+                  ...prev,
+                  [customer.id]: newHeight
+                }));
+              }
+            };
+            
+            const onMouseUp = () => {
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+            };
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
           }}
         ></div>
       </ResizableTableCell>
@@ -1126,7 +1063,7 @@ function SpreadsheetRow({
                   >
                     <div 
                       className={`w-4 h-4 rounded-full border ${color ? 'border-muted-foreground/50' : 'border-dashed border-muted-foreground/50'}`} 
-                      style={{ backgroundColor: color || 'transparent' }}
+                      style={{ backgroundColor: color || 'transparent' }} 
                     />
                   </Button>
                 ))}
@@ -1138,7 +1075,7 @@ function SpreadsheetRow({
               defaultValue={customer.customer_name}
               onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
               className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
-              style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
+              style={{ minHeight: '100%', height: '100%' }}
             />
           </div>
         </div>
@@ -1159,7 +1096,7 @@ function SpreadsheetRow({
             defaultValue={customer.phone_number}
             onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
-            style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
+            style={{ minHeight: '100%' }}
           />
         </div>
       </ResizableTableCell>
@@ -1208,7 +1145,7 @@ function SpreadsheetRow({
             defaultValue={customer.next_call_time || ""}
             onBlur={(e) => onCellChange(customer.id, "next_call_time", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
-            style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
+            style={{ minHeight: '100%' }}
           />
         </div>
       </ResizableTableCell>
@@ -1218,7 +1155,7 @@ function SpreadsheetRow({
             defaultValue={customer.remark || ""}
             onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
-            style={{ minHeight: '100%', height: '100%', boxSizing: 'border-box' }}
+            style={{ minHeight: '100%' }}
           />
         </div>
       </ResizableTableCell>
