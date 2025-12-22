@@ -56,20 +56,16 @@ const ResizableTableFooter = React.forwardRef<
 ));
 ResizableTableFooter.displayName = "ResizableTableFooter";
 
-interface ResizableTableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
-  style?: React.CSSProperties;
-}
+interface ResizableTableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {}
 
 const ResizableTableRow = React.forwardRef<HTMLTableRowElement, ResizableTableRowProps>(
-  ({ className, style, ...props }, ref) => {
+  ({ className, ...props }, ref) => {
     return (
       <tr
-        ref={ref}
         className={cn(
           "border-b transition-colors data-[state=selected]:bg-muted hover:bg-muted/50 relative",
           className
         )}
-        style={style}
         {...props}
       >
         {props.children}

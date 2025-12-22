@@ -32,7 +32,7 @@ router.get('/', auth, async (req, res) => {
     })));
     
     const sharedSpreadsheets = sharedRecords
-      .filter(record => record.spreadsheet_id && record.owner_user_id && record.spreadsheet_id._id) // Filter out records with null references
+      .filter(record => record.spreadsheet_id && record.owner_user_id) // Filter out records with null references
       .map(record => {
         const spreadsheetObj = record.spreadsheet_id.toObject();
         console.log('Spreadsheet object:', spreadsheetObj);
