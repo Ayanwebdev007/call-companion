@@ -29,8 +29,29 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     textarea.style.minHeight = '0';
     textarea.style.overflowY = 'hidden';
     
+    // Calculate content height properly accounting for padding and borders
+    const computedStyle = window.getComputedStyle(textarea);
+    const paddingTop = parseFloat(computedStyle.paddingTop);
+    const paddingBottom = parseFloat(computedStyle.paddingBottom);
+    const borderTop = parseFloat(computedStyle.borderTopWidth);
+    const borderBottom = parseFloat(computedStyle.borderBottomWidth);
+    
     // Get the natural size of the content
     let newHeight = textarea.scrollHeight;
+    
+    // For empty textareas or single line content, calculate the proper single-line height
+    const lineHeight = parseFloat(computedStyle.lineHeight) || 20;
+    const singleLineHeight = lineHeight + paddingTop + paddingBottom + borderTop + borderBottom;
+    
+    // If textarea is empty, use the single line height
+    if (!textarea.value) {
+      newHeight = singleLineHeight;
+    } else {
+      // For content, ensure it's at least the single line height
+      if (newHeight < singleLineHeight) {
+        newHeight = singleLineHeight;
+      }
+    }
     
     // Apply max height constraint
     if (maxHeight && newHeight > maxHeight) {
@@ -49,8 +70,8 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     }
   }, [maxHeight]);
 
+  // Effect to handle resize on value changes and initial render
   React.useEffect(() => {
-    // Use a timeout to ensure the textarea is rendered before calculating height
     const timer = setTimeout(() => {
       resizeTextarea();
     }, 0);
@@ -67,16 +88,23 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     };
   }, [props.value, resizeTextarea]);
 
-  // Additional effect to handle initial render resize
+  // Effect to handle initial resize after component is fully mounted
   React.useEffect(() => {
-    // Ensure resize happens when component mounts
-    if (textareaRef.current) {
-      // Use a microtask to ensure DOM is fully rendered
-      Promise.resolve().then(() => {
+    const handleAfterRender = () => {
+      // Use requestAnimationFrame to ensure DOM is fully rendered
+      requestAnimationFrame(() => {
         resizeTextarea();
       });
+    };
+    
+    // If component is already in the DOM, resize immediately
+    if (textareaRef.current && document.contains(textareaRef.current)) {
+      handleAfterRender();
+    } else {
+      // Otherwise wait for the next frame
+      requestAnimationFrame(handleAfterRender);
     }
-  }, [resizeTextarea]);
+  }, []);
 
   // Observe changes to the parent element's size
   React.useEffect(() => {
