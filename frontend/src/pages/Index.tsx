@@ -727,36 +727,39 @@ const Index = () => {
                           </div>
                         </PopoverContent>
                       </Popover>
-                      <div className="flex items-center min-h-full pl-6">
+                      <div className="flex items-start min-h-full pl-6 pt-1">
                         <AutoResizeTextarea
                           value={newRow.customer_name}
                           onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
                           className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full flex-grow"
                           placeholder="Customer Name"
                           style={{ minHeight: 'auto' }}
+                          minHeight={28}
                         />
                       </div>
                     </div>
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
-                    <div className="flex items-center min-h-full">
+                    <div className="flex items-start min-h-full pt-1">
                       <AutoResizeTextarea
                         value={newRow.company_name}
                         onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
                         className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
                         placeholder="Company Name"
                         style={{ minHeight: 'auto' }}
+                        minHeight={28}
                       />
                     </div>
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
-                    <div className="flex items-center min-h-full">
+                    <div className="flex items-start min-h-full pt-1">
                       <AutoResizeTextarea
                         value={newRow.phone_number}
                         onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
                         className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
                         placeholder="Phone Number"
                         style={{ minHeight: 'auto' }}
+                        minHeight={28}
                       />
                     </div>
                   </ResizableTableCell>
@@ -808,13 +811,14 @@ const Index = () => {
                 />
               </ResizableTableCell>
               <ResizableTableCell className="border border-border p-0">
-                <div className="flex items-center min-h-full">
+                <div className="flex items-start min-h-full pt-1">
                   <AutoResizeTextarea
                     value={newRow.remark}
                         onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
                         className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
                         placeholder="Remark"
                         style={{ minHeight: 'auto' }}
+                        minHeight={28}
                       />
                 </div>
               </ResizableTableCell>
@@ -949,7 +953,7 @@ function SpreadsheetRow({
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
-        <div className="flex items-center min-h-full">
+        <div className="flex items-start min-h-full pt-1">
           <div className="mr-2">
             <Popover>
               <PopoverTrigger asChild>
@@ -981,26 +985,29 @@ function SpreadsheetRow({
             onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full flex-grow"
             style={{ minHeight: 'auto' }}
+            minHeight={28}
           />
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
-        <div className="flex items-center min-h-full">
+        <div className="flex items-start min-h-full pt-1">
           <AutoResizeTextarea
             defaultValue={customer.company_name}
             onBlur={(e) => onCellChange(customer.id, "company_name", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full"
             style={{ minHeight: 'auto' }}
+            minHeight={28}
           />
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
-        <div className="flex items-center min-h-full">
+        <div className="flex items-start min-h-full pt-1">
           <AutoResizeTextarea
             defaultValue={customer.phone_number}
             onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full"
             style={{ minHeight: 'auto' }}
+            minHeight={28}
           />
         </div>
       </ResizableTableCell>
@@ -1052,12 +1059,13 @@ function SpreadsheetRow({
         />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
-        <div className="flex items-center min-h-full">
+        <div className="flex items-start min-h-full pt-1">
           <AutoResizeTextarea
             defaultValue={customer.remark || ""}
             onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full resize-none"
             style={{ minHeight: 'auto' }}
+            minHeight={28}
           />
         </div>
       </ResizableTableCell>
