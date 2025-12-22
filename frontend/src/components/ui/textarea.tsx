@@ -36,24 +36,23 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     const borderTop = parseFloat(computedStyle.borderTopWidth);
     const borderBottom = parseFloat(computedStyle.borderBottomWidth);
     
-    // Get the natural size of the content
-    const scrollHeight = textarea.scrollHeight;
-    
     // Calculate the single line height
     const lineHeight = parseFloat(computedStyle.lineHeight) || 20;
     const singleLineHeight = lineHeight + paddingTop + paddingBottom + borderTop + borderBottom;
     
-    let newHeight = singleLineHeight;
+    // Get the natural size of the content (includes visual wrapping)
+    const scrollHeight = textarea.scrollHeight;
     
-    // Count the number of lines in the textarea
-    const lines = textarea.value ? textarea.value.split('\n').length : 1;
+    // Count the number of logical lines (separated by newlines)
+    const logicalLines = textarea.value ? textarea.value.split('\n').length : 1;
     
-    if (lines > 1) {
-      // If there are multiple lines, use the scrollHeight but ensure it's at least single line height
-      newHeight = Math.max(scrollHeight, singleLineHeight * lines);
-    } else {
-      // For single line content, ensure it's exactly single line height
+    // For empty textarea, use single line height
+    if (!textarea.value) {
       newHeight = singleLineHeight;
+    } else {
+      // For content, use the scrollHeight which accounts for visual wrapping
+      // but ensure it's at least the height for the number of logical lines
+      newHeight = Math.max(scrollHeight, singleLineHeight * logicalLines);
     }
     
     // Apply max height constraint
