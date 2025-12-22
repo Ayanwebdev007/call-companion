@@ -595,6 +595,143 @@ const Index = () => {
                 </ResizableTableHead>
               )}
             </ResizableTableRow>
+            {/* New Row Input */}
+            <ResizableTableRow className="bg-primary/5">
+              <ResizableTableCell className="border border-border px-3 py-1 text-xs text-primary font-medium text-center">
+                NEW
+              </ResizableTableCell>
+              <ResizableTableCell className="border border-border p-0">
+                <div className="flex items-center h-9">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
+                        style={{ backgroundColor: newRow.color && newRow.color !== "" ? newRow.color : 'white' }} />
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-2" align="start">
+                      <div className="grid grid-cols-4 gap-1">
+                        {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
+                          <Button
+                            key={color || 'none'}
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => setNewRow({ ...newRow, color: color as any })}
+                          >
+                            <div 
+                              className={`w-4 h-4 rounded-full border ${color ? 'border-muted-foreground/50' : 'border-dashed border-muted-foreground/50'}`} 
+                              style={{ backgroundColor: color || 'transparent' }} 
+                            />
+                          </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <div className="flex items-center h-full">
+                    <AutoResizeTextarea
+                      value={newRow.customer_name}
+                      onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
+                      className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
+                      placeholder="Customer Name"
+                      style={{ height: '100%' }}
+                      rows={1}
+                    />
+                  </div>
+                </div>
+              </ResizableTableCell>
+              <ResizableTableCell className="border border-border p-0">
+                <div className="flex items-center h-full">
+                  <AutoResizeTextarea
+                    value={newRow.company_name}
+                    onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
+                    className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
+                    placeholder="Company Name"
+                    style={{ height: '100%' }}
+                    rows={1}
+                  />
+                </div>
+              </ResizableTableCell>
+              <ResizableTableCell className="border border-border p-0">
+                <div className="flex items-center h-full">
+                  <AutoResizeTextarea
+                    value={newRow.phone_number}
+                    onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
+                    className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
+                    placeholder="Phone Number"
+                    style={{ height: '100%' }}
+                    rows={1}
+                  />
+                </div>
+              </ResizableTableCell>
+              <ResizableTableCell className="border border-border p-0">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="w-full h-full px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
+                      <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      <span className="truncate">{newRow.last_call_date ? format(parseISO(newRow.last_call_date), "dd/MM/yyyy") : "Pick date"}</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={newRow.last_call_date ? parseISO(newRow.last_call_date) : undefined}
+                      onSelect={(date) => date && setNewRow({ ...newRow, last_call_date: format(date, "yyyy-MM-dd") })}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </ResizableTableCell>
+              <ResizableTableCell className="border border-border p-0">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="w-full h-full px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
+                      <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      <span className="truncate">{format(parseISO(newRow.next_call_date), "dd/MM/yyyy")}</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={parseISO(newRow.next_call_date)}
+                      onSelect={(date) => date && setNewRow({ ...newRow, next_call_date: format(date, "yyyy-MM-dd") })}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </ResizableTableCell>
+              <ResizableTableCell className="border border-border p-0">
+                <Input
+                  type="time"
+                  value={newRow.next_call_time}
+                  onChange={(e) => setNewRow({ ...newRow, next_call_time: e.target.value })}
+                  className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
+                  style={{ height: '100%' }}
+                />
+              </ResizableTableCell>
+              <ResizableTableCell className="border border-border p-0">
+                <div className="flex items-center h-full">
+                  <AutoResizeTextarea
+                    value={newRow.remark}
+                    onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
+                    className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
+                    placeholder="Remark"
+                    style={{ height: '100%' }}
+                    rows={1}
+                  />
+                </div>
+              </ResizableTableCell>
+              <ResizableTableCell className="border border-border p-1 text-center">
+                <Button
+                  size="sm"
+                  onClick={handleAddRow}
+                  disabled={addMutation.isPending}
+                  className="h-7 px-3 text-xs"
+                >
+                  {addMutation.isPending ? "..." : "Add"}
+                </Button>
+              </ResizableTableCell>
+            </ResizableTableRow>
           </ResizableTableHeader>
           <ResizableTableBody>
             {isLoading ? (
@@ -610,7 +747,7 @@ const Index = () => {
                     <ResizableTableCell colSpan={showCheckboxes ? 10 : 9} className="border border-border px-3 py-4 text-center text-muted-foreground text-sm">
                       {viewMode === "date" 
                         ? `No calls scheduled for ${format(selectedDate, "MMM do")}` 
-                        : "No customers yet. Add one below!"}
+                        : "No customers yet."}
                     </ResizableTableCell>
                   </ResizableTableRow>
                 )}
@@ -696,139 +833,7 @@ const Index = () => {
                     )}
                   </Fragment>
                 ))}
-                {/* New Row Input */}
-                <ResizableTableRow className="bg-primary/5">
-                  <ResizableTableCell className="border border-border px-3 py-1 text-xs text-primary font-medium text-center">
-                    NEW
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                    <div className="flex items-center h-9">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
-                            style={{ backgroundColor: newRow.color && newRow.color !== "" ? newRow.color : 'white' }} />
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-2" align="start">
-                          <div className="grid grid-cols-4 gap-1">
-                            {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
-                              <Button
-                                key={color || 'none'}
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={() => setNewRow({ ...newRow, color: color as any })}
-                              >
-                                <div 
-                                  className={`w-4 h-4 rounded-full border ${color ? 'border-muted-foreground/50' : 'border-dashed border-muted-foreground/50'}`} 
-                                  style={{ backgroundColor: color || 'transparent' }} 
-                                />
-                              </Button>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                      <div className="flex items-center h-full">
-                        <AutoResizeTextarea
-                          value={newRow.customer_name}
-                          onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
-                          className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
-                          placeholder="Customer Name"
-                          style={{ height: '100%' }}
-                        />
-                      </div>
-                    </div>
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                    <div className="flex items-center h-full">
-                      <AutoResizeTextarea
-                        value={newRow.company_name}
-                        onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
-                        className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
-                        placeholder="Company Name"
-                        style={{ height: '100%' }}
-                      />
-                    </div>
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                    <div className="flex items-center h-full">
-                      <AutoResizeTextarea
-                        value={newRow.phone_number}
-                        onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
-                        className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
-                        placeholder="Phone Number"
-                        style={{ height: '100%' }}
-                      />
-                    </div>
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button className="w-full h-full px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
-                          <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                          <span className="truncate">{newRow.last_call_date ? format(parseISO(newRow.last_call_date), "dd/MM/yyyy") : "Pick date"}</span>
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={newRow.last_call_date ? parseISO(newRow.last_call_date) : undefined}
-                          onSelect={(date) => date && setNewRow({ ...newRow, last_call_date: format(date, "yyyy-MM-dd") })}
-                          initialFocus
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-0">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="w-full h-full px-3 text-left text-sm flex items-center gap-2 hover:bg-muted/50">
-                      <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                      <span className="truncate">{format(parseISO(newRow.next_call_date), "dd/MM/yyyy")}</span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={parseISO(newRow.next_call_date)}
-                      onSelect={(date) => date && setNewRow({ ...newRow, next_call_date: format(date, "yyyy-MM-dd") })}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </ResizableTableCell>
-              <ResizableTableCell className="border border-border p-0">
-                <Input
-                  type="time"
-                  value={newRow.next_call_time}
-                  onChange={(e) => setNewRow({ ...newRow, next_call_time: e.target.value })}
-                  className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
-                  style={{ height: '100%' }}
-                />
-              </ResizableTableCell>
-              <ResizableTableCell className="border border-border p-0">
-                <div className="flex items-center h-full">
-                  <AutoResizeTextarea
-                    value={newRow.remark}
-                        onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
-                        className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
-                        placeholder="Remark"
-                        style={{ height: '100%' }}
-                      />
-                </div>
-              </ResizableTableCell>
-                  <ResizableTableCell className="border border-border p-1 text-center">
-                    <Button
-                      size="sm"
-                      onClick={handleAddRow}
-                      disabled={addMutation.isPending}
-                      className="h-7 px-3 text-xs"
-                    >
-                      {addMutation.isPending ? "..." : "Add"}
-                    </Button>
-                  </ResizableTableCell>
-                </ResizableTableRow>
+
               </>
             )}
           </ResizableTableBody>
