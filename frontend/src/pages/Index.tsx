@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect, memo, Fragment } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { AutoResizeTextarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -792,7 +793,7 @@ const Index = () => {
                 </Popover>
               </ResizableTableCell>
               <ResizableTableCell className="border border-border p-0">
-                <AutoResizeTextarea
+                <Input
                   type="time"
                   value={newRow.next_call_time}
                   onChange={(e) => setNewRow({ ...newRow, next_call_time: e.target.value })}
@@ -929,7 +930,7 @@ function SpreadsheetRow({
       onDragEnd={onDragEnd}
     >
       <ResizableTableCell 
-        className="border border-border px-3 py-1 text-xs text-muted-foreground text-center relative group"
+        className="border border-border px-3 py-1 text-xs text-muted-foreground text-center"
         style={{ height: '100%' }}
         title="Drag to reorder"
         draggable
@@ -938,43 +939,6 @@ function SpreadsheetRow({
         <div className="absolute inset-0 flex items-center justify-center">
           {index}
         </div>
-        {/* Simple row resize handle */}
-        <div 
-          className="absolute -bottom-1 left-0 right-0 h-2 cursor-row-resize opacity-0 group-hover:opacity-100 hover:opacity-100 hover:bg-muted-foreground/30"
-          onMouseDown={(e) => {
-            // Prevent drag event from firing
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const rowElement = e.currentTarget.closest('tr');
-            if (!rowElement) return;
-            
-            const startY = e.clientY;
-            const startHeight = rowElement.offsetHeight;
-            
-            const onMouseMove = (moveEvent: MouseEvent) => {
-              const deltaY = moveEvent.clientY - startY;
-              const newHeight = Math.max(40, startHeight + deltaY);
-              rowElement.style.height = `${newHeight}px`;
-              
-              // Update state
-              if (setRowHeights) {
-                setRowHeights(prev => ({
-                  ...prev,
-                  [customer.id]: newHeight
-                }));
-              }
-            };
-            
-            const onMouseUp = () => {
-              document.removeEventListener('mousemove', onMouseMove);
-              document.removeEventListener('mouseup', onMouseUp);
-            };
-            
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-          }}
-        ></div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <div className="flex items-center h-8">
@@ -1065,7 +1029,7 @@ function SpreadsheetRow({
         </Popover>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
-        <AutoResizeTextarea
+        <Input
           type="time"
           defaultValue={customer.next_call_time || ""}
           onBlur={(e) => onCellChange(customer.id, "next_call_time", e.target.value)}
