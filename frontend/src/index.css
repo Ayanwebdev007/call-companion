@@ -100,7 +100,7 @@
   }
   
   /* Resizable table cells */
-  th, td {
+  th:not(.resizable), td:not(.resizable) {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -111,6 +111,15 @@
     word-wrap: break-word;
     overflow: hidden;
     vertical-align: top;
+  }
+  
+  /* Ensure input elements in resizable cells fill height */
+  th.resizable input[h-full],
+  td.resizable input[h-full],
+  th.resizable textarea[h-full],
+  td.resizable textarea[h-full] {
+    height: 100% !important;
+    min-height: 100% !important;
   }
   
   /* Allow vertical resizing */

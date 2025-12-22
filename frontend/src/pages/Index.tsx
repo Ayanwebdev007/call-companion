@@ -805,13 +805,12 @@ const Index = () => {
                 />
               </ResizableTableCell>
               <ResizableTableCell className="border border-border p-0" autoHeight>
-                <Input
+                <textarea
                   value={newRow.remark}
                       onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
-                      className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
+                      className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full resize-none h-full"
                       placeholder="Remark"
-                      style={{ height: '100%' }}
-                      autoHeight
+                      style={{ height: '100%', minHeight: '100%' }}
                     />
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-1 text-center">
@@ -1086,12 +1085,11 @@ function SpreadsheetRow({
         />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0" autoHeight>
-        <Input
+        <textarea
           defaultValue={customer.remark || ""}
           onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
-          className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full h-full"
-          style={{ height: '100%' }}
-          autoHeight
+          className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full resize-none h-full"
+          style={{ height: '100%', minHeight: '100%' }}
         />
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-1 text-center" autoHeight>
