@@ -19,27 +19,13 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
 
     // Reset dimensions to auto to calculate sizes correctly
     textarea.style.height = 'auto';
-    textarea.style.width = 'auto';
     
     // Get the natural size of the content
     const scrollHeight = textarea.scrollHeight;
-    const scrollWidth = textarea.scrollWidth;
     
-    // Calculate width based on container and constraints
-    let newWidth = scrollWidth;
-    if (minWidth && newWidth < minWidth) {
-      newWidth = minWidth;
-    }
-    if (maxWidth && newWidth > maxWidth) {
-      newWidth = maxWidth;
-    }
-    
-    // Set width first to affect height calculation
-    textarea.style.width = `${newWidth}px`;
-    
-    // Now recalculate height with the new width
-    textarea.style.height = 'auto';
-    let newHeight = textarea.scrollHeight;
+    // For table cells, we should respect the width of the parent cell
+    // but still allow the height to adjust based on content
+    let newHeight = scrollHeight;
     
     // Apply max height constraint
     if (maxHeight && newHeight > maxHeight) {
@@ -51,7 +37,7 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     
     // Set the new height
     textarea.style.height = `${newHeight}px`;
-  }, [maxHeight, maxWidth, minWidth]);
+  }, [maxHeight]);
 
   React.useEffect(() => {
     resizeTextarea();
@@ -67,11 +53,31 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     };
   }, [props.value, resizeTextarea]);
 
+  // Observe changes to the parent element's size
+  React.useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      // When the parent element changes size, adjust height accordingly
+      resizeTextarea();
+    });
+
+    const parent = textarea.parentElement;
+    if (parent) {
+      resizeObserver.observe(parent);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [resizeTextarea]);
+
   return (
     <textarea
       ref={textareaRef}
       className={cn(
-        "flex rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none",
+        "flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none",
         className,
       )}
       onInput={resizeTextarea}
