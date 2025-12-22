@@ -26,9 +26,18 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         
         // Apply height styles immediately when element is available
         if (autoHeight && node) {
+          // Force immediate height inheritance
           node.style.height = '100%';
           node.style.minHeight = '100%';
           node.style.boxSizing = 'border-box';
+          
+          // Use setTimeout to ensure styles are applied after render
+          setTimeout(() => {
+            if (node) {
+              node.style.height = '100%';
+              node.style.minHeight = '100%';
+            }
+          }, 0);
         }
       },
       [ref, autoHeight]
@@ -37,9 +46,28 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     // Apply styles whenever props change
     React.useEffect(() => {
       if (autoHeight && internalRef.current) {
+        // Apply height styles
         internalRef.current.style.height = '100%';
         internalRef.current.style.minHeight = '100%';
         internalRef.current.style.boxSizing = 'border-box';
+        
+        // Create a ResizeObserver to monitor container size changes
+        const resizeObserver = new ResizeObserver(() => {
+          if (internalRef.current) {
+            internalRef.current.style.height = '100%';
+            internalRef.current.style.minHeight = '100%';
+          }
+        });
+        
+        // Observe the parent container if available
+        if (internalRef.current.parentElement) {
+          resizeObserver.observe(internalRef.current.parentElement);
+        }
+        
+        // Cleanup
+        return () => {
+          resizeObserver.disconnect();
+        };
       }
     }, [autoHeight, props.style]);
     
