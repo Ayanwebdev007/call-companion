@@ -21,11 +21,15 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     textarea.style.height = 'auto';
     
     // Get the natural size of the content
-    const scrollHeight = textarea.scrollHeight;
+    let newHeight = textarea.scrollHeight;
     
-    // For table cells, we should respect the width of the parent cell
-    // but still allow the height to adjust based on content
-    let newHeight = scrollHeight;
+    // Ensure minimum height is at least the line height for single-line text
+    const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
+    const minHeight = lineHeight + 2; // Add small padding
+    
+    if (newHeight < minHeight) {
+      newHeight = minHeight;
+    }
     
     // Apply max height constraint
     if (maxHeight && newHeight > maxHeight) {
@@ -40,7 +44,10 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
   }, [maxHeight]);
 
   React.useEffect(() => {
-    resizeTextarea();
+    // Use a timeout to ensure the textarea is rendered before calculating height
+    const timer = setTimeout(() => {
+      resizeTextarea();
+    }, 0);
     
     // Also resize when window resizes
     const handleResize = () => {
@@ -50,6 +57,7 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     window.addEventListener('resize', handleResize);
     return () => {
       window.removeEventListener('resize', handleResize);
+      clearTimeout(timer);
     };
   }, [props.value, resizeTextarea]);
 
@@ -77,7 +85,7 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
     <textarea
       ref={textareaRef}
       className={cn(
-        "flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none",
+        "flex w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none",
         className,
       )}
       onInput={resizeTextarea}
