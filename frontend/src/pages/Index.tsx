@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 import { LogOut } from "lucide-react";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Index = () => {
   const { id: spreadsheetId } = useParams<{ id: string }>();
@@ -346,6 +347,13 @@ const Index = () => {
     updateMutation.mutate({ id, field, value });
   };
 
+  const handleNewRowKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleAddRow();
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Fixed Header Section */}
@@ -630,6 +638,7 @@ const Index = () => {
                     <AutoResizeTextarea
                       value={newRow.customer_name}
                       onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
+                      onKeyDown={handleNewRowKeyDown}
                       className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
                       placeholder="Customer Name"
                       style={{ height: '100%' }}
@@ -643,6 +652,7 @@ const Index = () => {
                   <AutoResizeTextarea
                     value={newRow.company_name}
                     onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
+                    onKeyDown={handleNewRowKeyDown}
                     className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
                     placeholder="Company Name"
                     style={{ height: '100%' }}
@@ -655,6 +665,7 @@ const Index = () => {
                   <AutoResizeTextarea
                     value={newRow.phone_number}
                     onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
+                    onKeyDown={handleNewRowKeyDown}
                     className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
                     placeholder="Phone Number"
                     style={{ height: '100%' }}
@@ -705,6 +716,7 @@ const Index = () => {
                   type="time"
                   value={newRow.next_call_time}
                   onChange={(e) => setNewRow({ ...newRow, next_call_time: e.target.value })}
+                  onKeyDown={handleNewRowKeyDown}
                   className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
                   style={{ height: '100%' }}
                 />
@@ -714,6 +726,7 @@ const Index = () => {
                   <AutoResizeTextarea
                     value={newRow.remark}
                     onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
+                    onKeyDown={handleNewRowKeyDown}
                     className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
                     placeholder="Remark"
                     style={{ height: '100%' }}
@@ -735,11 +748,13 @@ const Index = () => {
           </ResizableTableHeader>
           <ResizableTableBody>
             {isLoading ? (
-              <ResizableTableRow>
-                <ResizableTableCell colSpan={showCheckboxes ? 10 : 9} className="border border-border px-3 py-8 text-center text-muted-foreground">
-                  Loading...
-                </ResizableTableCell>
-              </ResizableTableRow>
+              Array.from({ length: 10 }).map((_, i) => (
+                <ResizableTableRow key={i}>
+                  <ResizableTableCell colSpan={showCheckboxes ? 10 : 9} className="border border-border px-3 py-2">
+                     <Skeleton className="h-8 w-full" />
+                  </ResizableTableCell>
+                </ResizableTableRow>
+              ))
             ) : (
               <>
                 {displayedCustomers.length === 0 && (
@@ -929,7 +944,7 @@ function SpreadsheetRow({
 
   return (
     <ResizableTableRow 
-      className={`hover:bg-muted/50 transition-all duration-200 group ${
+      className={`animate-fade-in hover:bg-muted/50 transition-all duration-200 group ${
         isSelected ? "bg-primary/10" : ""
       } ${
         isDragging ? "opacity-50 scale-95 shadow-lg" : ""
