@@ -728,39 +728,24 @@ const Index = () => {
                         </PopoverContent>
                       </Popover>
                       <div className="flex items-start min-h-full pl-6 pt-1">
-                        <input
-                          type="text"
-                          value={newRow.customer_name}
-                          onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
-                          placeholder="Customer Name"
-                          className="w-full border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset px-0 py-1 focus:outline-none"
-                          style={{ minHeight: 'auto' }}
-                        />
+                        <div className="w-full text-sm">
+                          {newRow.customer_name}
+                        </div>
                       </div>
                     </div>
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
                     <div className="flex items-start min-h-full pt-1">
-                      <input
-                        type="text"
-                        value={newRow.company_name}
-                        onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
-                        placeholder="Company Name"
-                        className="w-full border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset px-0 py-1 focus:outline-none"
-                        style={{ minHeight: 'auto' }}
-                      />
+                      <div className="w-full text-sm">
+                        {newRow.company_name}
+                      </div>
                     </div>
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
                     <div className="flex items-start min-h-full pt-1">
-                      <input
-                        type="text"
-                        value={newRow.phone_number}
-                        onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
-                        placeholder="Phone Number"
-                        className="w-full border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset px-0 py-1 focus:outline-none"
-                        style={{ minHeight: 'auto' }}
-                      />
+                      <div className="w-full text-sm">
+                        {newRow.phone_number}
+                      </div>
                     </div>
                   </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-0">
@@ -812,14 +797,9 @@ const Index = () => {
               </ResizableTableCell>
               <ResizableTableCell className="border border-border p-0">
                 <div className="flex items-start min-h-full pt-1">
-                  <input
-                    type="text"
-                    value={newRow.remark}
-                    onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
-                    placeholder="Remark"
-                    className="w-full border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset px-0 py-1 focus:outline-none"
-                    style={{ minHeight: 'auto' }}
-                  />
+                  <div className="w-full text-sm">
+                    {newRow.remark}
+                  </div>
                 </div>
               </ResizableTableCell>
                   <ResizableTableCell className="border border-border p-1 text-center">
@@ -980,35 +960,23 @@ function SpreadsheetRow({
               </PopoverContent>
             </Popover>
           </div>
-          <input
-            type="text"
-            defaultValue={customer.customer_name}
-            onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
-            className="w-full border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset px-0 py-1 focus:outline-none"
-            style={{ minHeight: 'auto' }}
-          />
+          <div className="w-full text-sm">
+            {customer.customer_name}
+          </div>
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <div className="flex items-start min-h-full pt-1">
-          <input
-            type="text"
-            defaultValue={customer.company_name}
-            onBlur={(e) => onCellChange(customer.id, "company_name", e.target.value)}
-            className="w-full border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset px-0 py-1 focus:outline-none"
-            style={{ minHeight: 'auto' }}
-          />
+          <div className="w-full text-sm">
+            {customer.company_name}
+          </div>
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <div className="flex items-start min-h-full pt-1">
-          <input
-            type="text"
-            defaultValue={customer.phone_number}
-            onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
-            className="w-full border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset px-0 py-1 focus:outline-none"
-            style={{ minHeight: 'auto' }}
-          />
+          <div className="w-full text-sm">
+            {customer.phone_number}
+          </div>
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
@@ -1060,13 +1028,9 @@ function SpreadsheetRow({
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <div className="flex items-start min-h-full pt-1">
-          <input
-            type="text"
-            defaultValue={customer.remark || ""}
-            onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
-            className="w-full border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset px-0 py-1 focus:outline-none"
-            style={{ minHeight: 'auto' }}
-          />
+          <div className="w-full text-sm">
+            {customer.remark || ""}
+          </div>
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-1 text-center">
