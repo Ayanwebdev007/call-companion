@@ -76,6 +76,35 @@ const Index = () => {
   // Search query state
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [showSearch, setShowSearch] = useState<boolean>(false);
+  const [searchClosing, setSearchClosing] = useState<boolean>(false);
+  const searchRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!showSearch) return;
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchClosing(true);
+        setTimeout(() => {
+          setShowSearch(false);
+          setSearchClosing(false);
+        }, 200);
+      }
+    };
+    const onDocKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSearchClosing(true);
+        setTimeout(() => {
+          setShowSearch(false);
+          setSearchClosing(false);
+        }, 200);
+      }
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onDocKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onDocKeyDown);
+    };
+  }, [showSearch]);
   const [debouncedQuery, setDebouncedQuery] = useState<string>("");
   useEffect(() => {
     const t = setTimeout(() => {
@@ -511,7 +540,15 @@ const Index = () => {
               </Button>
             )}
             {showSearch && (
-              <div className="relative w-[280px] animate-in slide-in-from-right-2 fade-in duration-200">
+              <div
+                ref={searchRef}
+                className={cn(
+                  "relative w-[280px] duration-200",
+                  searchClosing
+                    ? "animate-out slide-out-to-right-2 fade-out"
+                    : "animate-in slide-in-from-right-2 fade-in"
+                )}
+              >
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   value={searchQuery}
