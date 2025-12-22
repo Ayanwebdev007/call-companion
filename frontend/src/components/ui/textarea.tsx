@@ -81,6 +81,7 @@ const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, AutoResizeTexta
         className,
       )}
       onInput={resizeTextarea}
+      style={{ minHeight: 'auto', ...props.style }}
       {...props}
     />
   );

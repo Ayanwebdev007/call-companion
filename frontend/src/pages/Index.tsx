@@ -727,11 +727,11 @@ const Index = () => {
                           </div>
                         </PopoverContent>
                       </Popover>
-                      <div className="flex items-center min-h-full">
+                      <div className="flex items-center min-h-full pl-6">
                         <AutoResizeTextarea
                           value={newRow.customer_name}
                           onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
-                          className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full"
+                          className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-1 focus-visible:ring-inset w-full flex-grow"
                           placeholder="Customer Name"
                           style={{ minHeight: 'auto' }}
                         />
@@ -950,34 +950,36 @@ function SpreadsheetRow({
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-0">
         <div className="flex items-center min-h-full">
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="ml-2 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
-                style={{ backgroundColor: localColor && localColor !== "" ? localColor : 'white' }} />
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-2" align="start">
-              <div className="grid grid-cols-4 gap-1">
-                {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
-                  <Button
-                    key={color || 'none'}
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0"
-                    onClick={() => handleColorChange(color as any)}
-                  >
-                    <div 
-                      className={`w-4 h-4 rounded-full border ${color ? 'border-muted-foreground/50' : 'border-dashed border-muted-foreground/50'}`} 
-                      style={{ backgroundColor: color || 'transparent' }} 
-                    />
-                  </Button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+          <div className="mr-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0" 
+                  style={{ backgroundColor: localColor && localColor !== "" ? localColor : 'white' }} />
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-2" align="start">
+                <div className="grid grid-cols-4 gap-1">
+                  {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
+                    <Button
+                      key={color || 'none'}
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0"
+                      onClick={() => handleColorChange(color as any)}
+                    >
+                      <div 
+                        className={`w-4 h-4 rounded-full border ${color ? 'border-muted-foreground/50' : 'border-dashed border-muted-foreground/50'}`} 
+                        style={{ backgroundColor: color || 'transparent' }} 
+                      />
+                    </Button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <AutoResizeTextarea
             defaultValue={customer.customer_name}
             onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
-            className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full"
+            className="border-0 rounded-none text-sm focus-visible:ring-1 focus-visible:ring-inset w-full flex-grow"
             style={{ minHeight: 'auto' }}
           />
         </div>
