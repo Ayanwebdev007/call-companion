@@ -11,33 +11,33 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, autoHeight = false, ...props }, ref) => {
     const textareaRef = React.useRef<HTMLTextAreaElement>(null);
     
-    // Auto-resize textarea to fill container when autoHeight is enabled
+    // Force textarea to fill container when autoHeight is enabled
     React.useEffect(() => {
       if (autoHeight && textareaRef.current) {
-        const resizeObserver = new ResizeObserver(entries => {
-          for (let entry of entries) {
-            const textarea = entry.target as HTMLTextAreaElement;
-            // Force the textarea to fill its container
+        const textarea = textareaRef.current;
+        
+        // Set initial styles
+        textarea.style.height = '100%';
+        textarea.style.minHeight = '100%';
+        textarea.style.boxSizing = 'border-box';
+        
+        // Create a MutationObserver to watch for style changes
+        const observer = new MutationObserver(() => {
+          // Ensure height stays at 100%
+          if (textarea.style.height !== '100%') {
             textarea.style.height = '100%';
           }
         });
         
-        resizeObserver.observe(textareaRef.current);
+        // Observe changes to the textarea's attributes
+        observer.observe(textarea, {
+          attributes: true,
+          attributeFilter: ['style']
+        });
         
-        // Also listen for input changes to adjust height dynamically
-        const handleInput = () => {
-          if (textareaRef.current) {
-            textareaRef.current.style.height = '100%';
-          }
-        };
-        
-        textareaRef.current.addEventListener('input', handleInput);
-        
+        // Cleanup
         return () => {
-          resizeObserver.disconnect();
-          if (textareaRef.current) {
-            textareaRef.current.removeEventListener('input', handleInput);
-          }
+          observer.disconnect();
         };
       }
     }, [autoHeight]);
