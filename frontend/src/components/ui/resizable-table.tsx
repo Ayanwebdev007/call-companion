@@ -125,7 +125,7 @@ const ResizableTableHead = React.forwardRef<HTMLTableCellElement, ResizableTable
         className={cn(
           "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 relative",
           className,
-          resizable && "overflow-hidden group resizable"
+          resizable && "overflow-hidden group"
         )}
         {...props}
       >
@@ -167,7 +167,11 @@ interface ResizableTableCellProps extends React.TdHTMLAttributes<HTMLTableCellEl
   autoHeight?: boolean;
 }
 
-const ResizableTableCell = React.forwardRef<HTMLTableCellElement, ResizableTableCellProps>(
+interface ResizableTableCellPropsWithHeight extends ResizableTableCellProps {
+  autoHeight?: boolean;
+}
+
+const ResizableTableCell = React.forwardRef<HTMLTableCellElement, ResizableTableCellPropsWithHeight>(
   ({ className, resizable = true, autoHeight = false, ...props }, ref) => (
     <td
       ref={ref}
@@ -175,7 +179,7 @@ const ResizableTableCell = React.forwardRef<HTMLTableCellElement, ResizableTable
         "[&:has([role=checkbox])]:pr-0 relative",
         autoHeight ? "p-0 h-full align-top" : "p-4 align-middle",
         className,
-        resizable && "overflow-hidden resizable"
+        resizable && "overflow-hidden"
       )}
       {...props}
     />

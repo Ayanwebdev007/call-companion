@@ -122,13 +122,6 @@
     min-height: 100% !important;
   }
   
-  /* Force height inheritance for all descendants in resizable cells */
-  th.resizable, td.resizable,
-  th.resizable > *, td.resizable > *,
-  th.resizable > * > *, td.resizable > * > * {
-    height: 100%; 
-  }
-  
   /* Allow vertical resizing */
   .resizable-cell {
     resize: both;
