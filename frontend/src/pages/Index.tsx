@@ -75,6 +75,7 @@ const Index = () => {
 
   // Search query state
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [showSearch, setShowSearch] = useState<boolean>(false);
   const [debouncedQuery, setDebouncedQuery] = useState<string>("");
   useEffect(() => {
     const t = setTimeout(() => {
@@ -498,15 +499,29 @@ const Index = () => {
           </Button>
           
           <div className="ml-auto flex items-center gap-3">
-            <div className="relative w-[280px]">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search name, company, or phone"
-                className="pl-8 h-8"
-              />
-            </div>
+            {!showSearch && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setShowSearch(true)}
+                aria-label="Open search"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            )}
+            {showSearch && (
+              <div className="relative w-[280px] animate-in slide-in-from-right-2 fade-in duration-200">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search name, company, or phone"
+                  className="pl-8 h-8"
+                  autoFocus
+                />
+              </div>
+            )}
             <Button
               variant="outline"
               size="icon"
