@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AutoResizeTextarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Download } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Download, Phone, ClipboardList, Clock, CheckCircle, XCircle, Voicemail, MoreHorizontal } from "lucide-react";
 import { format, isToday, parseISO, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -145,6 +145,14 @@ const Index = () => {
   const updateMutation = useMutation({
     mutationFn: async ({ id, field, value }: { id: string; field: string; value: string }) => {
       await updateCustomer(id, { [field]: value });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] }),
+  });
+
+  // Update customer row mutation (multiple fields)
+  const updateRowMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Customer> }) => {
+      await updateCustomer(id, updates);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] }),
   });
@@ -345,6 +353,10 @@ const Index = () => {
 
   const handleCellChange = (id: string, field: string, value: string) => {
     updateMutation.mutate({ id, field, value });
+  };
+
+  const handleRowUpdate = (id: string, updates: Partial<Customer>) => {
+    updateRowMutation.mutate({ id, updates });
   };
 
   const handleNewRowKeyDown = (e: React.KeyboardEvent) => {
@@ -578,10 +590,10 @@ const Index = () => {
                 Remark
               </ResizableTableHead>
               <ResizableTableHead 
-                className="border border-border px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12"
+                className="border border-border px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-24"
                 resizable={false}
               >
-                WP
+                Actions
               </ResizableTableHead>
               {showCheckboxes && (
                 <ResizableTableHead 
@@ -805,6 +817,7 @@ const Index = () => {
                       selectedCustomers={selectedCustomers}
                       onToggleSelect={toggleCustomerSelection}
                       onCellChange={handleCellChange}
+                      onRowUpdate={handleRowUpdate}
                       onDelete={() => deleteMutation.mutate(customer.id)}
                       onDragStart={handleDragStart}
                       onDragOver={handleDragOver}
@@ -876,7 +889,8 @@ function SpreadsheetRow({
   onDragEnd,
   showCheckboxes,
   rowHeights,
-  setRowHeights
+  setRowHeights,
+  onRowUpdate
 }: {
   customer: Customer;
   index: number;
@@ -886,6 +900,7 @@ function SpreadsheetRow({
   selectedCustomers: Set<string>;
   onToggleSelect: (id: string) => void;
   onCellChange: (id: string, field: string, value: string) => void;
+  onRowUpdate: (id: string, updates: Partial<Customer>) => void;
   onDelete: () => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -1050,6 +1065,20 @@ function SpreadsheetRow({
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
+            <div className="p-2 grid grid-cols-2 gap-2 border-b">
+              <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleDateChange(new Date(new Date().setDate(new Date().getDate() + 1)))}>
+                Tomorrow
+              </Button>
+              <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleDateChange(new Date(new Date().setDate(new Date().getDate() + 3)))}>
+                In 3 Days
+              </Button>
+              <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleDateChange(new Date(new Date().setDate(new Date().getDate() + 7)))}>
+                Next Week
+              </Button>
+              <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => handleDateChange(new Date(new Date().setMonth(new Date().getMonth() + 1)))}>
+                In 1 Month
+              </Button>
+            </div>
             <Calendar
               mode="single"
               selected={date}
@@ -1080,18 +1109,92 @@ function SpreadsheetRow({
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border border-border p-1 text-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
-            const whatsappUrl = `https://wa.me/${phoneNumber}`;
-            window.open(whatsappUrl, '_blank');
-          }}
-          className="h-6 w-6 p-0 text-muted-foreground hover:text-green-600"
-        >
-          <MessageCircle className="h-3 w-3" />
-        </Button>
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
+              window.open(`tel:${phoneNumber}`, '_self');
+            }}
+            title="Call"
+            className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+          >
+            <Phone className="h-3 w-3" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
+              const whatsappUrl = `https://wa.me/${phoneNumber}`;
+              window.open(whatsappUrl, '_blank');
+            }}
+            title="WhatsApp"
+            className="h-6 w-6 p-0 text-muted-foreground hover:text-green-600"
+          >
+            <MessageCircle className="h-3 w-3" />
+          </Button>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                title="Quick Log"
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-blue-600"
+              >
+                <ClipboardList className="h-3 w-3" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-40 p-1" align="end">
+              <div className="flex flex-col gap-0.5">
+                <div className="text-[10px] font-medium text-muted-foreground px-2 py-1 uppercase tracking-wider">Log Result</div>
+                
+                <Button variant="ghost" size="sm" className="justify-start h-7 px-2 text-xs font-normal" onClick={() => {
+                  const today = format(new Date(), "yyyy-MM-dd");
+                  onRowUpdate(customer.id, {
+                    last_call_date: today,
+                    remark: (customer.remark ? customer.remark + "\n" : "") + `[${today}] Connected`
+                  });
+                }}>
+                  <CheckCircle className="h-3 w-3 mr-2 text-green-600" /> Connected
+                </Button>
+
+                <Button variant="ghost" size="sm" className="justify-start h-7 px-2 text-xs font-normal" onClick={() => {
+                  const today = format(new Date(), "yyyy-MM-dd");
+                  onRowUpdate(customer.id, {
+                    last_call_date: today,
+                    remark: (customer.remark ? customer.remark + "\n" : "") + `[${today}] No Answer`
+                  });
+                }}>
+                  <XCircle className="h-3 w-3 mr-2 text-red-600" /> No Answer
+                </Button>
+
+                <Button variant="ghost" size="sm" className="justify-start h-7 px-2 text-xs font-normal" onClick={() => {
+                  const today = format(new Date(), "yyyy-MM-dd");
+                  onRowUpdate(customer.id, {
+                    last_call_date: today,
+                    remark: (customer.remark ? customer.remark + "\n" : "") + `[${today}] Busy`
+                  });
+                }}>
+                  <Clock className="h-3 w-3 mr-2 text-orange-600" /> Busy
+                </Button>
+
+                <Button variant="ghost" size="sm" className="justify-start h-7 px-2 text-xs font-normal" onClick={() => {
+                  const today = format(new Date(), "yyyy-MM-dd");
+                  onRowUpdate(customer.id, {
+                    last_call_date: today,
+                    remark: (customer.remark ? customer.remark + "\n" : "") + `[${today}] Voicemail`
+                  });
+                }}>
+                  <Voicemail className="h-3 w-3 mr-2 text-purple-600" /> Voicemail
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
       </ResizableTableCell>
       {showCheckboxes && (
         <ResizableTableCell className="border border-border px-1 py-1 text-center">
