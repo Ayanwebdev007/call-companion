@@ -231,7 +231,13 @@ const Index = () => {
   // Delete customer mutation
   const deleteMutation = useMutation({
     mutationFn: deleteCustomer,
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Remove from selection if present
+      if (selectedCustomers.has(variables)) {
+        const newSelected = new Set(selectedCustomers);
+        newSelected.delete(variables);
+        setSelectedCustomers(newSelected);
+      }
       queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
       toast({ title: "Customer deleted" });
     },
@@ -731,7 +737,7 @@ const Index = () => {
                   <Popover>
                     <PopoverTrigger asChild>
                       <button className="ml-2 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
-                        style={{ backgroundColor: newRow.color && newRow.color !== "" ? newRow.color : 'white' }} />
+                        style={{ backgroundColor: newRow.color ? newRow.color : 'white' }} />
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-3 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
                       <div className="grid grid-cols-4 gap-2">
@@ -1102,7 +1108,7 @@ function SpreadsheetRow({
           <Popover>
             <PopoverTrigger asChild>
               <button className="ml-2 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
-                style={{ backgroundColor: localColor && localColor !== "" ? localColor : 'white' }} />
+                style={{ backgroundColor: localColor ? localColor : 'white' }} />
             </PopoverTrigger>
             <PopoverContent className="w-auto p-3 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
               <div className="grid grid-cols-4 gap-2">
@@ -1209,18 +1215,35 @@ function SpreadsheetRow({
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-1 text-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
-            const whatsappUrl = `https://wa.me/${phoneNumber}`;
-            window.open(whatsappUrl, '_blank');
-          }}
-          className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
-        >
-          <MessageCircle className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
+              const whatsappUrl = `https://wa.me/${phoneNumber}`;
+              window.open(whatsappUrl, '_blank');
+            }}
+            className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
+            title="Chat on WhatsApp"
+          >
+            <MessageCircle className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (window.confirm(`Are you sure you want to delete ${customer.customer_name}?`)) {
+                onDelete();
+              }
+            }}
+            className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            title="Delete customer"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       </ResizableTableCell>
       {showCheckboxes && (
         <ResizableTableCell className="border-b border-border/50 px-1 py-1 text-center">
