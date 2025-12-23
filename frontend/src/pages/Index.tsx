@@ -1168,7 +1168,7 @@ function SpreadsheetRow({
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
         <Popover>
           <PopoverTrigger asChild>
-            <button className="w-full h-full px-2 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors">
+            <button className="w-full h-full px-2 text-left text-sm flex items-center gap-1 hover:bg-accent/10 transition-colors">
               <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
               <span className="truncate">{lastCallDate ? format(lastCallDate, "dd/MM/yyyy") : "Pick"}</span>
             </button>
@@ -1187,7 +1187,7 @@ function SpreadsheetRow({
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-8">
         <Popover>
           <PopoverTrigger asChild>
-            <button className="w-full h-full px-2 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors">
+            <button className="w-full h-full px-2 text-left text-sm flex items-center gap-1 hover:bg-accent/10 transition-colors">
               <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
               <span className="truncate">{date ? format(date, "dd/MM/yyyy") : "Pick"}</span>
             </button>
