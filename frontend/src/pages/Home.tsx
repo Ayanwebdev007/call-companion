@@ -3,7 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, SidebarSeparator, SidebarFooter } from "@/components/ui/sidebar";
-import { Phone, User, LayoutDashboard, LogOut, Home as HomeIcon, ShieldCheck, ArrowRight } from "lucide-react";
+import { Phone, User, LayoutDashboard, LogOut, Home as HomeIcon, ArrowRight } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Home = () => {
@@ -108,64 +108,26 @@ const Home = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1">
             {/* Quick Action: Calling */}
             <Card
-              className="col-span-1 lg:col-span-2 group relative overflow-hidden transition-all hover:shadow-lg border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-primary/50"
+              className="group relative overflow-hidden transition-all hover:shadow-2xl border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-primary/50 max-w-2xl"
               onClick={() => navigate("/calling")}
             >
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <LayoutDashboard className="h-5 w-5 text-primary" />
-                  Calling Dashboard
+                <CardTitle className="flex items-center gap-2 text-2xl">
+                  <LayoutDashboard className="h-6 w-6 text-primary" />
+                  Start Calling
                 </CardTitle>
-                <CardDescription>Manage spreadsheets and start calling customers.</CardDescription>
+                <CardDescription className="text-base">Access your spreadsheets and start calling customers immediately.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between mt-2">
-                  <div className="text-sm text-muted-foreground">Go to dashboard</div>
-                  <Button variant="ghost" size="icon" className="group-hover:translate-x-1 transition-transform">
+                <div className="flex items-center justify-between mt-4">
+                  <div className="text-sm text-muted-foreground">Launch calling workspace</div>
+                  <Button className="group-hover:translate-x-1 transition-transform bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+                    <span className="mr-2">Open</span>
                     <ArrowRight className="h-4 w-4" />
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Action: Profile */}
-            <Card
-              className="col-span-1 group relative overflow-hidden transition-all hover:shadow-lg border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-blue-500/50"
-              onClick={() => navigate("/profile")}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5 text-blue-500" />
-                  Profile Settings
-                </CardTitle>
-                <CardDescription>Update your password and account info.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mt-2">
-                  <div className="text-sm text-muted-foreground">Manage profile</div>
-                  <Button variant="ghost" size="icon" className="group-hover:translate-x-1 transition-transform">
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Stats / Info Card */}
-            <Card className="col-span-1 group relative overflow-hidden border-border/50 bg-card/60 backdrop-blur-md">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-emerald-500" />
-                  System Status
-                </CardTitle>
-                <CardDescription>All systems operational.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-emerald-500 font-medium">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Online
                 </div>
               </CardContent>
             </Card>
