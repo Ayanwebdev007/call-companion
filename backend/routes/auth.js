@@ -108,21 +108,24 @@ router.post('/forgot-password', async (req, res) => {
       return res.json({ message: 'Reset link generated (check server logs for development)', devMode: true });
     }
 
-    console.log('--- ATTEMPTING EMAIL SEND (V3: Port 587) ---');
+    console.log('--- ATTEMPTING EMAIL SEND (V4: Service preset) ---');
     const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // STARTTLS
+      service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
-      debug: true,
-      logger: true
+      }
     });
+
+    // Verify connection configuration
+    console.log('Verifying transporter...');
+    try {
+      await transporter.verify();
+      console.log('Transporter is ready to take our messages');
+    } catch (verifyError) {
+      console.error('Transporter verification failed:', verifyError);
+      return res.status(500).json({ message: 'Email service connection failed: ' + verifyError.message });
+    }
 
     const mailOptions = {
       to: user.email,
