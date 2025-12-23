@@ -142,7 +142,7 @@ const Login = () => {
 
       {/* Right Side - Hero Image/Abstract */}
       <div className="hidden lg:relative lg:flex lg:flex-col lg:items-center lg:justify-center overflow-hidden bg-muted/20">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-purple-900 to-background opacity-90" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-slate-900 to-background opacity-90" />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
 
         {/* Abstract Shapes */}

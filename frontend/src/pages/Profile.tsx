@@ -131,7 +131,7 @@ const Profile = () => {
 
             {/* Profile Header Card */}
             <Card className="border-border/50 bg-card/60 backdrop-blur-md overflow-hidden">
-              <div className="h-32 bg-gradient-to-r from-primary/20 via-blue-500/20 to-purple-500/20" />
+              <div className="h-32 bg-gradient-to-r from-primary/20 via-blue-500/20 to-cyan-500/20" />
               <CardContent className="relative px-8 pb-8">
                 <div className="absolute -top-16 left-8">
                   <div className="h-32 w-32 rounded-full border-4 border-background shadow-xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white text-5xl font-bold">

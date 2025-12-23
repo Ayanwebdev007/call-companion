@@ -178,7 +178,7 @@ const Dashboard = () => {
 
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-600/90 border-0 text-white">
+                <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 border-0 text-white">
                   <Plus className="h-4 w-4 mr-2" />
                   New Spreadsheet
                 </Button>
@@ -363,7 +363,7 @@ const Dashboard = () => {
                 className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10 border-border/50 dark:border-white/5 bg-card/60 dark:bg-card/40 backdrop-blur-md cursor-pointer ring-1 ring-border/10 dark:ring-white/10 hover:ring-primary/30"
                 onClick={() => handleOpenSpreadsheet(spreadsheet.id)}
               >
-                <div className={`absolute top-0 left-0 w-full h-1 ${spreadsheet.is_shared ? 'bg-blue-500' : 'bg-gradient-to-r from-primary to-violet-600'} opacity-80 group-hover:opacity-100 transition-opacity`} />
+                <div className={`absolute top-0 left-0 w-full h-1 ${spreadsheet.is_shared ? 'bg-blue-500' : 'bg-gradient-to-r from-primary to-blue-600'} opacity-80 group-hover:opacity-100 transition-opacity`} />
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
                 <CardHeader className="pb-3 pt-5">
