@@ -108,7 +108,7 @@ router.post('/forgot-password', async (req, res) => {
       return res.json({ message: 'Reset link generated (check server logs for development)', devMode: true });
     }
 
-    console.log('Creating nodemailer transporter with Port 587...');
+    console.log('--- ATTEMPTING EMAIL SEND (V3: Port 587) ---');
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 587,
@@ -117,8 +117,9 @@ router.post('/forgot-password', async (req, res) => {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
       },
-      connectionTimeout: 10000, // 10 seconds
+      connectionTimeout: 10000,
       greetingTimeout: 10000,
+      socketTimeout: 10000,
       debug: true,
       logger: true
     });
