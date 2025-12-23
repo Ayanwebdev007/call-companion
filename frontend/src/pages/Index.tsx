@@ -475,7 +475,7 @@ const Index = () => {
                     });
                   }
                 }}>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center gap-2 w-full">
                     <Download className="h-4 w-4 flex-shrink-0" />
                     <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
                       Export
@@ -485,7 +485,7 @@ const Index = () => {
               </div>
 
               <Button variant="ghost" size="sm" onClick={logout} className="ml-2 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center gap-2 w-full">
                   <LogOut className="h-4 w-4 flex-shrink-0" />
                   <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
                     Logout
