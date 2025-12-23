@@ -10,7 +10,7 @@ import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, Check
 import { format, isToday, parseISO, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet, addColumn } from "@/lib/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +59,16 @@ const Index = () => {
       }
     },
     enabled: !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null",
+  });
+
+  // Fetch spreadsheet details (for headers)
+  const { data: spreadsheet, refetch: refetchSpreadsheet } = useQuery({
+    queryKey: ["spreadsheet", spreadsheetId],
+    queryFn: async () => {
+      if (!spreadsheetId || spreadsheetId === "undefined") return null;
+      return await fetchSpreadsheet(spreadsheetId);
+    },
+    enabled: !!spreadsheetId && spreadsheetId !== "undefined",
   });
 
   // Bulk selection state
@@ -120,6 +130,24 @@ const Index = () => {
     };
   }, [showSearch]);
   const [debouncedQuery, setDebouncedQuery] = useState<string>("");
+
+  // Add Column State
+  const [isAddColumnOpen, setIsAddColumnOpen] = useState(false);
+  const [newColumnName, setNewColumnName] = useState("");
+
+  const handleAddColumn = async () => {
+    if (!newColumnName || !spreadsheetId) return;
+    try {
+      await addColumn(spreadsheetId, newColumnName);
+      toast({ title: "Column added successfully" });
+      setNewColumnName("");
+      setIsAddColumnOpen(false);
+      refetchSpreadsheet();
+    } catch (err) {
+      toast({ title: "Error adding column", variant: "destructive" });
+    }
+  };
+
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedQuery(searchQuery.trim());
@@ -154,17 +182,7 @@ const Index = () => {
     enabled: !!user && !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null", // Only fetch when user and spreadsheetId are available
   });
 
-  // Fetch spreadsheet details
-  const { data: spreadsheet } = useQuery({
-    queryKey: ["spreadsheet", spreadsheetId],
-    queryFn: async () => {
-      if (!spreadsheetId || spreadsheetId === "undefined" || spreadsheetId === "null") {
-        return null;
-      }
-      return await fetchSpreadsheet(spreadsheetId);
-    },
-    enabled: !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null",
-  });
+
 
   // Add customer mutation
   const addMutation = useMutation({
@@ -390,10 +408,43 @@ const Index = () => {
       toast({ title: "Please fill Customer Name, Company Name, and Phone No.", variant: "destructive" });
       return;
     }
+
+    // Prepare dynamic data
+    const dynamic_data: Record<string, any> = {};
+    if (spreadsheet?.columns) {
+      spreadsheet.columns.forEach((col) => {
+        if ((newRow as any)[col.name]) {
+          dynamic_data[col.name] = (newRow as any)[col.name];
+        }
+      });
+    }
+
     // Remove color field if it's null to avoid sending unnecessary data
     const { color, ...newRowWithoutNullColor } = newRow;
-    const rowData = color ? newRow : newRowWithoutNullColor;
+    const baseRowData = color ? newRow : newRowWithoutNullColor;
+
+    // Filter out dynamic keys from baseRowData to keep it clean (optional but good practice)
+    // Actually api.ts Customer type doesn't have dynamic keys, so we cast it anyway.
+    // But we need to ensure dynamic_data is sent.
+
+    const rowData = {
+      ...baseRowData,
+      dynamic_data
+    };
+
     addMutation.mutate(rowData as Omit<Customer, 'id'>);
+
+    // Reset new row (keep date/time if needed or reset)
+    setNewRow({
+      customer_name: "",
+      company_name: "",
+      phone_number: "",
+      next_call_date: format(new Date(), "yyyy-MM-dd"),
+      last_call_date: "",
+      next_call_time: "",
+      remark: "",
+      color: null,
+    });
   };
 
   const handleCellChange = (id: string, field: string, value: string) => {
@@ -453,7 +504,6 @@ const Index = () => {
               )}
 
               <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-lg border border-border/50">
-                <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
                 <Button variant="ghost" size="sm" className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8" onClick={async () => {
                   if (!spreadsheetId) return;
                   try {
@@ -482,6 +532,7 @@ const Index = () => {
                     </span>
                   </div>
                 </Button>
+                <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
               </div>
 
               <Button variant="ghost" size="sm" onClick={logout} className="ml-2 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8">
@@ -665,41 +716,68 @@ const Index = () => {
           <ResizableTableHeader className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm shadow-sm supports-[backdrop-filter]:bg-background/60">
             <ResizableTableRow className="bg-muted/50 hover:bg-muted/60 transition-colors border-b border-border/50">
               <ResizableTableHead
-                className="border-b border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10 sticky top-0 bg-muted/50"
+                className="border-b border-border/50 px-3 py-2 text-left text-sm font-semibold text-muted-foreground w-10 sticky top-0 bg-muted/50"
                 resizable={false}
               >
                 {/* Row numbers header */}
               </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
+              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-sm font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
                 Customer Name
               </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
+              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-sm font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
                 Company Name
               </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[120px] sticky top-0 bg-muted/50">
+              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-sm font-semibold text-muted-foreground min-w-[120px] sticky top-0 bg-muted/50">
                 Phone No.
               </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px] sticky top-0 bg-muted/50">
+              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-sm font-semibold text-muted-foreground min-w-[130px] sticky top-0 bg-muted/50">
                 Last Call Date
               </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px] sticky top-0 bg-muted/50">
+              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-sm font-semibold text-muted-foreground min-w-[130px] sticky top-0 bg-muted/50">
                 Next Call Date
               </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[100px] sticky top-0 bg-muted/50">
+              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-sm font-semibold text-muted-foreground min-w-[100px] sticky top-0 bg-muted/50">
                 Time
               </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[200px] sticky top-0 bg-muted/50">
+              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-sm font-semibold text-muted-foreground min-w-[200px] sticky top-0 bg-muted/50">
                 Remark
               </ResizableTableHead>
+              {spreadsheet?.columns?.map((col) => (
+                <ResizableTableHead
+                  key={col.name}
+                  className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-sm font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50"
+                >
+                  {col.name}
+                </ResizableTableHead>
+              ))}
+              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-sm font-semibold text-muted-foreground min-w-[50px] sticky top-0 bg-muted/50">
+                <Popover open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-muted"><Plus className="h-4 w-4" /></Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-60 p-2">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Column Name"
+                        value={newColumnName}
+                        onChange={(e) => setNewColumnName(e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                      <Button size="sm" onClick={handleAddColumn} className="h-8">Add</Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </ResizableTableHead>
               <ResizableTableHead
-                className="border-b border-border/50 px-2 py-1 text-center text-xs font-semibold text-muted-foreground w-20 sticky top-0 bg-muted/50"
+                className="border-b border-border/50 px-2 py-1 text-center text-sm font-semibold text-muted-foreground w-20 sticky top-0 bg-background z-50 shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]"
+                style={{ right: showCheckboxes ? '32px' : '0px' }}
                 resizable={false}
               >
                 Actions
               </ResizableTableHead>
               {showCheckboxes && (
                 <ResizableTableHead
-                  className="border-b border-border/50 px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-8 sticky top-0 bg-muted/50"
+                  className="border-b border-border/50 px-3 py-2 text-center text-sm font-semibold text-muted-foreground w-8 sticky top-0 right-0 bg-background z-50"
                   resizable={false}
                 >
                   <Button
@@ -709,9 +787,9 @@ const Index = () => {
                     onClick={selectAllCustomers}
                   >
                     {selectedCustomers.size === displayedCustomers.length && displayedCustomers.length > 0 ? (
-                      <CheckSquare className="h-3 w-3 text-primary" />
+                      <CheckSquare className="h-4 w-4 text-primary" />
                     ) : (
-                      <Square className="h-3 w-3 text-muted-foreground" />
+                      <Square className="h-4 w-4 text-muted-foreground" />
                     )}
                   </Button>
                 </ResizableTableHead>
@@ -719,14 +797,14 @@ const Index = () => {
             </ResizableTableRow>
             {/* New Row Input */}
             <ResizableTableRow className="bg-background shadow-md z-30 relative group border-b-2 border-primary/20">
-              <ResizableTableCell className="border-b border-primary/20 px-1 py-0.5 text-xs text-primary font-bold text-center bg-primary/5 sticky left-0 h-6">
-                <Plus className="h-3 w-3 mx-auto" />
+              <ResizableTableCell className="border-b border-primary/20 px-1 py-0.5 text-sm text-primary font-bold text-center bg-primary/5 sticky left-0 h-9">
+                <Plus className="h-4 w-4 mx-auto" />
               </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
+              <ResizableTableCell className="border-b border-primary/20 p-0 h-9">
                 <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className="ml-1 w-3 h-3 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
+                      <button className="ml-1 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
                         style={{ backgroundColor: newRow.color || 'white' }} />
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-2 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
@@ -736,11 +814,11 @@ const Index = () => {
                             key={color || 'none'}
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0 rounded-full hover:scale-110 transition-transform"
+                            className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform"
                             onClick={() => setNewRow({ ...newRow, color: color as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null })}
                           >
                             <div
-                              className={`w-4 h-4 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`}
+                              className={`w-6 h-6 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`}
                               style={{ backgroundColor: color || 'transparent' }}
                             />
                           </Button>
@@ -753,7 +831,7 @@ const Index = () => {
                       value={newRow.customer_name}
                       onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
                       onKeyDown={handleNewRowKeyDown}
-                      className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 font-medium px-1.5 leading-none h-full min-h-0"
+                      className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 font-medium px-2 leading-tight h-full min-h-0"
                       placeholder="Add New "
                       style={{ height: '100%' }}
                       rows={1}
@@ -761,37 +839,37 @@ const Index = () => {
                   </div>
                 </div>
               </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
+              <ResizableTableCell className="border-b border-primary/20 p-0 h-9">
                 <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
                   <AutoResizeTextarea
                     value={newRow.company_name}
                     onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
                     onKeyDown={handleNewRowKeyDown}
-                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-1.5 leading-none h-full min-h-0"
+                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-2 leading-tight h-full min-h-0"
                     placeholder="Company"
                     style={{ height: '100%' }}
                     rows={1}
                   />
                 </div>
               </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
+              <ResizableTableCell className="border-b border-primary/20 p-0 h-9">
                 <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
                   <AutoResizeTextarea
                     value={newRow.phone_number}
                     onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
                     onKeyDown={handleNewRowKeyDown}
-                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-1.5 leading-none h-full min-h-0"
+                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-2 leading-tight h-full min-h-0"
                     placeholder="Phone"
                     style={{ height: '100%' }}
                     rows={1}
                   />
                 </div>
               </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
+              <ResizableTableCell className="border-b border-primary/20 p-0 h-9">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="w-full h-full px-2 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
-                      <CalendarIcon className="h-3 w-3 flex-shrink-0" />
+                    <button className="w-full h-full px-2 text-left text-sm flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
+                      <CalendarIcon className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">{newRow.last_call_date ? format(parseISO(newRow.last_call_date), "dd/MM/yyyy") : "Select"}</span>
                     </button>
                   </PopoverTrigger>
@@ -806,11 +884,11 @@ const Index = () => {
                   </PopoverContent>
                 </Popover>
               </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
+              <ResizableTableCell className="border-b border-primary/20 p-0 h-9">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="w-full h-full px-2 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
-                      <CalendarIcon className="h-3 w-3 flex-shrink-0" />
+                    <button className="w-full h-full px-2 text-left text-sm flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
+                      <CalendarIcon className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">{newRow.next_call_date ? format(parseISO(newRow.next_call_date), "dd/MM/yyyy") : "Select"}</span>
                     </button>
                   </PopoverTrigger>
@@ -825,13 +903,13 @@ const Index = () => {
                   </PopoverContent>
                 </Popover>
               </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
+              <ResizableTableCell className="border-b border-primary/20 p-0 h-9">
                 <Input
                   type="time"
                   value={newRow.next_call_time}
                   onChange={(e) => setNewRow({ ...newRow, next_call_time: e.target.value })}
                   onKeyDown={handleNewRowKeyDown}
-                  className="border-0 rounded-none text-xs bg-transparent focus-visible:ring-0 w-full text-muted-foreground hover:text-foreground px-1 h-full"
+                  className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 w-full text-muted-foreground hover:text-foreground px-2 h-full"
                   style={{ height: '100%' }}
                 />
               </ResizableTableCell>
@@ -841,23 +919,46 @@ const Index = () => {
                     value={newRow.remark}
                     onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
                     onKeyDown={handleNewRowKeyDown}
-                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-1.5 leading-none h-full min-h-0"
+                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-2 leading-tight h-full min-h-0"
                     placeholder="Remark"
                     style={{ height: '100%' }}
                     rows={1}
                   />
                 </div>
               </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0.5 text-center bg-background group-hover:bg-accent/5 transition-colors h-6">
+              {spreadsheet?.columns?.map((col) => (
+                <ResizableTableCell key={col.name} className="border-b border-primary/20 p-0 h-9">
+                  <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
+                    <AutoResizeTextarea
+                      value={(newRow as any)[col.name] || ""}
+                      onChange={(e) => setNewRow({ ...newRow, [col.name]: e.target.value })}
+                      onKeyDown={handleNewRowKeyDown}
+                      className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-2 leading-tight h-full min-h-0"
+                      placeholder={col.name}
+                      style={{ height: '100%' }}
+                      rows={1}
+                    />
+                  </div>
+                </ResizableTableCell>
+              ))}
+              <ResizableTableCell
+                className="border-b border-primary/20 p-0.5 text-center bg-background group-hover:bg-accent/5 transition-colors h-9 sticky z-30 shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]"
+                style={{ right: showCheckboxes ? '32px' : '0px' }}
+              >
                 <Button
                   size="sm"
                   onClick={handleAddRow}
                   disabled={addMutation.isPending}
-                  className="h-6 px-2 text-xs bg-primary hover:bg-primary/90 shadow-sm"
+                  className="h-7 px-3 text-xs bg-primary hover:bg-primary/90 shadow-sm"
                 >
                   {addMutation.isPending ? "..." : "Add"}
                 </Button>
               </ResizableTableCell>
+              {showCheckboxes && (
+                <ResizableTableCell className="border-b border-primary/20 p-0.5 text-center bg-background group-hover:bg-accent/5 transition-colors h-9 sticky right-0 z-30">
+                </ResizableTableCell>
+              )}
+
             </ResizableTableRow>
           </ResizableTableHeader>
           <ResizableTableBody>
@@ -934,6 +1035,7 @@ const Index = () => {
                       setRowHeights={setRowHeights}
                       focusedCell={focusedCell}
                       setFocusedCell={setFocusedCell}
+                      dynamicColumns={spreadsheet?.columns || []}
                     />
 
                     {/* Drop zone after last row */}
@@ -1019,6 +1121,7 @@ function SpreadsheetRow({
   setRowHeights: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   focusedCell: string | null;
   setFocusedCell: React.Dispatch<React.SetStateAction<string | null>>;
+  dynamicColumns: { name: string; type: string }[];
 }) {
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
@@ -1078,8 +1181,8 @@ function SpreadsheetRow({
       onDragEnd={onDragEnd}
     >
       <ResizableTableCell
-        className="border-b border-border/50 border-r border-border/50 px-1 py-0.5 text-xs text-muted-foreground text-center bg-muted/20"
-        style={{ height: '24px' }}
+        className="border-b border-border/50 border-r border-border/50 px-1 py-0.5 text-sm text-muted-foreground text-center bg-muted/20"
+        style={{ height: '36px' }}
         title="Drag to reorder"
         draggable
         onDragStart={(e) => onDragStart(e, customer.id)}
@@ -1088,11 +1191,11 @@ function SpreadsheetRow({
           {index}
         </div>
       </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
+      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-9">
         <div className="flex items-center h-full">
           <Popover>
             <PopoverTrigger asChild>
-              <button className="ml-1 w-3 h-3 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
+              <button className="ml-1 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
                 style={{ backgroundColor: localColor || 'white' }} />
             </PopoverTrigger>
             <PopoverContent className="w-auto p-2 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
@@ -1102,11 +1205,11 @@ function SpreadsheetRow({
                     key={color || 'none'}
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0 rounded-full hover:scale-110 transition-transform"
+                    className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform"
                     onClick={() => handleColorChange(color as Customer['color'])}
                   >
                     <div
-                      className={`w-4 h-4 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`}
+                      className={`w-6 h-6 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`}
                       style={{ backgroundColor: color || 'transparent' }}
                     />
                   </Button>
@@ -1125,13 +1228,13 @@ function SpreadsheetRow({
               defaultValue={customer.customer_name}
               onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
               onFocus={() => setFocusedCell(`${customer.id}-customer_name`)}
-              className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-0.5 leading-none h-full min-h-0"
+              className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-2 py-0.5 leading-tight h-full min-h-0"
               style={{ height: '100%' }}
             />
           </div>
         </div>
       </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
+      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-9">
         <div
           className={cn(
             "flex items-center h-full transition-all duration-200",
@@ -1143,12 +1246,12 @@ function SpreadsheetRow({
             defaultValue={customer.company_name}
             onBlur={(e) => onCellChange(customer.id, "company_name", e.target.value)}
             onFocus={() => setFocusedCell(`${customer.id}-company_name`)}
-            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-0.5 leading-none h-full min-h-0"
+            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-2 py-0.5 leading-tight h-full min-h-0"
             style={{ height: '100%' }}
           />
         </div>
       </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
+      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-9">
         <div
           className={cn(
             "flex items-center h-full transition-all duration-200",
@@ -1160,16 +1263,16 @@ function SpreadsheetRow({
             defaultValue={customer.phone_number}
             onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
             onFocus={() => setFocusedCell(`${customer.id}-phone_number`)}
-            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-0.5 leading-none h-full min-h-0"
+            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-2 py-0.5 leading-tight h-full min-h-0"
             style={{ height: '100%' }}
           />
         </div>
       </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
+      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-9">
         <Popover>
           <PopoverTrigger asChild>
-            <button className="w-full h-full px-2 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors">
-              <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+            <button className="w-full h-full px-2 text-left text-sm flex items-center gap-1 hover:bg-accent/10 transition-colors">
+              <CalendarIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span className="truncate">{lastCallDate ? format(lastCallDate, "dd/MM/yyyy") : "Pick"}</span>
             </button>
           </PopoverTrigger>
@@ -1184,11 +1287,11 @@ function SpreadsheetRow({
           </PopoverContent>
         </Popover>
       </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-8">
+      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-9">
         <Popover>
           <PopoverTrigger asChild>
-            <button className="w-full h-full px-2 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors">
-              <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+            <button className="w-full h-full px-2 text-left text-sm flex items-center gap-1 hover:bg-accent/10 transition-colors">
+              <CalendarIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <span className="truncate">{date ? format(date, "dd/MM/yyyy") : "Pick"}</span>
             </button>
           </PopoverTrigger>
@@ -1203,7 +1306,7 @@ function SpreadsheetRow({
           </PopoverContent>
         </Popover>
       </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-8">
+      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-9">
         <div
           className={cn(
             "flex items-center h-full transition-all duration-200",
@@ -1216,12 +1319,12 @@ function SpreadsheetRow({
             defaultValue={customer.next_call_time || ""}
             onBlur={(e) => onCellChange(customer.id, "next_call_time", e.target.value)}
             onFocus={() => setFocusedCell(`${customer.id}-next_call_time`)}
-            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 h-full min-h-0"
+            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-2 h-full min-h-0"
             style={{ height: '100%' }}
           />
         </div>
       </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
+      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-9">
         <div
           className={cn(
             "flex items-center h-full transition-all duration-200",
@@ -1233,23 +1336,35 @@ function SpreadsheetRow({
             defaultValue={customer.remark || ""}
             onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
             onFocus={() => setFocusedCell(`${customer.id}-remark`)}
-            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs focus-visible:ring-0 focus-visible:ring-inset w-full resize-none hover:bg-muted/30 transition-colors px-1.5 py-0.5 leading-none h-full min-h-0"
+            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full resize-none hover:bg-muted/30 transition-colors px-2 py-0.5 leading-tight h-full min-h-0"
             style={{ height: '100%', minHeight: 'auto' }}
           />
         </div>
       </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0.5 text-center h-6">
-        <div className="flex items-center justify-center gap-1 h-full">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              window.location.href = `tel:${customer.phone_number}`;
-            }}
-            className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-blue-600 hover:bg-blue-50 transition-colors"
+      {dynamicColumns?.map((col) => (
+        <ResizableTableCell key={col.name} className="border-b border-border/50 border-r border-border/50 p-0 h-9">
+          <div
+            className={cn(
+              "flex items-center h-full transition-all duration-200",
+              focusedCell === `${customer.id}-${col.name}` && "ring-2 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
+            )}
+            onClick={() => setFocusedCell(`${customer.id}-${col.name}`)}
           >
-            <Phone className="h-3 w-3" />
-          </Button>
+            <AutoResizeTextarea
+              defaultValue={customer.dynamic_data?.[col.name] || ""}
+              onBlur={(e) => onCellChange(customer.id, `dynamic_data.${col.name}`, e.target.value)}
+              onFocus={() => setFocusedCell(`${customer.id}-${col.name}`)}
+              className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full resize-none hover:bg-muted/30 transition-colors px-2 py-0.5 leading-tight h-full min-h-0"
+              style={{ height: '100%', minHeight: 'auto' }}
+            />
+          </div>
+        </ResizableTableCell>
+      ))}
+      <ResizableTableCell
+        className="border-b border-border/50 border-r border-border/50 p-0.5 text-center h-9 sticky bg-background z-20 shadow-[-5px_0_10px_-5px_rgba(0,0,0,0.1)]"
+        style={{ right: showCheckboxes ? '32px' : '0px' }}
+      >
+        <div className="flex items-center justify-center gap-1 h-full">
           <Button
             variant="ghost"
             size="sm"
@@ -1258,15 +1373,15 @@ function SpreadsheetRow({
               const whatsappUrl = `https://wa.me/${phoneNumber}`;
               window.open(whatsappUrl, '_blank');
             }}
-            className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
+            className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
           >
-            <MessageCircle className="h-3 w-3" />
+            <MessageCircle className="h-4 w-4" />
           </Button>
         </div>
       </ResizableTableCell>
       {
         showCheckboxes && (
-          <ResizableTableCell className="border-b border-border/50 px-1 py-1 text-center">
+          <ResizableTableCell className="border-b border-border/50 px-1 py-1 text-center sticky right-0 bg-background z-20">
             <Button
               variant="ghost"
               size="sm"
@@ -1274,9 +1389,9 @@ function SpreadsheetRow({
               onClick={() => onToggleSelect(customer.id)}
             >
               {isSelected ? (
-                <CheckSquare className="h-3.5 w-3.5 text-primary" />
+                <CheckSquare className="h-4 w-4 text-primary" />
               ) : (
-                <Square className="h-3.5 w-3.5" />
+                <Square className="h-4 w-4" />
               )}
             </Button>
           </ResizableTableCell>

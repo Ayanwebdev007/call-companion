@@ -36,7 +36,7 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
 
   const handleDownloadTemplate = async () => {
     try {
-      const blob = await downloadTemplate();
+      const blob = await downloadTemplate(spreadsheetId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

@@ -107,18 +107,14 @@ router.post('/forgot-password', async (req, res) => {
     // For development fallback to log if no credentials
     if (!process.env.RESEND_API_KEY) {
       console.log('RESET LINK (Dev Mode):', `${frontendUrl}/reset-password/${token}`);
-      console.log('NOTE: If this link does not open your frontend, check FRONTEND_URL in .env');
       return res.json({ message: 'Reset link generated (check server logs for development)', devMode: true });
     }
 
     console.log('--- ATTEMPTING EMAIL SEND (Resend) ---');
-    console.log('Using API Key:', process.env.RESEND_API_KEY ? 'Present (starts with ' + process.env.RESEND_API_KEY.substring(0, 5) + '...)' : 'MISSING');
-    console.log('Using Sender:', process.env.EMAIL_FROM || 'Default (onboarding@resend.dev)');
-
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+      from: 'Call Companion <onboarding@resend.dev>',
       to: [user.email],
       subject: 'Password Reset',
       html: `<p>You are receiving this because you (or someone else) have requested the reset of the password for your account.</p>` +

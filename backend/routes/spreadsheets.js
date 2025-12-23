@@ -13,7 +13,7 @@ router.get('/', auth, async (req, res) => {
     // Get owned spreadsheets
     const ownedSpreadsheets = await Spreadsheet.find({ user_id: req.user.id }).sort({ created_at: -1 });
     console.log('Owned spreadsheets:', ownedSpreadsheets.length);
-    
+
     // Get shared spreadsheets
     const sharedRecords = await Sharing.find({ shared_with_user_id: req.user.id })
       .populate('spreadsheet_id')
@@ -22,15 +22,15 @@ router.get('/', auth, async (req, res) => {
         console.error('Population error:', err);
         throw err;
       });
-    
+
     console.log('Shared records found:', sharedRecords.length);
-    
+
     // Debug logging for shared records
     console.log('Shared records before processing:', sharedRecords.map(record => ({
       spreadsheet_id: record.spreadsheet_id ? record.spreadsheet_id._id : 'null',
       spreadsheet_obj: record.spreadsheet_id ? record.spreadsheet_id.toObject() : 'null'
     })));
-    
+
     const sharedSpreadsheets = sharedRecords
       .filter(record => record.spreadsheet_id && record.owner_user_id) // Filter out records with null references
       .map(record => {
@@ -44,22 +44,22 @@ router.get('/', auth, async (req, res) => {
           is_shared: true
         };
       });
-    
+
     // Debug logging
-    console.log('Owned spreadsheets:', ownedSpreadsheets.map(s => ({id: s.id, name: s.name})));
-    console.log('Shared spreadsheets:', sharedSpreadsheets.map(s => ({id: s.id, name: s.name})));
-    
+    console.log('Owned spreadsheets:', ownedSpreadsheets.map(s => ({ id: s.id, name: s.name })));
+    console.log('Shared spreadsheets:', sharedSpreadsheets.map(s => ({ id: s.id, name: s.name })));
+
     // Combine owned and shared spreadsheets
     const allSpreadsheets = [...ownedSpreadsheets, ...sharedSpreadsheets];
-    
+
     // Remove duplicates by ID
-    const uniqueSpreadsheets = allSpreadsheets.filter((spreadsheet, index, self) => 
+    const uniqueSpreadsheets = allSpreadsheets.filter((spreadsheet, index, self) =>
       index === self.findIndex(s => s.id === spreadsheet.id)
     );
-    
+
     // Sort by created_at descending
     uniqueSpreadsheets.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    
+
     console.log('Final spreadsheets count:', uniqueSpreadsheets.length);
     res.json(uniqueSpreadsheets);
   } catch (err) {
@@ -88,23 +88,23 @@ router.get('/:id', auth, async (req, res) => {
   try {
     // First check if user owns the spreadsheet
     let spreadsheet = await Spreadsheet.findOne({ _id: req.params.id, user_id: req.user.id });
-    
+
     // If not owned, check if it's shared with the user
     if (!spreadsheet) {
       const sharedRecord = await Sharing.findOne({
         spreadsheet_id: req.params.id,
         shared_with_user_id: req.user.id
       }).populate('spreadsheet_id');
-      
+
       if (sharedRecord) {
         spreadsheet = sharedRecord.spreadsheet_id;
       }
     }
-    
+
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
-    
+
     res.json(spreadsheet);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -125,6 +125,33 @@ router.put('/:id', auth, async (req, res) => {
     res.json(updatedSpreadsheet);
   } catch (err) {
     res.status(400).json({ message: err.message });
+  }
+});
+
+// ADD COLUMN to spreadsheet
+router.post('/:id/columns', auth, async (req, res) => {
+  try {
+    const { name, type } = req.body;
+    if (!name) {
+      return res.status(400).json({ message: 'Column name is required' });
+    }
+
+    const spreadsheet = await Spreadsheet.findOne({ _id: req.params.id, user_id: req.user.id });
+    if (!spreadsheet) {
+      return res.status(404).json({ message: 'Spreadsheet not found' });
+    }
+
+    // Check if column already exists
+    if (spreadsheet.columns.some(col => col.name === name)) {
+      return res.status(400).json({ message: 'Column already exists' });
+    }
+
+    spreadsheet.columns.push({ name, type: type || 'text' });
+    await spreadsheet.save();
+
+    res.json(spreadsheet);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

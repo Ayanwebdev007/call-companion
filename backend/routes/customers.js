@@ -74,7 +74,7 @@ router.get('/', auth, async (req, res) => {
 
 // POST new customer
 router.post('/', auth, async (req, res) => {
-  const { spreadsheet_id, customer_name, company_name, phone_number, next_call_date, next_call_time, last_call_date, remark, color, status } = req.body;
+  const { spreadsheet_id, customer_name, company_name, phone_number, next_call_date, next_call_time, last_call_date, remark, color, status, dynamic_data } = req.body;
 
   if (!spreadsheet_id) {
     return res.status(400).json({ message: 'spreadsheet_id is required' });
@@ -126,6 +126,7 @@ router.post('/', auth, async (req, res) => {
     remark: remark || '',
     color: color || null,
     status: status || 'New',
+    dynamic_data: dynamic_data || {},
     position: newPosition
   });
 
@@ -260,8 +261,21 @@ router.post('/bulk-import', auth, async (req, res) => {
         remark: (row['remark'] || '').toString().trim(),
         color: null, // Default to null for imported customers
         status: 'New', // Default status for imported customers
-        position: currentPosition++
+        position: currentPosition++,
+        dynamic_data: {}
       };
+
+      // Process dynamic columns
+      if (spreadsheet.columns && spreadsheet.columns.length > 0) {
+        spreadsheet.columns.forEach(col => {
+          const colKey = col.name.toLowerCase().replace(/\s+/g, '_');
+          // Try exact match or normalized match
+          const value = row[colKey] || row[col.name];
+          if (value !== undefined) {
+            customerData.dynamic_data[col.name] = value.toString().trim();
+          }
+        });
+      }
 
       customers.push(customerData);
     }
@@ -287,8 +301,18 @@ router.post('/bulk-import', auth, async (req, res) => {
 // DOWNLOAD Excel template
 router.get('/download-template', auth, async (req, res) => {
   try {
+    const { spreadsheetId } = req.query;
+    let dynamicColumns = [];
+
+    if (spreadsheetId) {
+      const spreadsheet = await Spreadsheet.findById(spreadsheetId);
+      if (spreadsheet && spreadsheet.columns) {
+        dynamicColumns = spreadsheet.columns;
+      }
+    }
+
     // Create template data with exact column names
-    const templateData = [{
+    const templateRow = {
       'customer_name': 'John Doe',
       'company_name': 'ABC Company',
       'phone_number': '+1234567890',
@@ -297,7 +321,14 @@ router.get('/download-template', auth, async (req, res) => {
       'next_call_time': '14:30',
       'remark': 'Important client',
       'color': ''
-    }];
+    };
+
+    // Add dynamic columns to template
+    dynamicColumns.forEach(col => {
+      templateRow[col.name] = `Example ${col.name}`;
+    });
+
+    const templateData = [templateRow];
 
     // Create workbook and worksheet
     const workbook = XLSX.utils.book_new();
@@ -399,6 +430,16 @@ router.get('/export/:spreadsheetId', auth, async (req, res) => {
         'remark': customer.remark || '',
         'color': customer.color || ''
       };
+
+      // Add dynamic data to export
+      if (spreadsheet.columns && spreadsheet.columns.length > 0) {
+        spreadsheet.columns.forEach(col => {
+          const val = customer.dynamic_data ? customer.dynamic_data[col.name] : '';
+          exportObj[col.name] = val || '';
+        });
+      }
+
+      return exportObj;
     });
 
     // Create workbook and worksheet
