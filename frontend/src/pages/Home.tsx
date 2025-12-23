@@ -111,23 +111,20 @@ const Home = () => {
           <div className="grid grid-cols-1">
             {/* Quick Action: Calling */}
             <Card
-              className="group relative overflow-hidden transition-all hover:shadow-2xl border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-primary/50 max-w-2xl"
+              className="group relative overflow-hidden transition-all hover:shadow-2xl border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-primary/50 max-w-md"
               onClick={() => navigate("/calling")}
             >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-2xl">
-                  <LayoutDashboard className="h-6 w-6 text-primary" />
-                  Start Calling
-                </CardTitle>
-                <CardDescription className="text-base">Access your spreadsheets and start calling customers immediately.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">Launch calling workspace</div>
-                  <Button className="group-hover:translate-x-1 transition-transform bg-primary text-primary-foreground shadow-lg shadow-primary/20">
-                    <span className="mr-2">Open</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-primary/10 rounded-2xl ring-1 ring-primary/20 shadow-lg group-hover:scale-110 transition-transform">
+                    <Phone className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-foreground mb-2">Start Calling</h3>
+                    <Button className="w-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+                      Launch Dashboard
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
