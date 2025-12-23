@@ -753,7 +753,7 @@ const Index = () => {
                       value={newRow.customer_name}
                       onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
                       onKeyDown={handleNewRowKeyDown}
-                      className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 font-medium px-1.5 leading-none h-full min-h-0"
+                      className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 font-medium px-3 leading-none h-full min-h-0"
                       placeholder="Add New "
                       style={{ height: '100%' }}
                       rows={1}
@@ -767,7 +767,7 @@ const Index = () => {
                     value={newRow.company_name}
                     onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
                     onKeyDown={handleNewRowKeyDown}
-                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-1.5 leading-none h-full min-h-0"
+                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3 leading-none h-full min-h-0"
                     placeholder="Company"
                     style={{ height: '100%' }}
                     rows={1}
@@ -780,7 +780,7 @@ const Index = () => {
                     value={newRow.phone_number}
                     onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
                     onKeyDown={handleNewRowKeyDown}
-                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-1.5 leading-none h-full min-h-0"
+                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3 leading-none h-full min-h-0"
                     placeholder="Phone"
                     style={{ height: '100%' }}
                     rows={1}
@@ -790,7 +790,7 @@ const Index = () => {
               <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="w-full h-full px-2 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
+                    <button className="w-full h-full px-3 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
                       <CalendarIcon className="h-3 w-3 flex-shrink-0" />
                       <span className="truncate">{newRow.last_call_date ? format(parseISO(newRow.last_call_date), "dd/MM/yyyy") : "Select"}</span>
                     </button>
@@ -809,7 +809,7 @@ const Index = () => {
               <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="w-full h-full px-2 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
+                    <button className="w-full h-full px-3 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
                       <CalendarIcon className="h-3 w-3 flex-shrink-0" />
                       <span className="truncate">{newRow.next_call_date ? format(parseISO(newRow.next_call_date), "dd/MM/yyyy") : "Select"}</span>
                     </button>
@@ -831,7 +831,7 @@ const Index = () => {
                   value={newRow.next_call_time}
                   onChange={(e) => setNewRow({ ...newRow, next_call_time: e.target.value })}
                   onKeyDown={handleNewRowKeyDown}
-                  className="border-0 rounded-none text-xs bg-transparent focus-visible:ring-0 w-full text-muted-foreground hover:text-foreground px-1 h-full"
+                  className="border-0 rounded-none text-xs bg-transparent focus-visible:ring-0 w-full text-muted-foreground hover:text-foreground px-3 h-full"
                   style={{ height: '100%' }}
                 />
               </ResizableTableCell>
@@ -841,7 +841,7 @@ const Index = () => {
                     value={newRow.remark}
                     onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
                     onKeyDown={handleNewRowKeyDown}
-                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-1.5 leading-none h-full min-h-0"
+                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3 leading-none h-full min-h-0"
                     placeholder="Remark"
                     style={{ height: '100%' }}
                     rows={1}
