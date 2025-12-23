@@ -8,9 +8,6 @@ import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 // Register
 router.post('/register', async (req, res) => {
   const { username, email, password } = req.body;
@@ -107,6 +104,7 @@ router.post('/forgot-password', async (req, res) => {
 
     console.log('--- ATTEMPTING EMAIL SEND (Resend API) ---');
     try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
       const { data, error } = await resend.emails.send({
         from: 'onboarding@resend.dev',
         to: user.email,
