@@ -4,7 +4,6 @@ const spreadsheetSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   name: { type: String, required: true },
   description: { type: String, default: '' },
-  columns: { type: [{ name: String, type: { type: String, default: 'text' } }], default: [] }, // Dynamic columns
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });

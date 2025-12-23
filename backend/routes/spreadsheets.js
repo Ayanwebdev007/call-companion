@@ -128,33 +128,6 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// ADD COLUMN to spreadsheet
-router.post('/:id/columns', auth, async (req, res) => {
-  try {
-    const { name, type } = req.body;
-    if (!name) {
-      return res.status(400).json({ message: 'Column name is required' });
-    }
-
-    const spreadsheet = await Spreadsheet.findOne({ _id: req.params.id, user_id: req.user.id });
-    if (!spreadsheet) {
-      return res.status(404).json({ message: 'Spreadsheet not found' });
-    }
-
-    // Check if column already exists
-    if (spreadsheet.columns.some(col => col.name === name)) {
-      return res.status(400).json({ message: 'Column already exists' });
-    }
-
-    spreadsheet.columns.push({ name, type: type || 'text' });
-    await spreadsheet.save();
-
-    res.json(spreadsheet);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
 // DELETE spreadsheet and all associated customers
 router.delete('/:id', auth, async (req, res) => {
   try {

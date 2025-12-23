@@ -26,7 +26,6 @@ export interface Customer {
   created_at?: string;
   updated_at?: string;
   position?: number;
-  dynamic_data?: Record<string, any>;
 }
 
 export interface Spreadsheet {
@@ -39,7 +38,6 @@ export interface Spreadsheet {
   permission_level?: 'read-only' | 'read-write';
   owner?: string;
   is_shared?: boolean;
-  columns?: { name: string; type: string }[];
 }
 
 export const fetchCustomers = async (spreadsheetId?: string, q?: string): Promise<Customer[]> => {
@@ -81,18 +79,10 @@ export const bulkImportCustomers = async (file: File, spreadsheetId: string): Pr
   return response.data;
 };
 
-export const downloadTemplate = async (spreadsheetId?: string): Promise<Blob> => {
-  const url = spreadsheetId
-    ? `${API_URL}/download-template?spreadsheetId=${spreadsheetId}`
-    : `${API_URL}/download-template`;
-  const response = await axios.get(url, {
+export const downloadTemplate = async (): Promise<Blob> => {
+  const response = await axios.get(`${API_URL}/download-template`, {
     responseType: 'blob',
   });
-  return response.data;
-};
-
-export const addColumn = async (spreadsheetId: string, name: string, type: string = 'text') => {
-  const response = await axios.post(`${SPREADSHEETS_API_URL}/${spreadsheetId}/columns`, { name, type });
   return response.data;
 };
 
