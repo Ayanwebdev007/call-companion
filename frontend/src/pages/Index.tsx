@@ -484,6 +484,7 @@ const Index = () => {
                 <Download className="h-4 w-4" />
               </Button>
             </div>
+          </div>
         </header>
       </div>
 
@@ -710,7 +711,7 @@ const Index = () => {
                   <Popover>
                     <PopoverTrigger asChild>
                       <button className="ml-2 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
-                        style={{ backgroundColor: newRow.color && newRow.color !== "" ? newRow.color : 'white' }} />
+                        style={{ backgroundColor: newRow.color || 'white' }} />
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-3 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
                       <div className="grid grid-cols-4 gap-2">
@@ -965,7 +966,7 @@ const Index = () => {
           />
         )
       }
-    </div >
+    </div>
   );
 };
 
