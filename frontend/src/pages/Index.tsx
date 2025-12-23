@@ -1085,7 +1085,7 @@ function SpreadsheetRow({
           <div
             className={cn(
               "flex items-center h-full flex-1 transition-all duration-200",
-              focusedCell === `${customer.id}-customer_name` && "ring-[3px] ring-primary ring-inset shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary/[0.03] z-10"
+              focusedCell === `${customer.id}-customer_name` && "ring-4 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
             )}
             onClick={() => setFocusedCell(`${customer.id}-customer_name`)}
           >
@@ -1103,7 +1103,7 @@ function SpreadsheetRow({
         <div
           className={cn(
             "flex items-center h-full transition-all duration-200",
-            focusedCell === `${customer.id}-company_name` && "ring-[3px] ring-primary ring-inset shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary/[0.03] z-10"
+            focusedCell === `${customer.id}-company_name` && "ring-4 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
           )}
           onClick={() => setFocusedCell(`${customer.id}-company_name`)}
         >
@@ -1120,7 +1120,7 @@ function SpreadsheetRow({
         <div
           className={cn(
             "flex items-center h-full transition-all duration-200",
-            focusedCell === `${customer.id}-phone_number` && "ring-[3px] ring-primary ring-inset shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary/[0.03] z-10"
+            focusedCell === `${customer.id}-phone_number` && "ring-4 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
           )}
           onClick={() => setFocusedCell(`${customer.id}-phone_number`)}
         >
@@ -1175,7 +1175,7 @@ function SpreadsheetRow({
         <div
           className={cn(
             "flex items-center h-full transition-all duration-200",
-            focusedCell === `${customer.id}-next_call_time` && "ring-[3px] ring-primary ring-inset shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary/[0.03] z-10"
+            focusedCell === `${customer.id}-next_call_time` && "ring-4 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
           )}
           onClick={() => setFocusedCell(`${customer.id}-next_call_time`)}
         >
@@ -1193,7 +1193,7 @@ function SpreadsheetRow({
         <div
           className={cn(
             "flex items-center h-full transition-all duration-200",
-            focusedCell === `${customer.id}-remark` && "ring-[3px] ring-primary ring-inset shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary/[0.03] z-10"
+            focusedCell === `${customer.id}-remark` && "ring-4 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
           )}
           onClick={() => setFocusedCell(`${customer.id}-remark`)}
         >
