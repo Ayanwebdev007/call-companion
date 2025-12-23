@@ -1084,8 +1084,8 @@ function SpreadsheetRow({
           </Popover>
           <div
             className={cn(
-              "flex items-center h-full flex-1 transition-all",
-              focusedCell === `${customer.id}-customer_name` && "ring-2 ring-primary ring-inset"
+              "flex items-center h-full flex-1 transition-all duration-200",
+              focusedCell === `${customer.id}-customer_name` && "ring-[3px] ring-primary ring-inset shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary/[0.03] z-10"
             )}
             onClick={() => setFocusedCell(`${customer.id}-customer_name`)}
           >
@@ -1102,8 +1102,8 @@ function SpreadsheetRow({
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0">
         <div
           className={cn(
-            "flex items-center h-full transition-all",
-            focusedCell === `${customer.id}-company_name` && "ring-2 ring-primary ring-inset"
+            "flex items-center h-full transition-all duration-200",
+            focusedCell === `${customer.id}-company_name` && "ring-[3px] ring-primary ring-inset shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary/[0.03] z-10"
           )}
           onClick={() => setFocusedCell(`${customer.id}-company_name`)}
         >
@@ -1119,8 +1119,8 @@ function SpreadsheetRow({
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0">
         <div
           className={cn(
-            "flex items-center h-full transition-all",
-            focusedCell === `${customer.id}-phone_number` && "ring-2 ring-primary ring-inset"
+            "flex items-center h-full transition-all duration-200",
+            focusedCell === `${customer.id}-phone_number` && "ring-[3px] ring-primary ring-inset shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary/[0.03] z-10"
           )}
           onClick={() => setFocusedCell(`${customer.id}-phone_number`)}
         >
@@ -1174,8 +1174,8 @@ function SpreadsheetRow({
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0">
         <div
           className={cn(
-            "flex items-center h-full transition-all",
-            focusedCell === `${customer.id}-next_call_time` && "ring-2 ring-primary ring-inset"
+            "flex items-center h-full transition-all duration-200",
+            focusedCell === `${customer.id}-next_call_time` && "ring-[3px] ring-primary ring-inset shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary/[0.03] z-10"
           )}
           onClick={() => setFocusedCell(`${customer.id}-next_call_time`)}
         >
@@ -1192,8 +1192,8 @@ function SpreadsheetRow({
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0">
         <div
           className={cn(
-            "flex items-center h-full transition-all",
-            focusedCell === `${customer.id}-remark` && "ring-2 ring-primary ring-inset"
+            "flex items-center h-full transition-all duration-200",
+            focusedCell === `${customer.id}-remark` && "ring-[3px] ring-primary ring-inset shadow-[0_0_15px_hsl(var(--primary)/0.3)] bg-primary/[0.03] z-10"
           )}
           onClick={() => setFocusedCell(`${customer.id}-remark`)}
         >
