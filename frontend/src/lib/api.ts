@@ -23,8 +23,6 @@ export interface Customer {
   last_call_date?: string;
   remark: string | null;
   color?: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null;
-  status?: 'New' | 'Called' | 'Interested' | 'Not Interested' | 'Follow Up' | 'Voicemail';
-  call_count?: number;
   created_at?: string;
   updated_at?: string;
   position?: number;

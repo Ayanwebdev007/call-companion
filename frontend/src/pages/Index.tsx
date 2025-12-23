@@ -13,12 +13,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet } from "@/lib/api";
 
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, Phone } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CallModeOverlay } from "@/components/CallModeOverlay";
-import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
   const { id: spreadsheetId } = useParams<{ id: string }>();
@@ -32,11 +30,6 @@ const Index = () => {
   }, [spreadsheetId, navigate]);
   const [viewMode, setViewMode] = useState<"date" | "all">("date");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-
-  // Call Mode State
-  const [isCallModeOpen, setIsCallModeOpen] = useState(false);
-  const [callModeStartIndex, setCallModeStartIndex] = useState(0);
-
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
@@ -78,7 +71,6 @@ const Index = () => {
     next_call_time: "",
     remark: "",
     color: null as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null,
-    status: 'New' as Customer['status'],
   });
 
   // Search query state
@@ -86,7 +78,6 @@ const Index = () => {
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [searchClosing, setSearchClosing] = useState<boolean>(false);
   const searchRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
     if (!showSearch) return;
     const onDocMouseDown = (e: MouseEvent) => {
@@ -177,7 +168,6 @@ const Index = () => {
         next_call_time: "",
         remark: "",
         color: null,
-        status: 'New',
       });
     },
     onError: (error: unknown) => {
@@ -448,147 +438,141 @@ const Index = () => {
                 </div>
               )}
 
-            </div>
+              <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-lg border border-border/50">
+                <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={async () => {
+                  if (!spreadsheetId) return;
+                  try {
+                    const blob = await exportCustomers(spreadsheetId);
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `customers_export.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                  } catch (error) {
+                    console.error('Export failed:', error);
+                    toast({
+                      title: "Export failed",
+                      description: "Failed to export customer data. Please try again.",
+                      variant: "destructive",
+                    });
+                  }
+                }}>
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
 
-            <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-lg border border-border/50">
-              <Button
-                onClick={() => setIsCallModeOpen(true)}
-                className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md shadow-green-900/10"
-              >
-                <Phone className="h-4 w-4 mr-2" />
-                Start Calling
-              </Button>
-              <div className="h-6 w-px bg-border/50 mx-1" />
-              <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={async () => {
-                if (!spreadsheetId) return;
-                try {
-                  const blob = await exportCustomers(spreadsheetId);
-                  const url = window.URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `customers_export.xlsx`;
-                  document.body.appendChild(a);
-                  a.click();
-                  window.URL.revokeObjectURL(url);
-                  document.body.removeChild(a);
-                } catch (error) {
-                  console.error('Export failed:', error);
-                  toast({
-                    title: "Export failed",
-                    description: "Failed to export customer data. Please try again.",
-                    variant: "destructive",
-                  });
-                }
-              }}>
-                <Download className="h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={logout} className="ml-2 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20">
+                <LogOut className="h-4 w-4" />
+                Logout
               </Button>
             </div>
           </div>
         </header>
-      </div>
 
-      {/* Sheet Tabs */}
-      <div className="bg-background/95 border-b border-border/50 px-6 py-2 flex items-center gap-4 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30">
-        <div className="flex items-center gap-2">
+        {/* Sheet Tabs */}
+        <div className="bg-background/95 border-b border-border/50 px-6 py-2 flex items-center gap-4 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => {
+                setViewMode("date");
+                setSelectedDate(new Date());
+              }}
+            >
+              Today
+            </Button>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={viewMode === "date" ? "secondary" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "gap-2",
+                    viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  {format(selectedDate, "PPP")}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date);
+                      setViewMode("date");
+                    }
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="h-6 w-px bg-border/50" />
+
           <Button
-            variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
+            variant={viewMode === "all" ? "secondary" : "ghost"}
             size="sm"
-            onClick={() => {
-              setViewMode("date");
-              setSelectedDate(new Date());
-            }}
+            onClick={() => setViewMode("all")}
           >
-            Today
+            All Customers ({customers.length})
           </Button>
 
-          <Popover>
-            <PopoverTrigger asChild>
+          <div className="ml-auto flex items-center gap-3">
+            {!showSearch && (
               <Button
-                variant={viewMode === "date" ? "secondary" : "ghost"}
-                size="sm"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setShowSearch(true)}
+                aria-label="Open search"
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            )}
+            {showSearch && (
+              <div
+                ref={searchRef}
                 className={cn(
-                  "gap-2",
-                  viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
+                  "relative w-[280px] duration-200",
+                  searchClosing
+                    ? "animate-out slide-out-to-right-2 fade-out"
+                    : "animate-in slide-in-from-right-2 fade-in"
                 )}
               >
-                <CalendarIcon className="h-4 w-4" />
-                {format(selectedDate, "PPP")}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => {
-                  if (date) {
-                    setSelectedDate(date);
-                    setViewMode("date");
-                  }
-                }}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-
-        <div className="h-6 w-px bg-border/50" />
-
-        <Button
-          variant={viewMode === "all" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => setViewMode("all")}
-        >
-          All Customers ({customers.length})
-        </Button>
-
-        <div className="ml-auto flex items-center gap-3">
-          {!showSearch && (
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search name, company, or phone"
+                  className="pl-8 h-8"
+                  autoFocus
+                />
+              </div>
+            )}
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="h-8 w-8"
-              onClick={() => setShowSearch(true)}
-              aria-label="Open search"
+              onClick={() => setShowCheckboxes(true)}
+              className="h-7 w-7 border-border/50"
+              aria-label="Select rows to delete"
             >
-              <Search className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
-          )}
-          {showSearch && (
-            <div
-              ref={searchRef}
-              className={cn(
-                "relative w-[280px] duration-200",
-                searchClosing
-                  ? "animate-out slide-out-to-right-2 fade-out"
-                  : "animate-in slide-in-from-right-2 fade-in"
-              )}
-            >
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search name, company, or phone"
-                className="pl-8 h-8"
-                autoFocus
-              />
-            </div>
-          )}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setShowCheckboxes(true)}
-            className="h-7 w-7 border-border/50"
-            aria-label="Select rows to delete"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Bulk Actions Bar */}
-      {
-        showCheckboxes && (
+        {/* Bulk Actions Bar */}
+        {showCheckboxes && (
           <div className="bg-primary/5 border-b border-border/50 px-4 py-2 flex items-center gap-4 backdrop-blur-sm animate-in slide-in-from-top-2">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-primary">
@@ -635,13 +619,13 @@ const Index = () => {
               Cancel
             </Button>
           </div>
-        )
-      }
+        )}
+      </div>
 
 
 
       {/* Spreadsheet - Only this section should scroll */}
-      < div className="flex-1 overflow-auto bg-muted/10" >
+      <div className="flex-1 overflow-auto bg-muted/10">
         <ResizableTable className="w-full border-separate border-spacing-0">
           <ResizableTableHeader className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm shadow-sm supports-[backdrop-filter]:bg-background/60">
             <ResizableTableRow className="bg-muted/50 hover:bg-muted/60 transition-colors border-b border-border/50">
@@ -665,9 +649,6 @@ const Index = () => {
               </ResizableTableHead>
               <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px] sticky top-0 bg-muted/50">
                 Next Call Date
-              </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[120px] sticky top-0 bg-muted/50">
-                Status
               </ResizableTableHead>
               <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[100px] sticky top-0 bg-muted/50">
                 Time
@@ -711,7 +692,7 @@ const Index = () => {
                   <Popover>
                     <PopoverTrigger asChild>
                       <button className="ml-2 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
-                        style={{ backgroundColor: newRow.color || 'white' }} />
+                        style={{ backgroundColor: newRow.color && newRow.color !== "" ? newRow.color : 'white' }} />
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-3 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
                       <div className="grid grid-cols-4 gap-2">
@@ -954,18 +935,7 @@ const Index = () => {
             )}
           </ResizableTableBody>
         </ResizableTable>
-      </div >
-
-      {
-        isCallModeOpen && (
-          <CallModeOverlay
-            customers={displayedCustomers}
-            initialIndex={0}
-            onClose={() => setIsCallModeOpen(false)}
-            spreadsheetId={spreadsheetId || ""}
-          />
-        )
-      }
+      </div>
     </div>
   );
 };
@@ -1082,7 +1052,7 @@ function SpreadsheetRow({
           <Popover>
             <PopoverTrigger asChild>
               <button className="ml-2 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
-                style={{ backgroundColor: localColor || 'white' }} />
+                style={{ backgroundColor: localColor && localColor !== "" ? localColor : 'white' }} />
             </PopoverTrigger>
             <PopoverContent className="w-auto p-3 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
               <div className="grid grid-cols-4 gap-2">
@@ -1168,18 +1138,6 @@ function SpreadsheetRow({
             />
           </PopoverContent>
         </Popover>
-      </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 px-3 py-1 text-center">
-        <Badge variant="outline" className={`
-           ${customer.status === 'Interested' ? 'bg-green-500/10 text-green-500 border-green-500/20' : ''}
-           ${customer.status === 'Not Interested' ? 'bg-red-500/10 text-red-500 border-red-500/20' : ''}
-           ${customer.status === 'Follow Up' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' : ''}
-           ${customer.status === 'Voicemail' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : ''}
-           ${customer.status === 'Called' ? 'bg-secondary text-secondary-foreground' : ''}
-           ${!customer.status || customer.status === 'New' ? 'bg-muted text-muted-foreground' : ''}
-         `}>
-          {customer.status || 'New'}
-        </Badge>
       </ResizableTableCell>
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0">
         <Input

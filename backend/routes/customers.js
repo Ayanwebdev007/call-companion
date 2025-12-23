@@ -259,6 +259,7 @@ router.post('/bulk-import', auth, async (req, res) => {
         last_call_date: (row['last_call_date'] || row['lastcalldate'] || '').toString().trim(),
         remark: (row['remark'] || '').toString().trim(),
         color: null, // Default to null for imported customers
+        status: 'New', // Default status for imported customers
         position: currentPosition++
       };
 
