@@ -1092,7 +1092,7 @@ function SpreadsheetRow({
         <div className="flex items-center h-full">
           <Popover>
             <PopoverTrigger asChild>
-              <button className="ml-1 w-3 h-3 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
+              <button className="ml-1 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
                 style={{ backgroundColor: localColor || 'white' }} />
             </PopoverTrigger>
             <PopoverContent className="w-auto p-2 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
@@ -1125,7 +1125,7 @@ function SpreadsheetRow({
               defaultValue={customer.customer_name}
               onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
               onFocus={() => setFocusedCell(`${customer.id}-customer_name`)}
-              className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-0.5 leading-none h-full min-h-0"
+              className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-1 leading-tight h-full min-h-0"
               style={{ height: '100%' }}
             />
           </div>
@@ -1143,7 +1143,7 @@ function SpreadsheetRow({
             defaultValue={customer.company_name}
             onBlur={(e) => onCellChange(customer.id, "company_name", e.target.value)}
             onFocus={() => setFocusedCell(`${customer.id}-company_name`)}
-            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-0.5 leading-none h-full min-h-0"
+            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-1 leading-tight h-full min-h-0"
             style={{ height: '100%' }}
           />
         </div>
@@ -1216,7 +1216,7 @@ function SpreadsheetRow({
             defaultValue={customer.next_call_time || ""}
             onBlur={(e) => onCellChange(customer.id, "next_call_time", e.target.value)}
             onFocus={() => setFocusedCell(`${customer.id}-next_call_time`)}
-            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 h-full min-h-0"
+            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 h-full min-h-0"
             style={{ height: '100%' }}
           />
         </div>
@@ -1233,23 +1233,13 @@ function SpreadsheetRow({
             defaultValue={customer.remark || ""}
             onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
             onFocus={() => setFocusedCell(`${customer.id}-remark`)}
-            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs focus-visible:ring-0 focus-visible:ring-inset w-full resize-none hover:bg-muted/30 transition-colors px-1.5 py-0.5 leading-none h-full min-h-0"
+            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full resize-none hover:bg-muted/30 transition-colors px-1.5 py-1 leading-tight h-full min-h-0"
             style={{ height: '100%', minHeight: 'auto' }}
           />
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0.5 text-center h-6">
         <div className="flex items-center justify-center gap-1 h-full">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              window.location.href = `tel:${customer.phone_number}`;
-            }}
-            className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-blue-600 hover:bg-blue-50 transition-colors"
-          >
-            <Phone className="h-3 w-3" />
-          </Button>
           <Button
             variant="ghost"
             size="sm"
