@@ -1099,7 +1099,8 @@ function SpreadsheetRow({
   rowHeights,
   setRowHeights,
   focusedCell,
-  setFocusedCell
+  setFocusedCell,
+  dynamicColumns
 }: {
   customer: Customer;
   index: number;
