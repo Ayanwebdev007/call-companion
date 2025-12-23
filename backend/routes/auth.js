@@ -87,9 +87,11 @@ router.post('/login', async (req, res) => {
 // Forgot Password
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
+  console.log('Received forgot-password request for:', email);
   try {
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('User not found:', email);
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -98,12 +100,23 @@ router.post('/forgot-password', async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
 
     await user.save();
+    console.log('Reset token generated and saved for:', email);
 
+    // For development fallback to log if no credentials
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.log('RESET LINK (Dev Mode):', `http://localhost:5173/reset-password/${token}`);
+      return res.json({ message: 'Reset link generated (check server logs for development)', devMode: true });
+    }
+
+    console.log('Creating nodemailer transporter...');
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
+      },
+      tls: {
+        rejectUnauthorized: false
       }
     });
 
@@ -117,17 +130,13 @@ router.post('/forgot-password', async (req, res) => {
         `If you did not request this, please ignore this email and your password will remain unchanged.\n`
     };
 
-    // For development, we log the link if email credentials are not set
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.log('RESET LINK:', `http://localhost:5173/reset-password/${token}`);
-      return res.json({ message: 'Reset link generated (check server logs for development)', devMode: true });
-    }
-
+    console.log('Sending email...');
     await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully to:', email);
     res.json({ message: 'Email sent' });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    console.error('Error in forgot-password:', err);
+    res.status(500).json({ message: 'Server error: ' + err.message });
   }
 });
 
