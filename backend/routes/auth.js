@@ -107,6 +107,7 @@ router.post('/forgot-password', async (req, res) => {
     // For development fallback to log if no credentials
     if (!process.env.RESEND_API_KEY) {
       console.log('RESET LINK (Dev Mode):', `${frontendUrl}/reset-password/${token}`);
+      console.log('NOTE: If this link does not open your frontend, check FRONTEND_URL in .env');
       return res.json({ message: 'Reset link generated (check server logs for development)', devMode: true });
     }
 
