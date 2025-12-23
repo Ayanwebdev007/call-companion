@@ -27,10 +27,20 @@ const Home = () => {
                 <SidebarMenuButton
                   onClick={() => navigate("/calling")}
                   tooltip="Calling"
-                  isActive={true}
+                  isActive={window.location.pathname === "/calling"}
                 >
                   <Phone />
                   <span>Calling</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate("/profile")}
+                  tooltip="Profile"
+                  isActive={window.location.pathname === "/profile"}
+                >
+                  <User />
+                  <span>Profile</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
