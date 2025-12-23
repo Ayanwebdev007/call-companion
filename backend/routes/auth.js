@@ -102,9 +102,11 @@ router.post('/forgot-password', async (req, res) => {
     await user.save();
     console.log('Reset token generated and saved for:', email);
 
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
     // For development fallback to log if no credentials
     if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.log('RESET LINK (Dev Mode):', `http://localhost:5173/reset-password/${token}`);
+      console.log('RESET LINK (Dev Mode):', `${frontendUrl}/reset-password/${token}`);
       return res.json({ message: 'Reset link generated (check server logs for development)', devMode: true });
     }
 
@@ -127,7 +129,6 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(500).json({ message: 'Email service connection failed: ' + verifyError.message });
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const mailOptions = {
       to: user.email,
       from: process.env.EMAIL_USER,
