@@ -108,22 +108,29 @@ router.post('/forgot-password', async (req, res) => {
       return res.json({ message: 'Reset link generated (check server logs for development)', devMode: true });
     }
 
-    console.log('--- ATTEMPTING EMAIL SEND (V4: Service preset) ---');
+    console.log('--- ATTEMPTING EMAIL SEND (V5: Logging + Verification Timeout) ---');
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-      }
+      },
+      debug: true,
+      logger: true
     });
 
-    // Verify connection configuration
-    console.log('Verifying transporter...');
+    // Verify connection configuration with a manual timeout
+    console.log('Verifying transporter (10s timeout)...');
     try {
-      await transporter.verify();
+      const verifyPromise = transporter.verify();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Verification timed out after 10s')), 10000)
+      );
+
+      await Promise.race([verifyPromise, timeoutPromise]);
       console.log('Transporter is ready to take our messages');
     } catch (verifyError) {
-      console.error('Transporter verification failed:', verifyError);
+      console.error('Transporter verification failed or timed out:', verifyError.message);
       return res.status(500).json({ message: 'Email service connection failed: ' + verifyError.message });
     }
 
