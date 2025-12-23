@@ -13,15 +13,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet } from "@/lib/api";
 
 import { useAuth } from "@/context/AuthContext";
-import { LogOut } from "lucide-react";
+import { LogOut, Phone } from "lucide-react";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CallModeOverlay } from "@/components/CallModeOverlay";
+import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
   const { id: spreadsheetId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   // Redirect if no valid spreadsheetId
   useEffect(() => {
     if (!spreadsheetId || spreadsheetId === "undefined" || spreadsheetId === "null") {
@@ -30,10 +32,15 @@ const Index = () => {
   }, [spreadsheetId, navigate]);
   const [viewMode, setViewMode] = useState<"date" | "all">("date");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Call Mode State
+  const [isCallModeOpen, setIsCallModeOpen] = useState(false);
+  const [callModeStartIndex, setCallModeStartIndex] = useState(0);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
-  
+
   // Fetch shared users for this spreadsheet
   const { data: sharedUsers = [], isLoading: sharedUsersLoading } = useQuery({
     queryKey: ["sharedUsers", spreadsheetId],
@@ -49,7 +56,7 @@ const Index = () => {
     },
     enabled: !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null",
   });
-  
+
   // Bulk selection state
   const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(new Set());
   const [showCheckboxes, setShowCheckboxes] = useState(false);
@@ -71,6 +78,7 @@ const Index = () => {
     next_call_time: "",
     remark: "",
     color: null as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null,
+    status: 'New' as Customer['status'],
   });
 
   // Search query state
@@ -78,6 +86,7 @@ const Index = () => {
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [searchClosing, setSearchClosing] = useState<boolean>(false);
   const searchRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (!showSearch) return;
     const onDocMouseDown = (e: MouseEvent) => {
@@ -246,8 +255,8 @@ const Index = () => {
   const displayedCustomers = useMemo(() => {
     if (!customers) return [];
     if (!Array.isArray(customers)) {
-        console.error("Customers is not an array:", customers);
-        return [];
+      console.error("Customers is not an array:", customers);
+      return [];
     }
     if (viewMode === "all") return customers;
     const targetDateStr = format(selectedDate, "yyyy-MM-dd");
@@ -277,7 +286,7 @@ const Index = () => {
   // Handle bulk delete
   const handleBulkDelete = () => {
     if (selectedCustomers.size === 0) return;
-    
+
     if (window.confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)?`)) {
       bulkDeleteMutation.mutate(Array.from(selectedCustomers));
     }
@@ -311,22 +320,22 @@ const Index = () => {
   const handleDrop = (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
     const draggedId = e.dataTransfer.getData("text/plain");
-    
+
     if (draggedId !== targetId) {
       // Optimistically update the UI immediately
       const newOrder = [...displayedCustomers];
       const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
       const targetIndex = newOrder.findIndex(c => c.id === targetId);
-      
+
       if (draggedIndex !== -1 && targetIndex !== -1) {
         // Remove the dragged item
         const [removed] = newOrder.splice(draggedIndex, 1);
         // Insert it at the new position
         newOrder.splice(targetIndex, 0, removed);
-        
+
         // Update UI immediately
         queryClient.setQueryData(["customers"], newOrder);
-        
+
         // Get the IDs in the new order
         const reorderedIds = newOrder.map(c => c.id);
         reorderMutation.mutate(reorderedIds, {
@@ -338,7 +347,7 @@ const Index = () => {
         });
       }
     }
-    
+
     setDraggedItem(null);
     setDropTarget(null);
   };
@@ -356,7 +365,7 @@ const Index = () => {
   if (error) {
     console.error("Query Error:", error);
     const errResp = (error as { response?: { status?: number; data?: unknown } }).response;
-    
+
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <h2 className="text-xl font-bold text-red-600">Error loading customers</h2>
@@ -418,12 +427,12 @@ const Index = () => {
                   {format(new Date(), "MMM do, yyyy")}
                 </span>
               </div>
-              
+
               {sharedUsers.length > 0 && (
                 <div className="flex items-center -space-x-2 mr-2">
                   {sharedUsers.slice(0, 3).map((sharedUser, index) => (
-                    <div 
-                      key={sharedUser.username} 
+                    <div
+                      key={sharedUser.username}
                       className="w-8 h-8 rounded-full border-2 border-background bg-muted flex items-center justify-center text-xs font-medium ring-offset-background"
                       title={`${sharedUser.username} (${sharedUser.permission_level})`}
                     >
@@ -437,506 +446,526 @@ const Index = () => {
                   )}
                 </div>
               )}
-              
-              <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-lg border border-border/50">
-                <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={async () => {
-                  if (!spreadsheetId) return;
-                  try {
-                    const blob = await exportCustomers(spreadsheetId);
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `customers_export.xlsx`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                  } catch (error) {
-                    console.error('Export failed:', error);
-                    toast({
-                      title: "Export failed",
-                      description: "Failed to export customer data. Please try again.",
-                      variant: "destructive",
-                    });
-                  }
-                }}>
-                  <Download className="h-4 w-4" />
-                </Button>
-              </div>
 
-              <Button variant="outline" size="sm" onClick={logout} className="ml-2 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20">
-                <LogOut className="h-4 w-4" />
-                Logout
+            </div>
+
+            <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-lg border border-border/50">
+              <Button
+                onClick={() => setIsCallModeOpen(true)}
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md shadow-green-900/10"
+              >
+                <Phone className="h-4 w-4 mr-2" />
+                Start Calling
+              </Button>
+              <div className="h-6 w-px bg-border/50 mx-1" />
+              <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={async () => {
+                if (!spreadsheetId) return;
+                try {
+                  const blob = await exportCustomers(spreadsheetId);
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `customers_export.xlsx`;
+                  document.body.appendChild(a);
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                  document.body.removeChild(a);
+                } catch (error) {
+                  console.error('Export failed:', error);
+                  toast({
+                    title: "Export failed",
+                    description: "Failed to export customer data. Please try again.",
+                    variant: "destructive",
+                  });
+                }
+              }}>
+                <Download className="h-4 w-4" />
               </Button>
             </div>
-          </div>
-        </header>
 
-        {/* Sheet Tabs */}
-        <div className="bg-background/95 border-b border-border/50 px-6 py-2 flex items-center gap-4 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30">
-          <div className="flex items-center gap-2">
-            <Button
-              variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => {
+          </Button>
+      </div>
+    </header>
+
+        {/* Sheet Tabs */ }
+  <div className="bg-background/95 border-b border-border/50 px-6 py-2 flex items-center gap-4 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30">
+    <div className="flex items-center gap-2">
+      <Button
+        variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
+        size="sm"
+        onClick={() => {
+          setViewMode("date");
+          setSelectedDate(new Date());
+        }}
+      >
+        Today
+      </Button>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant={viewMode === "date" ? "secondary" : "ghost"}
+            size="sm"
+            className={cn(
+              "gap-2",
+              viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
+            )}
+          >
+            <CalendarIcon className="h-4 w-4" />
+            {format(selectedDate, "PPP")}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={(date) => {
+              if (date) {
+                setSelectedDate(date);
                 setViewMode("date");
-                setSelectedDate(new Date());
-              }}
-            >
-              Today
-            </Button>
+              }
+            }}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
 
+    <div className="h-6 w-px bg-border/50" />
+
+    <Button
+      variant={viewMode === "all" ? "secondary" : "ghost"}
+      size="sm"
+      onClick={() => setViewMode("all")}
+    >
+      All Customers ({customers.length})
+    </Button>
+
+    <div className="ml-auto flex items-center gap-3">
+      {!showSearch && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => setShowSearch(true)}
+          aria-label="Open search"
+        >
+          <Search className="h-4 w-4" />
+        </Button>
+      )}
+      {showSearch && (
+        <div
+          ref={searchRef}
+          className={cn(
+            "relative w-[280px] duration-200",
+            searchClosing
+              ? "animate-out slide-out-to-right-2 fade-out"
+              : "animate-in slide-in-from-right-2 fade-in"
+          )}
+        >
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search name, company, or phone"
+            className="pl-8 h-8"
+            autoFocus
+          />
+        </div>
+      )}
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => setShowCheckboxes(true)}
+        className="h-7 w-7 border-border/50"
+        aria-label="Select rows to delete"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  </div>
+
+  {/* Bulk Actions Bar */ }
+  {
+    showCheckboxes && (
+      <div className="bg-primary/5 border-b border-border/50 px-4 py-2 flex items-center gap-4 backdrop-blur-sm animate-in slide-in-from-top-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-primary">
+            {selectedCustomers.size} selected
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={selectAllCustomers}
+            className="h-7 px-2 text-xs"
+          >
+            {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
+          </Button>
+        </div>
+        <div className="h-4 w-px bg-border/50" />
+        <Button
+          variant="destructive"
+          size="icon"
+          onClick={() => {
+            if (window.confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)?`)) {
+              bulkDeleteMutation.mutate(Array.from(selectedCustomers), {
+                onSuccess: () => {
+                  setShowCheckboxes(false);
+                  setSelectedCustomers(new Set());
+                }
+              });
+            }
+          }}
+          disabled={bulkDeleteMutation.isPending}
+          className="h-7 w-7"
+          aria-label="Delete selected customers"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setShowCheckboxes(false);
+            setSelectedCustomers(new Set());
+          }}
+          className="h-7 px-2 text-xs ml-auto"
+        >
+          Cancel
+        </Button>
+      </div>
+    )
+  }
+      </div >
+
+
+
+  {/* Spreadsheet - Only this section should scroll */ }
+  < div className = "flex-1 overflow-auto bg-muted/10" >
+    <ResizableTable className="w-full border-separate border-spacing-0">
+      <ResizableTableHeader className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm shadow-sm supports-[backdrop-filter]:bg-background/60">
+        <ResizableTableRow className="bg-muted/50 hover:bg-muted/60 transition-colors border-b border-border/50">
+          <ResizableTableHead
+            className="border-b border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10 sticky top-0 bg-muted/50"
+            resizable={false}
+          >
+            {/* Row numbers header */}
+          </ResizableTableHead>
+          <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
+            Customer Name
+          </ResizableTableHead>
+          <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
+            Company Name
+          </ResizableTableHead>
+          <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[120px] sticky top-0 bg-muted/50">
+            Phone No.
+          </ResizableTableHead>
+          <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px] sticky top-0 bg-muted/50">
+            Last Call Date
+          </ResizableTableHead>
+          <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px] sticky top-0 bg-muted/50">
+            Next Call Date
+          </ResizableTableHead>
+          <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[120px] sticky top-0 bg-muted/50">
+            Status
+          </ResizableTableHead>
+          <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[100px] sticky top-0 bg-muted/50">
+            Time
+          </ResizableTableHead>
+          <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[200px] sticky top-0 bg-muted/50">
+            Remark
+          </ResizableTableHead>
+          <ResizableTableHead
+            className="border-b border-border/50 px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12 sticky top-0 bg-muted/50"
+            resizable={false}
+          >
+            WP
+          </ResizableTableHead>
+          {showCheckboxes && (
+            <ResizableTableHead
+              className="border-b border-border/50 px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-8 sticky top-0 bg-muted/50"
+              resizable={false}
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-4 w-4 p-0 hover:bg-primary/10"
+                onClick={selectAllCustomers}
+              >
+                {selectedCustomers.size === displayedCustomers.length && displayedCustomers.length > 0 ? (
+                  <CheckSquare className="h-3 w-3 text-primary" />
+                ) : (
+                  <Square className="h-3 w-3 text-muted-foreground" />
+                )}
+              </Button>
+            </ResizableTableHead>
+          )}
+        </ResizableTableRow>
+        {/* New Row Input */}
+        <ResizableTableRow className="bg-background shadow-md z-30 relative group border-b-2 border-primary/20">
+          <ResizableTableCell className="border-b border-primary/20 px-3 py-1 text-xs text-primary font-bold text-center bg-primary/5 sticky left-0">
+            <Plus className="h-4 w-4 mx-auto" />
+          </ResizableTableCell>
+          <ResizableTableCell className="border-b border-primary/20 p-0">
+            <div className="flex items-center h-10 bg-background group-hover:bg-accent/5 transition-colors">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="ml-2 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
+                    style={{ backgroundColor: newRow.color && newRow.color !== "" ? newRow.color : 'white' }} />
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-3 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
+                  <div className="grid grid-cols-4 gap-2">
+                    {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
+                      <Button
+                        key={color || 'none'}
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform"
+                        onClick={() => setNewRow({ ...newRow, color: color as Customer['color'] })}
+                      >
+                        <div
+                          className={`w-6 h-6 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`}
+                          style={{ backgroundColor: color || 'transparent' }}
+                        />
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <div className="flex items-center h-full flex-1">
+                <AutoResizeTextarea
+                  value={newRow.customer_name}
+                  onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
+                  onKeyDown={handleNewRowKeyDown}
+                  className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 font-medium px-3"
+                  placeholder="Add New Customer..."
+                  style={{ height: '100%' }}
+                  rows={1}
+                />
+              </div>
+            </div>
+          </ResizableTableCell>
+          <ResizableTableCell className="border-b border-primary/20 p-0">
+            <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
+              <AutoResizeTextarea
+                value={newRow.company_name}
+                onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
+                onKeyDown={handleNewRowKeyDown}
+                className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3"
+                placeholder="Company Name"
+                style={{ height: '100%' }}
+                rows={1}
+              />
+            </div>
+          </ResizableTableCell>
+          <ResizableTableCell className="border-b border-primary/20 p-0">
+            <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
+              <AutoResizeTextarea
+                value={newRow.phone_number}
+                onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
+                onKeyDown={handleNewRowKeyDown}
+                className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3"
+                placeholder="Phone Number"
+                style={{ height: '100%' }}
+                rows={1}
+              />
+            </div>
+          </ResizableTableCell>
+          <ResizableTableCell className="border-b border-primary/20 p-0">
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant={viewMode === "date" ? "secondary" : "ghost"}
-                  size="sm"
-                  className={cn(
-                    "gap-2",
-                    viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
-                  )}
-                >
-                  <CalendarIcon className="h-4 w-4" />
-                  {format(selectedDate, "PPP")}
-                </Button>
+                <button className="w-full h-full px-3 text-left text-sm flex items-center gap-2 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
+                  <CalendarIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="truncate">{newRow.last_call_date ? format(parseISO(newRow.last_call_date), "dd/MM/yyyy") : "Select date"}</span>
+                </button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedDate(date);
-                      setViewMode("date");
-                    }
-                  }}
+                  selected={newRow.last_call_date ? parseISO(newRow.last_call_date) : undefined}
+                  onSelect={(date) => date && setNewRow({ ...newRow, last_call_date: format(date, "yyyy-MM-dd") })}
                   initialFocus
+                  className="pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
-          </div>
-
-          <div className="h-6 w-px bg-border/50" />
-
-          <Button
-            variant={viewMode === "all" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("all")}
-          >
-            All Customers ({customers.length})
-          </Button>
-          
-          <div className="ml-auto flex items-center gap-3">
-            {!showSearch && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setShowSearch(true)}
-                aria-label="Open search"
-              >
-                <Search className="h-4 w-4" />
-              </Button>
-            )}
-            {showSearch && (
-              <div
-                ref={searchRef}
-                className={cn(
-                  "relative w-[280px] duration-200",
-                  searchClosing
-                    ? "animate-out slide-out-to-right-2 fade-out"
-                    : "animate-in slide-in-from-right-2 fade-in"
-                )}
-              >
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search name, company, or phone"
-                  className="pl-8 h-8"
-                  autoFocus
+          </ResizableTableCell>
+          <ResizableTableCell className="border-b border-primary/20 p-0">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="w-full h-full px-3 text-left text-sm flex items-center gap-2 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
+                  <CalendarIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="truncate">{newRow.next_call_date ? format(parseISO(newRow.next_call_date), "dd/MM/yyyy") : "Select date"}</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={newRow.next_call_date ? parseISO(newRow.next_call_date) : undefined}
+                  onSelect={(date) => date && setNewRow({ ...newRow, next_call_date: format(date, "yyyy-MM-dd") })}
+                  initialFocus
+                  className="pointer-events-auto"
                 />
-              </div>
-            )}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setShowCheckboxes(true)}
-              className="h-7 w-7 border-border/50"
-              aria-label="Select rows to delete"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Bulk Actions Bar */}
-        {showCheckboxes && (
-          <div className="bg-primary/5 border-b border-border/50 px-4 py-2 flex items-center gap-4 backdrop-blur-sm animate-in slide-in-from-top-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-primary">
-                {selectedCustomers.size} selected
-              </span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={selectAllCustomers}
-                className="h-7 px-2 text-xs"
-              >
-                {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
-              </Button>
+              </PopoverContent>
+            </Popover>
+          </ResizableTableCell>
+          <ResizableTableCell className="border-b border-primary/20 p-0">
+            <Input
+              type="time"
+              value={newRow.next_call_time}
+              onChange={(e) => setNewRow({ ...newRow, next_call_time: e.target.value })}
+              onKeyDown={handleNewRowKeyDown}
+              className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 w-full text-muted-foreground hover:text-foreground px-3"
+              style={{ height: '100%' }}
+            />
+          </ResizableTableCell>
+          <ResizableTableCell className="border-b border-primary/20 p-0">
+            <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
+              <AutoResizeTextarea
+                value={newRow.remark}
+                onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
+                onKeyDown={handleNewRowKeyDown}
+                className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3"
+                placeholder="Remark"
+                style={{ height: '100%' }}
+                rows={1}
+              />
             </div>
-            <div className="h-4 w-px bg-border/50" />
-            <Button 
-              variant="destructive" 
-              size="icon" 
-              onClick={() => {
-                if (window.confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)?`)) {
-                  bulkDeleteMutation.mutate(Array.from(selectedCustomers), {
-                    onSuccess: () => {
-                      setShowCheckboxes(false);
-                      setSelectedCustomers(new Set());
-                    }
-                  });
-                }
-              }}
-              disabled={bulkDeleteMutation.isPending}
-              className="h-7 w-7"
-              aria-label="Delete selected customers"
+          </ResizableTableCell>
+          <ResizableTableCell className="border-b border-primary/20 p-1 text-center bg-background group-hover:bg-accent/5 transition-colors">
+            <Button
+              size="sm"
+              onClick={handleAddRow}
+              disabled={addMutation.isPending}
+              className="h-7 px-3 text-xs bg-primary hover:bg-primary/90 shadow-sm"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              {addMutation.isPending ? "..." : "Add"}
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => {
-                setShowCheckboxes(false);
-                setSelectedCustomers(new Set());
-              }}
-              className="h-7 px-2 text-xs ml-auto"
-            >
-              Cancel
-            </Button>
-          </div>
-        )}
-      </div>
-
-
-
-      {/* Spreadsheet - Only this section should scroll */}
-      <div className="flex-1 overflow-auto bg-muted/10">
-        <ResizableTable className="w-full border-separate border-spacing-0">
-          <ResizableTableHeader className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm shadow-sm supports-[backdrop-filter]:bg-background/60">
-            <ResizableTableRow className="bg-muted/50 hover:bg-muted/60 transition-colors border-b border-border/50">
-              <ResizableTableHead 
-                className="border-b border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10 sticky top-0 bg-muted/50"
-                resizable={false}
-              >
-                {/* Row numbers header */}
-              </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
-                Customer Name
-              </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
-                Company Name
-              </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[120px] sticky top-0 bg-muted/50">
-                Phone No.
-              </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px] sticky top-0 bg-muted/50">
-                Last Call Date
-              </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px] sticky top-0 bg-muted/50">
-                Next Call Date
-              </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[100px] sticky top-0 bg-muted/50">
-                Time
-              </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[200px] sticky top-0 bg-muted/50">
-                Remark
-              </ResizableTableHead>
-              <ResizableTableHead 
-                className="border-b border-border/50 px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12 sticky top-0 bg-muted/50"
-                resizable={false}
-              >
-                WP
-              </ResizableTableHead>
-              {showCheckboxes && (
-                <ResizableTableHead 
-                  className="border-b border-border/50 px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-8 sticky top-0 bg-muted/50"
-                  resizable={false}
-                >
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-4 w-4 p-0 hover:bg-primary/10"
-                    onClick={selectAllCustomers}
-                  >
-                    {selectedCustomers.size === displayedCustomers.length && displayedCustomers.length > 0 ? (
-                      <CheckSquare className="h-3 w-3 text-primary" />
-                    ) : (
-                      <Square className="h-3 w-3 text-muted-foreground" />
-                    )}
-                  </Button>
-                </ResizableTableHead>
-              )}
-            </ResizableTableRow>
-            {/* New Row Input */}
-            <ResizableTableRow className="bg-background shadow-md z-30 relative group border-b-2 border-primary/20">
-              <ResizableTableCell className="border-b border-primary/20 px-3 py-1 text-xs text-primary font-bold text-center bg-primary/5 sticky left-0">
-                <Plus className="h-4 w-4 mx-auto" />
+          </ResizableTableCell>
+        </ResizableTableRow>
+      </ResizableTableHeader>
+      <ResizableTableBody>
+        {isLoading ? (
+          Array.from({ length: 10 }).map((_, i) => (
+            <ResizableTableRow key={i} className="animate-pulse">
+              <ResizableTableCell colSpan={showCheckboxes ? 10 : 9} className="border-b border-border/50 px-3 py-2">
+                <Skeleton className="h-8 w-full bg-muted/50" />
               </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0">
-                <div className="flex items-center h-10 bg-background group-hover:bg-accent/5 transition-colors">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="ml-2 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform" 
-                        style={{ backgroundColor: newRow.color && newRow.color !== "" ? newRow.color : 'white' }} />
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-3 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
-                      <div className="grid grid-cols-4 gap-2">
-                        {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
-                          <Button
-                            key={color || 'none'}
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform"
-                          onClick={() => setNewRow({ ...newRow, color: color as Customer['color'] })}
-                          >
-                            <div 
-                              className={`w-6 h-6 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`} 
-                              style={{ backgroundColor: color || 'transparent' }} 
-                            />
-                          </Button>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  <div className="flex items-center h-full flex-1">
-                    <AutoResizeTextarea
-                      value={newRow.customer_name}
-                      onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
-                      onKeyDown={handleNewRowKeyDown}
-                      className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 font-medium px-3"
-                      placeholder="Add New Customer..."
-                      style={{ height: '100%' }}
-                      rows={1}
-                    />
+            </ResizableTableRow>
+          ))
+        ) : (
+          <>
+            {displayedCustomers.length === 0 && (
+              <ResizableTableRow>
+                <ResizableTableCell colSpan={showCheckboxes ? 10 : 9} className="border-b border-border/50 px-3 py-12 text-center text-muted-foreground text-sm">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                      <Users className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                    <p>No customers yet. Start adding above!</p>
                   </div>
-                </div>
-              </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0">
-                <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
-                  <AutoResizeTextarea
-                    value={newRow.company_name}
-                    onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
-                    onKeyDown={handleNewRowKeyDown}
-                    className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3"
-                    placeholder="Company Name"
-                    style={{ height: '100%' }}
-                    rows={1}
-                  />
-                </div>
-              </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0">
-                <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
-                  <AutoResizeTextarea
-                    value={newRow.phone_number}
-                    onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
-                    onKeyDown={handleNewRowKeyDown}
-                    className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3"
-                    placeholder="Phone Number"
-                    style={{ height: '100%' }}
-                    rows={1}
-                  />
-                </div>
-              </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="w-full h-full px-3 text-left text-sm flex items-center gap-2 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
-                      <CalendarIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="truncate">{newRow.last_call_date ? format(parseISO(newRow.last_call_date), "dd/MM/yyyy") : "Select date"}</span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={newRow.last_call_date ? parseISO(newRow.last_call_date) : undefined}
-                      onSelect={(date) => date && setNewRow({ ...newRow, last_call_date: format(date, "yyyy-MM-dd") })}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="w-full h-full px-3 text-left text-sm flex items-center gap-2 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
-                      <CalendarIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="truncate">{newRow.next_call_date ? format(parseISO(newRow.next_call_date), "dd/MM/yyyy") : "Select date"}</span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={newRow.next_call_date ? parseISO(newRow.next_call_date) : undefined}
-                      onSelect={(date) => date && setNewRow({ ...newRow, next_call_date: format(date, "yyyy-MM-dd") })}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0">
-                <Input
-                  type="time"
-                  value={newRow.next_call_time}
-                  onChange={(e) => setNewRow({ ...newRow, next_call_time: e.target.value })}
-                  onKeyDown={handleNewRowKeyDown}
-                  className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 w-full text-muted-foreground hover:text-foreground px-3"
-                  style={{ height: '100%' }}
-                />
-              </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0">
-                <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
-                  <AutoResizeTextarea
-                    value={newRow.remark}
-                    onChange={(e) => setNewRow({ ...newRow, remark: e.target.value })}
-                    onKeyDown={handleNewRowKeyDown}
-                    className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3"
-                    placeholder="Remark"
-                    style={{ height: '100%' }}
-                    rows={1}
-                  />
-                </div>
-              </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-1 text-center bg-background group-hover:bg-accent/5 transition-colors">
-                <Button
-                  size="sm"
-                  onClick={handleAddRow}
-                  disabled={addMutation.isPending}
-                  className="h-7 px-3 text-xs bg-primary hover:bg-primary/90 shadow-sm"
-                >
-                  {addMutation.isPending ? "..." : "Add"}
-                </Button>
-              </ResizableTableCell>
-            </ResizableTableRow>
-          </ResizableTableHeader>
-          <ResizableTableBody>
-            {isLoading ? (
-              Array.from({ length: 10 }).map((_, i) => (
-                <ResizableTableRow key={i} className="animate-pulse">
-                  <ResizableTableCell colSpan={showCheckboxes ? 10 : 9} className="border-b border-border/50 px-3 py-2">
-                     <Skeleton className="h-8 w-full bg-muted/50" />
-                  </ResizableTableCell>
-                </ResizableTableRow>
-              ))
-            ) : (
-              <>
-                {displayedCustomers.length === 0 && (
-                  <ResizableTableRow>
-                    <ResizableTableCell colSpan={showCheckboxes ? 10 : 9} className="border-b border-border/50 px-3 py-12 text-center text-muted-foreground text-sm">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-                          <Users className="h-6 w-6 text-muted-foreground/50" />
-                        </div>
-                        <p>No customers yet. Start adding above!</p>
-                      </div>
-                    </ResizableTableCell>
-                  </ResizableTableRow>
-                )}
-                {displayedCustomers.map((customer, index) => (
-                  <Fragment key={customer.id}>
-                    {/* Drop zone before row */}
-                    <tr 
-                      className={`h-2 ${dropTarget === `before-${customer.id}` ? 'bg-primary/20 border-t-2 border-dashed border-primary' : 'bg-transparent'}`}
-                      onDragOver={handleDragOver}
-                      onDragEnter={(e) => handleDragEnter(e, `before-${customer.id}`)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const draggedId = e.dataTransfer.getData("text/plain");
-                        if (draggedId !== customer.id) {
-                          // Move dragged item to before this item
-                          const newOrder = [...displayedCustomers];
-                          const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
-                          const targetIndex = newOrder.findIndex(c => c.id === customer.id);
-                          
-                          if (draggedIndex !== -1 && targetIndex !== -1) {
-                            const [removed] = newOrder.splice(draggedIndex, 1);
-                            newOrder.splice(targetIndex, 0, removed);
-                            
-                            const reorderedIds = newOrder.map(c => c.id);
-                            reorderMutation.mutate(reorderedIds);
-                          }
-                        }
-                        setDraggedItem(null);
-                        setDropTarget(null);
-                      }}
-                    />
-                    
-                    <MemoizedSpreadsheetRow
-                      customer={customer}
-                      index={index + 1}
-                      isSelected={selectedCustomers.has(customer.id)}
-                      isDragging={draggedItem === customer.id}
-                      dropTarget={dropTarget}
-                      selectedCustomers={selectedCustomers}
-                      onToggleSelect={toggleCustomerSelection}
-                      onCellChange={handleCellChange}
-                      onDelete={() => deleteMutation.mutate(customer.id)}
-                      onDragStart={handleDragStart}
-                      onDragOver={handleDragOver}
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onDragEnd={handleDragEnd}
-                      showCheckboxes={showCheckboxes}
-                      rowHeights={rowHeights}
-                      setRowHeights={setRowHeights}
-                    />
-                    
-                    {/* Drop zone after last row */}
-                    {index === displayedCustomers.length - 1 && (
-                      <tr 
-                        className={`h-2 ${dropTarget === `after-${customer.id}` ? 'bg-primary/20 border-b-2 border-dashed border-primary' : 'bg-transparent'}`}
-                        onDragOver={handleDragOver}
-                        onDragEnter={(e) => handleDragEnter(e, `after-${customer.id}`)}
-                        onDragLeave={handleDragLeave}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          const draggedId = e.dataTransfer.getData("text/plain");
-                          if (draggedId !== customer.id) {
-                            // Move dragged item to after this item
-                            const newOrder = [...displayedCustomers];
-                            const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
-                            const targetIndex = newOrder.findIndex(c => c.id === customer.id);
-                            
-                            if (draggedIndex !== -1 && targetIndex !== -1) {
-                              const [removed] = newOrder.splice(draggedIndex, 1);
-                              newOrder.splice(targetIndex + 1, 0, removed);
-                              
-                              const reorderedIds = newOrder.map(c => c.id);
-                              reorderMutation.mutate(reorderedIds);
-                            }
-                          }
-                          setDraggedItem(null);
-                          setDropTarget(null);
-                        }}
-                      />
-                    )}
-                  </Fragment>
-                ))}
-
-              </>
+                </ResizableTableCell>
+              </ResizableTableRow>
             )}
-          </ResizableTableBody>
-        </ResizableTable>
-      </div>
-    </div>
+            {displayedCustomers.map((customer, index) => (
+              <Fragment key={customer.id}>
+                {/* Drop zone before row */}
+                <tr
+                  className={`h-2 ${dropTarget === `before-${customer.id}` ? 'bg-primary/20 border-t-2 border-dashed border-primary' : 'bg-transparent'}`}
+                  onDragOver={handleDragOver}
+                  onDragEnter={(e) => handleDragEnter(e, `before-${customer.id}`)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const draggedId = e.dataTransfer.getData("text/plain");
+                    if (draggedId !== customer.id) {
+                      // Move dragged item to before this item
+                      const newOrder = [...displayedCustomers];
+                      const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
+                      const targetIndex = newOrder.findIndex(c => c.id === customer.id);
+
+                      if (draggedIndex !== -1 && targetIndex !== -1) {
+                        const [removed] = newOrder.splice(draggedIndex, 1);
+                        newOrder.splice(targetIndex, 0, removed);
+
+                        const reorderedIds = newOrder.map(c => c.id);
+                        reorderMutation.mutate(reorderedIds);
+                      }
+                    }
+                    setDraggedItem(null);
+                    setDropTarget(null);
+                  }}
+                />
+
+                <MemoizedSpreadsheetRow
+                  customer={customer}
+                  index={index + 1}
+                  isSelected={selectedCustomers.has(customer.id)}
+                  isDragging={draggedItem === customer.id}
+                  dropTarget={dropTarget}
+                  selectedCustomers={selectedCustomers}
+                  onToggleSelect={toggleCustomerSelection}
+                  onCellChange={handleCellChange}
+                  onDelete={() => deleteMutation.mutate(customer.id)}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onDragEnd={handleDragEnd}
+                  showCheckboxes={showCheckboxes}
+                  rowHeights={rowHeights}
+                  setRowHeights={setRowHeights}
+                />
+
+                {/* Drop zone after last row */}
+                {index === displayedCustomers.length - 1 && (
+                  <tr
+                    className={`h-2 ${dropTarget === `after-${customer.id}` ? 'bg-primary/20 border-b-2 border-dashed border-primary' : 'bg-transparent'}`}
+                    onDragOver={handleDragOver}
+                    onDragEnter={(e) => handleDragEnter(e, `after-${customer.id}`)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const draggedId = e.dataTransfer.getData("text/plain");
+                      if (draggedId !== customer.id) {
+                        // Move dragged item to after this item
+                        const newOrder = [...displayedCustomers];
+                        const draggedIndex = newOrder.findIndex(c => c.id === draggedId);
+                        const targetIndex = newOrder.findIndex(c => c.id === customer.id);
+
+                        if (draggedIndex !== -1 && targetIndex !== -1) {
+                          const [removed] = newOrder.splice(draggedIndex, 1);
+                          newOrder.splice(targetIndex + 1, 0, removed);
+
+                          const reorderedIds = newOrder.map(c => c.id);
+                          reorderMutation.mutate(reorderedIds);
+                        }
+                      }
+                      setDraggedItem(null);
+                      setDropTarget(null);
+                    }}
+                  />
+                )}
+              </Fragment>
+            ))}
+
+          </>
+        )}
+      </ResizableTableBody>
+    </ResizableTable>
+      </div >
+
+  { isCallModeOpen && (
+    <CallModeOverlay
+      customers={displayedCustomers}
+      initialIndex={0}
+      onClose={() => setIsCallModeOpen(false)}
+      spreadsheetId={spreadsheetId || ""}
+    />
+  )}
+    </div >
   );
 };
 
@@ -991,7 +1020,7 @@ function SpreadsheetRow({
     customer.last_call_date ? parseISO(customer.last_call_date) : undefined
   );
   const [localColor, setLocalColor] = useState(customer.color);
-  
+
   // Sync localColor with customer.color when it changes from outside (e.g. after refetch)
   useEffect(() => {
     setLocalColor(customer.color);
@@ -1025,21 +1054,18 @@ function SpreadsheetRow({
   };
 
   return (
-    <ResizableTableRow 
-      className={`animate-fade-in hover:bg-accent/5 transition-all duration-200 group bg-background ${
-        isSelected ? "bg-primary/10 hover:bg-primary/20" : ""
-      } ${
-        isDragging ? "opacity-50 scale-95 shadow-lg" : ""
-      } ${
-        dropTarget === customer.id ? "border-2 border-dashed border-primary" : "border-b border-border/50"
-      }`}
+    <ResizableTableRow
+      className={`animate-fade-in hover:bg-accent/5 transition-all duration-200 group bg-background ${isSelected ? "bg-primary/10 hover:bg-primary/20" : ""
+        } ${isDragging ? "opacity-50 scale-95 shadow-lg" : ""
+        } ${dropTarget === customer.id ? "border-2 border-dashed border-primary" : "border-b border-border/50"
+        }`}
       onDragOver={onDragOver}
       onDragEnter={(e) => onDragEnter(e, customer.id)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, customer.id)}
       onDragEnd={onDragEnd}
     >
-      <ResizableTableCell 
+      <ResizableTableCell
         className="border-b border-border/50 border-r border-border/50 px-3 py-1 text-xs text-muted-foreground text-center bg-muted/20"
         style={{ height: '100%' }}
         title="Drag to reorder"
@@ -1054,7 +1080,7 @@ function SpreadsheetRow({
         <div className="flex items-center h-full">
           <Popover>
             <PopoverTrigger asChild>
-              <button className="ml-2 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform" 
+              <button className="ml-2 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
                 style={{ backgroundColor: localColor && localColor !== "" ? localColor : 'white' }} />
             </PopoverTrigger>
             <PopoverContent className="w-auto p-3 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
@@ -1067,9 +1093,9 @@ function SpreadsheetRow({
                     className="h-8 w-8 p-0 rounded-full hover:scale-110 transition-transform"
                     onClick={() => handleColorChange(color as Customer['color'])}
                   >
-                    <div 
-                      className={`w-6 h-6 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`} 
-                      style={{ backgroundColor: color || 'transparent' }} 
+                    <div
+                      className={`w-6 h-6 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`}
+                      style={{ backgroundColor: color || 'transparent' }}
                     />
                   </Button>
                 ))}
@@ -1141,6 +1167,18 @@ function SpreadsheetRow({
             />
           </PopoverContent>
         </Popover>
+      </ResizableTableCell>
+      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 px-3 py-1 text-center">
+        <Badge variant="outline" className={`
+           ${customer.status === 'Interested' ? 'bg-green-500/10 text-green-500 border-green-500/20' : ''}
+           ${customer.status === 'Not Interested' ? 'bg-red-500/10 text-red-500 border-red-500/20' : ''}
+           ${customer.status === 'Follow Up' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' : ''}
+           ${customer.status === 'Voicemail' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : ''}
+           ${customer.status === 'Called' ? 'bg-secondary text-secondary-foreground' : ''}
+           ${!customer.status || customer.status === 'New' ? 'bg-muted text-muted-foreground' : ''}
+         `}>
+          {customer.status || 'New'}
+        </Badge>
       </ResizableTableCell>
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0">
         <Input

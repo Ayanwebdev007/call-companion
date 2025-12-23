@@ -11,6 +11,8 @@ const customerSchema = new mongoose.Schema({
   last_call_date: { type: String, default: '' }, // New field for last call date
   remark: { type: String, default: '' },
   color: { type: String, enum: ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', null], default: null },
+  status: { type: String, enum: ['New', 'Called', 'Interested', 'Not Interested', 'Follow Up', 'Voicemail'], default: 'New' },
+  call_count: { type: Number, default: 0 },
   position: { type: Number, default: 0 } // For drag and drop ordering
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 

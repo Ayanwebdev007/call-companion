@@ -1,8 +1,5 @@
-/* eslint-disable-next-line */
 @tailwind base;
-/* eslint-disable-next-line */
 @tailwind components;
-/* eslint-disable-next-line */
 @tailwind utilities;
 
 @layer base {

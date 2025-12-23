@@ -12,41 +12,41 @@ const router = express.Router();
 router.get('/', auth, async (req, res) => {
   try {
     const { spreadsheetId, q } = req.query;
-    
+
     console.log('Received spreadsheetId:', spreadsheetId);
-    
+
     if (!spreadsheetId) {
       return res.status(400).json({ message: 'spreadsheetId is required' });
     }
-    
+
     // Validate that spreadsheetId is a valid ObjectId
     const mongoose = await import('mongoose');
     if (!mongoose.default.isValidObjectId(spreadsheetId)) {
       return res.status(400).json({ message: 'Invalid spreadsheet ID' });
     }
-    
+
     // Check if user has access to this spreadsheet (owner or shared)
     const spreadsheet = await Spreadsheet.findOne({ _id: spreadsheetId });
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
-    
+
     // Check ownership or sharing
     let hasAccess = spreadsheet.user_id.toString() === req.user.id;
-    
+
     if (!hasAccess) {
       // Check if shared with this user
-      const sharing = await Sharing.findOne({ 
-        spreadsheet_id: spreadsheetId, 
-        shared_with_user_id: req.user.id 
+      const sharing = await Sharing.findOne({
+        spreadsheet_id: spreadsheetId,
+        shared_with_user_id: req.user.id
       });
       hasAccess = !!sharing;
     }
-    
+
     if (!hasAccess) {
       return res.status(403).json({ message: 'You do not have access to this spreadsheet' });
     }
-    
+
     // Build query
     const baseFilter = { spreadsheet_id: spreadsheetId };
     let filter = baseFilter;
@@ -63,7 +63,7 @@ router.get('/', auth, async (req, res) => {
         ]
       };
     }
-    
+
     const customers = await Customer.find(filter).sort({ position: 1, next_call_date: 1, next_call_time: 1 });
     res.json(customers);
   } catch (err) {
@@ -74,46 +74,46 @@ router.get('/', auth, async (req, res) => {
 
 // POST new customer
 router.post('/', auth, async (req, res) => {
-  const { spreadsheet_id, customer_name, company_name, phone_number, next_call_date, next_call_time, last_call_date, remark, color } = req.body;
-  
+  const { spreadsheet_id, customer_name, company_name, phone_number, next_call_date, next_call_time, last_call_date, remark, color, status } = req.body;
+
   if (!spreadsheet_id) {
     return res.status(400).json({ message: 'spreadsheet_id is required' });
   }
-  
+
   // Validate that spreadsheet_id is a valid ObjectId
   const mongoose = await import('mongoose');
   if (!mongoose.default.isValidObjectId(spreadsheet_id)) {
     return res.status(400).json({ message: 'Invalid spreadsheet ID' });
   }
-  
+
   // Check if user has write access to this spreadsheet
   const spreadsheet = await Spreadsheet.findOne({ _id: spreadsheet_id });
   if (!spreadsheet) {
     return res.status(404).json({ message: 'Spreadsheet not found' });
   }
-  
+
   // Check ownership or sharing with write permission
   let hasWriteAccess = spreadsheet.user_id.toString() === req.user.id;
-  
+
   if (!hasWriteAccess) {
     // Check if shared with this user with write permission
-    const sharing = await Sharing.findOne({ 
-      spreadsheet_id: spreadsheet_id, 
-      shared_with_user_id: req.user.id 
+    const sharing = await Sharing.findOne({
+      spreadsheet_id: spreadsheet_id,
+      shared_with_user_id: req.user.id
     });
     hasWriteAccess = sharing && sharing.permission_level === 'read-write';
   }
-  
+
   if (!hasWriteAccess) {
     return res.status(403).json({ message: 'You do not have write access to this spreadsheet' });
   }
-  
+
   // First get the highest position value
-  const maxPositionCustomer = await Customer.findOne({ 
-    spreadsheet_id: spreadsheet_id 
+  const maxPositionCustomer = await Customer.findOne({
+    spreadsheet_id: spreadsheet_id
   }).sort({ position: -1 });
   const newPosition = maxPositionCustomer ? maxPositionCustomer.position + 1 : 0;
-  
+
   const customer = new Customer({
     user_id: req.user.id,
     spreadsheet_id: spreadsheet_id,
@@ -125,6 +125,7 @@ router.post('/', auth, async (req, res) => {
     last_call_date: last_call_date || '',
     remark: remark || '',
     color: color || null,
+    status: status || 'New',
     position: newPosition
   });
 
@@ -147,7 +148,7 @@ router.post('/bulk-import', auth, async (req, res) => {
     if (!spreadsheetId) {
       return res.status(400).json({ message: 'Spreadsheet ID is required' });
     }
-    
+
     // Validate that spreadsheetId is a valid ObjectId
     const mongoose = await import('mongoose');
     if (!mongoose.default.isValidObjectId(spreadsheetId)) {
@@ -165,9 +166,9 @@ router.post('/bulk-import', auth, async (req, res) => {
 
     if (!hasWriteAccess) {
       // Check if shared with this user with write permission
-      const sharing = await Sharing.findOne({ 
-        spreadsheet_id: spreadsheetId, 
-        shared_with_user_id: req.user.id 
+      const sharing = await Sharing.findOne({
+        spreadsheet_id: spreadsheetId,
+        shared_with_user_id: req.user.id
       });
       hasWriteAccess = sharing && sharing.permission_level === 'read-write';
     }
@@ -178,7 +179,7 @@ router.post('/bulk-import', auth, async (req, res) => {
 
     const file = req.files.file;
     let buffer;
-    
+
     // Handle both buffer and temp file approaches
     if (file.data) {
       // Direct buffer approach
@@ -189,12 +190,12 @@ router.post('/bulk-import', auth, async (req, res) => {
     } else {
       return res.status(400).json({ message: 'Invalid file format' });
     }
-    
+
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet);
-    
+
     // Debug: Log the raw data structure
     console.log('Excel data structure:', JSON.stringify(data, null, 2));
 
@@ -215,20 +216,20 @@ router.post('/bulk-import', auth, async (req, res) => {
     };
 
     // Get the highest position value for this spreadsheet
-    const maxPositionCustomer = await Customer.findOne({ 
-      spreadsheet_id: spreadsheetId 
+    const maxPositionCustomer = await Customer.findOne({
+      spreadsheet_id: spreadsheetId
     }).sort({ position: -1 });
     let currentPosition = maxPositionCustomer ? maxPositionCustomer.position + 1 : 0;
 
     for (let i = 0; i < data.length; i++) {
       const originalRow = data[i];
       const row = normalizeRow(originalRow);
-      
+
       // Try multiple possible column names
       const customerName = row['customer_name'] || row['customername'] || row['name'] || '';
       const companyName = row['company_name'] || row['companyname'] || row['company'] || '';
       const phoneNumber = row['phone_number'] || row['phonenumber'] || row['phone'] || '';
-      
+
       // Validate mandatory fields
       if (!customerName || !companyName || !phoneNumber) {
         errors.push(`Row ${i + 1}: Missing mandatory fields. Found - Name: '${customerName}', Company: '${companyName}', Phone: '${phoneNumber}'`);
@@ -270,11 +271,11 @@ router.post('/bulk-import', auth, async (req, res) => {
 
     // Insert all customers
     const insertedCustomers = await Customer.insertMany(customers);
-    
-    res.status(201).json({ 
-      message: `${insertedCustomers.length} customers imported successfully`, 
+
+    res.status(201).json({
+      message: `${insertedCustomers.length} customers imported successfully`,
       count: insertedCustomers.length,
-      customers: insertedCustomers 
+      customers: insertedCustomers
     });
   } catch (err) {
     console.error('Bulk import error:', err);
@@ -300,20 +301,20 @@ router.get('/download-template', auth, async (req, res) => {
     // Create workbook and worksheet
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.json_to_sheet(templateData);
-    
+
     // Add worksheet to workbook
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
-    
+
     // Write to buffer
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-    
+
     // Convert buffer for proper sending
     const bufferArray = Buffer.from(buffer);
-    
+
     // Set headers for download
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="customers_template.xlsx"');
-    
+
     // Send the buffer
     res.send(bufferArray);
   } catch (err) {
@@ -326,32 +327,32 @@ router.get('/download-template', auth, async (req, res) => {
 router.get('/export/:spreadsheetId', auth, async (req, res) => {
   try {
     const { spreadsheetId } = req.params;
-    
+
     // Validate spreadsheetId
     if (!spreadsheetId || spreadsheetId === 'undefined') {
       return res.status(400).json({ message: 'Valid spreadsheet ID is required' });
     }
-    
+
     // Check if user has access to this spreadsheet (either owner or shared with access)
     const spreadsheet = await Spreadsheet.findById(spreadsheetId);
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
-    
+
     // Check ownership or sharing permissions
     const isOwner = spreadsheet.user_id.toString() === req.user.id;
     const sharedRecord = await Sharing.findOne({
       spreadsheet_id: spreadsheetId,
       shared_with_user_id: req.user.id
     });
-    
+
     if (!isOwner && !sharedRecord) {
       return res.status(403).json({ message: 'Access denied' });
     }
-    
+
     // Fetch customers for this spreadsheet
     const customers = await Customer.find({ spreadsheet_id: spreadsheetId }).sort({ createdAt: 1 });
-    
+
     // Transform customer data for export
     const exportData = customers.map(customer => {
       // Handle date conversion safely
@@ -370,7 +371,7 @@ router.get('/export/:spreadsheetId', auth, async (req, res) => {
           }
         }
       }
-      
+
       let nextCallDate = '';
       if (customer.next_call_date) {
         if (customer.next_call_date instanceof Date) {
@@ -386,7 +387,7 @@ router.get('/export/:spreadsheetId', auth, async (req, res) => {
           }
         }
       }
-      
+
       return {
         'customer_name': customer.customer_name || '',
         'company_name': customer.company_name || '',
@@ -398,24 +399,24 @@ router.get('/export/:spreadsheetId', auth, async (req, res) => {
         'color': customer.color || ''
       };
     });
-    
+
     // Create workbook and worksheet
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.json_to_sheet(exportData);
-    
+
     // Add worksheet to workbook
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
-    
+
     // Write to buffer
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-    
+
     // Convert buffer for proper sending
     const bufferArray = Buffer.from(buffer);
-    
+
     // Set headers for download
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${spreadsheet.name.replace(/[^a-zA-Z0-9]/g, '_')}_export.xlsx"`);
-    
+
     // Send the buffer
     res.send(bufferArray);
   } catch (err) {
@@ -432,35 +433,35 @@ router.put('/:id', auth, async (req, res) => {
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
-    
+
     // Check if user has write access to this spreadsheet
     const spreadsheet = await Spreadsheet.findById(customer.spreadsheet_id);
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
-    
+
     // Check ownership or sharing with write permission
     let hasWriteAccess = spreadsheet.user_id.toString() === req.user.id;
-    
+
     if (!hasWriteAccess) {
       // Check if shared with this user with write permission
-      const sharing = await Sharing.findOne({ 
-        spreadsheet_id: customer.spreadsheet_id, 
-        shared_with_user_id: req.user.id 
+      const sharing = await Sharing.findOne({
+        spreadsheet_id: customer.spreadsheet_id,
+        shared_with_user_id: req.user.id
       });
       hasWriteAccess = sharing && sharing.permission_level === 'read-write';
     }
-    
+
     if (!hasWriteAccess) {
       return res.status(403).json({ message: 'You do not have write access to this spreadsheet' });
     }
-    
+
     const updatedCustomer = await Customer.findOneAndUpdate(
       { _id: req.params.id },
       req.body,
       { new: true }
     );
-    
+
     if (!updatedCustomer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
@@ -478,29 +479,29 @@ router.delete('/:id', auth, async (req, res) => {
     if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
-    
+
     // Check if user has write access to this spreadsheet
     const spreadsheet = await Spreadsheet.findById(customer.spreadsheet_id);
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
-    
+
     // Check ownership or sharing with write permission
     let hasWriteAccess = spreadsheet.user_id.toString() === req.user.id;
-    
+
     if (!hasWriteAccess) {
       // Check if shared with this user with write permission
-      const sharing = await Sharing.findOne({ 
-        spreadsheet_id: customer.spreadsheet_id, 
-        shared_with_user_id: req.user.id 
+      const sharing = await Sharing.findOne({
+        spreadsheet_id: customer.spreadsheet_id,
+        shared_with_user_id: req.user.id
       });
       hasWriteAccess = sharing && sharing.permission_level === 'read-write';
     }
-    
+
     if (!hasWriteAccess) {
       return res.status(403).json({ message: 'You do not have write access to this spreadsheet' });
     }
-    
+
     const deletedCustomer = await Customer.findOneAndDelete({ _id: req.params.id });
     if (!deletedCustomer) {
       return res.status(404).json({ message: 'Customer not found' });
@@ -517,75 +518,75 @@ router.post('/bulk-delete', auth, async (req, res) => {
     console.log('Bulk delete request received');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     console.log('User ID:', req.user.id);
-    
+
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       console.log('No customer IDs provided or invalid format');
       return res.status(400).json({ message: 'No customer IDs provided' });
     }
-    
+
     console.log('Deleting customers with IDs:', ids);
     console.log('User ID for query:', req.user.id);
-    
+
     // Validate that all IDs are valid ObjectIds
     const mongoose = await import('mongoose');
     const validIds = ids.filter(id => mongoose.default.isValidObjectId(id));
     console.log('Valid IDs:', validIds);
     console.log('Invalid IDs:', ids.filter(id => !mongoose.default.isValidObjectId(id)));
-    
+
     if (validIds.length === 0) {
       return res.status(400).json({ message: 'No valid customer IDs provided' });
     }
-    
+
     // Check if user has write access to all these customers
     const customers = await Customer.find({ _id: { $in: validIds } });
-    
+
     // Group customers by spreadsheet_id
     const spreadsheetIds = [...new Set(customers.map(c => c.spreadsheet_id.toString()))];
-    
+
     // Check access for each spreadsheet
     for (const spreadsheetId of spreadsheetIds) {
       const spreadsheet = await Spreadsheet.findById(spreadsheetId);
       if (!spreadsheet) {
         continue;
       }
-      
+
       // Check ownership or sharing with write permission
       let hasWriteAccess = spreadsheet.user_id.toString() === req.user.id;
-      
+
       if (!hasWriteAccess) {
         // Check if shared with this user with write permission
-        const sharing = await Sharing.findOne({ 
-          spreadsheet_id: spreadsheetId, 
-          shared_with_user_id: req.user.id 
+        const sharing = await Sharing.findOne({
+          spreadsheet_id: spreadsheetId,
+          shared_with_user_id: req.user.id
         });
         hasWriteAccess = sharing && sharing.permission_level === 'read-write';
       }
-      
+
       if (!hasWriteAccess) {
         return res.status(403).json({ message: `You do not have write access to spreadsheet ${spreadsheet.name || spreadsheetId}` });
       }
     }
-    
+
     // First, let's check if we can find the customers
     try {
-      const customersToCheck = await Customer.find({ 
+      const customersToCheck = await Customer.find({
         _id: { $in: validIds }
       });
       console.log('Customers to delete (before deletion):', customersToCheck.length);
     } catch (checkErr) {
       console.error('Error checking customers before deletion:', checkErr);
     }
-    
-    const result = await Customer.deleteMany({ 
+
+    const result = await Customer.deleteMany({
       _id: { $in: validIds }
     });
-    
+
     console.log('Delete result:', result);
-    
-    res.json({ 
+
+    res.json({
       message: `${result.deletedCount} customers deleted successfully`,
-      deletedCount: result.deletedCount 
+      deletedCount: result.deletedCount
     });
   } catch (err) {
     console.error('Bulk delete error:', err);
@@ -598,49 +599,49 @@ router.post('/bulk-delete', auth, async (req, res) => {
 router.post('/reorder', auth, async (req, res) => {
   try {
     const { customerIds } = req.body;
-    
+
     if (!customerIds || !Array.isArray(customerIds)) {
       return res.status(400).json({ message: 'Invalid customer IDs format' });
     }
-    
+
     // Check if user has write access to all these customers
     const customers = await Customer.find({ _id: { $in: customerIds } });
-    
+
     // Group customers by spreadsheet_id
     const spreadsheetIds = [...new Set(customers.map(c => c.spreadsheet_id.toString()))];
-    
+
     // Check access for each spreadsheet
     for (const spreadsheetId of spreadsheetIds) {
       const spreadsheet = await Spreadsheet.findById(spreadsheetId);
       if (!spreadsheet) {
         continue;
       }
-      
+
       // Check ownership or sharing with write permission
       let hasWriteAccess = spreadsheet.user_id.toString() === req.user.id;
-      
+
       if (!hasWriteAccess) {
         // Check if shared with this user with write permission
-        const sharing = await Sharing.findOne({ 
-          spreadsheet_id: spreadsheetId, 
-          shared_with_user_id: req.user.id 
+        const sharing = await Sharing.findOne({
+          spreadsheet_id: spreadsheetId,
+          shared_with_user_id: req.user.id
         });
         hasWriteAccess = sharing && sharing.permission_level === 'read-write';
       }
-      
+
       if (!hasWriteAccess) {
         return res.status(403).json({ message: `You do not have write access to spreadsheet ${spreadsheet.name || spreadsheetId}` });
       }
     }
-    
+
     // Update position for each customer
-    const updates = customerIds.map((id, index) => 
+    const updates = customerIds.map((id, index) =>
       Customer.updateOne(
         { _id: id },
         { position: index }
       )
     );
-    
+
     await Promise.all(updates);
     res.json({ message: 'Order updated successfully' });
   } catch (err) {

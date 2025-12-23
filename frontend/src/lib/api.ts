@@ -23,6 +23,8 @@ export interface Customer {
   last_call_date?: string;
   remark: string | null;
   color?: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null;
+  status?: 'New' | 'Called' | 'Interested' | 'Not Interested' | 'Follow Up' | 'Voicemail';
+  call_count?: number;
   created_at?: string;
   updated_at?: string;
   position?: number;
@@ -45,7 +47,7 @@ export const fetchCustomers = async (spreadsheetId?: string, q?: string): Promis
   if (spreadsheetId && (spreadsheetId === 'undefined' || spreadsheetId === 'null')) {
     throw new Error('Invalid spreadsheet ID provided');
   }
-  
+
   const params = new URLSearchParams();
   if (spreadsheetId) params.set('spreadsheetId', spreadsheetId);
   if (q && q.trim().length > 0) params.set('q', q.trim());
@@ -70,7 +72,7 @@ export const bulkImportCustomers = async (file: File, spreadsheetId: string): Pr
   const formData = new FormData();
   formData.append('file', file);
   formData.append('spreadsheetId', spreadsheetId);
-  
+
   const response = await axios.post<BulkImportResponse>(`${API_URL}/bulk-import`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
