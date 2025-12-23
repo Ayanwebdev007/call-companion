@@ -254,13 +254,20 @@ const Index = () => {
 
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
-    mutationFn: bulkDeleteCustomers,
+    mutationFn: async (ids: string[]) => {
+      console.log('Bulk delete mutation called with IDs:', ids);
+      console.log('IDs count:', ids.length);
+      const result = await bulkDeleteCustomers(ids);
+      console.log('Bulk delete result:', result);
+      return result;
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
       setSelectedCustomers(new Set()); // Clear selection
       toast({ title: `${data.deletedCount} customers deleted successfully` });
     },
     onError: (error: unknown) => {
+      console.error('Bulk delete error:', error);
       let errorMessage = "Failed to delete customers";
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -301,12 +308,17 @@ const Index = () => {
 
   // Toggle customer selection
   const toggleCustomerSelection = (customerId: string) => {
+    console.log('Toggle selection for:', customerId);
+    console.log('Current selection:', Array.from(selectedCustomers));
     const newSelected = new Set(selectedCustomers);
     if (newSelected.has(customerId)) {
       newSelected.delete(customerId);
+      console.log('Removed from selection');
     } else {
       newSelected.add(customerId);
+      console.log('Added to selection');
     }
+    console.log('New selection:', Array.from(newSelected));
     setSelectedCustomers(newSelected);
   };
 
@@ -1215,35 +1227,19 @@ function SpreadsheetRow({
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-1 text-center">
-        <div className="flex items-center justify-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
-              const whatsappUrl = `https://wa.me/${phoneNumber}`;
-              window.open(whatsappUrl, '_blank');
-            }}
-            className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
-            title="Chat on WhatsApp"
-          >
-            <MessageCircle className="h-4 w-4" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (window.confirm(`Are you sure you want to delete ${customer.customer_name}?`)) {
-                onDelete();
-              }
-            }}
-            className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-            title="Delete customer"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
+            const whatsappUrl = `https://wa.me/${phoneNumber}`;
+            window.open(whatsappUrl, '_blank');
+          }}
+          className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
+          title="Chat on WhatsApp"
+        >
+          <MessageCircle className="h-4 w-4" />
+        </Button>
       </ResizableTableCell>
       {showCheckboxes && (
         <ResizableTableCell className="border-b border-border/50 px-1 py-1 text-center">
