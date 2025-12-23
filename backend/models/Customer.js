@@ -14,10 +14,17 @@ const customerSchema = new mongoose.Schema({
   position: { type: Number, default: 0 } // For drag and drop ordering
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
-// Indexes to support search within a spreadsheet
+// Indexes for performance optimization
+// Single field indexes for search
 customerSchema.index({ spreadsheet_id: 1, customer_name: 1 });
 customerSchema.index({ spreadsheet_id: 1, company_name: 1 });
 customerSchema.index({ spreadsheet_id: 1, phone_number: 1 });
+
+// Compound indexes for sorted queries
+customerSchema.index({ spreadsheet_id: 1, position: 1 }); // For drag-drop ordering
+customerSchema.index({ spreadsheet_id: 1, next_call_date: 1, next_call_time: 1 }); // For date-based filtering
+customerSchema.index({ spreadsheet_id: 1, status: 1 }); // For status filtering
+customerSchema.index({ user_id: 1, created_at: -1 }); // For user's recent customers
 
 // Map _id to id
 customerSchema.set('toJSON', {

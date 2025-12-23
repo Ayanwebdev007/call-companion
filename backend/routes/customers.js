@@ -8,10 +8,10 @@ import fs from 'fs';
 
 const router = express.Router();
 
-// GET all customers for logged in user (supports search)
+// GET all customers for logged in user (supports search and pagination)
 router.get('/', auth, async (req, res) => {
   try {
-    const { spreadsheetId, q } = req.query;
+    const { spreadsheetId, q, page = 1, limit = 100 } = req.query;
 
     console.log('Received spreadsheetId:', spreadsheetId);
 
@@ -64,8 +64,30 @@ router.get('/', auth, async (req, res) => {
       };
     }
 
-    const customers = await Customer.find(filter).sort({ position: 1, next_call_date: 1, next_call_time: 1 });
-    res.json(customers);
+    // Pagination
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(500, Math.max(10, parseInt(limit))); // Max 500 per page
+    const skip = (pageNum - 1) * limitNum;
+
+    // Fetch customers with pagination and total count in parallel
+    const [customers, total] = await Promise.all([
+      Customer.find(filter)
+        .sort({ position: 1, next_call_date: 1, next_call_time: 1 })
+        .skip(skip)
+        .limit(limitNum)
+        .lean(), // Use lean() for better performance
+      Customer.countDocuments(filter)
+    ]);
+
+    res.json({
+      customers,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        pages: Math.ceil(total / limitNum)
+      }
+    });
   } catch (err) {
     console.error('Error loading customers:', err);
     res.status(500).json({ message: err.message });

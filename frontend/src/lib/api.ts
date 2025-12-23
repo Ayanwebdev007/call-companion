@@ -40,7 +40,7 @@ export interface Spreadsheet {
   is_shared?: boolean;
 }
 
-export const fetchCustomers = async (spreadsheetId?: string, q?: string): Promise<Customer[]> => {
+export const fetchCustomers = async (spreadsheetId?: string, q?: string, page?: number, limit?: number): Promise<Customer[]> => {
   // Validate spreadsheetId if provided
   if (spreadsheetId && (spreadsheetId === 'undefined' || spreadsheetId === 'null')) {
     throw new Error('Invalid spreadsheet ID provided');
@@ -49,9 +49,17 @@ export const fetchCustomers = async (spreadsheetId?: string, q?: string): Promis
   const params = new URLSearchParams();
   if (spreadsheetId) params.set('spreadsheetId', spreadsheetId);
   if (q && q.trim().length > 0) params.set('q', q.trim());
+  if (page) params.set('page', page.toString());
+  if (limit) params.set('limit', limit.toString());
+
   const url = params.toString().length > 0 ? `${API_URL}?${params.toString()}` : API_URL;
   const response = await axios.get(url);
-  return response.data;
+
+  // Handle both old format (array) and new format (paginated object)
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+  return response.data.customers || [];
 };
 
 export const addCustomer = async (customer: Omit<Customer, 'id'> & { spreadsheet_id: string }): Promise<Customer> => {
