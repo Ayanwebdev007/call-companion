@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search } from "lucide-react";
 import { format, isToday, parseISO, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet } from "@/lib/api";
 
 import { useAuth } from "@/context/AuthContext";
@@ -113,12 +113,19 @@ const Index = () => {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  // Fetch customers
-  const { data: customers = [], isLoading, error } = useQuery({
+  // Fetch customers with infinite scroll
+  const {
+    data: customersData,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ["customers", spreadsheetId, debouncedQuery],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 1 }) => {
       try {
-        console.log("Fetching customers for spreadsheet:", spreadsheetId);
+        console.log("Fetching customers for spreadsheet:", spreadsheetId, "page:", pageParam);
         // Validate spreadsheetId before making the request
         if (!spreadsheetId) {
           throw new Error("No spreadsheet ID provided");
@@ -126,7 +133,7 @@ const Index = () => {
         if (spreadsheetId === "undefined" || spreadsheetId === "null") {
           throw new Error(`Invalid spreadsheet ID: ${spreadsheetId}`);
         }
-        const data = await fetchCustomers(spreadsheetId, debouncedQuery || undefined);
+        const data = await fetchCustomers(spreadsheetId, debouncedQuery || undefined, pageParam, 20);
         console.log("Customers fetched:", data);
         if (!Array.isArray(data)) {
           throw new Error("API response is not an array");
@@ -137,8 +144,40 @@ const Index = () => {
         throw err;
       }
     },
-    enabled: !!user && !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null", // Only fetch when user and spreadsheetId are available
+    getNextPageParam: (lastPage, allPages) => {
+      // If last page has less than 20 items, we've reached the end
+      if (lastPage.length < 20) return undefined;
+      return allPages.length + 1;
+    },
+    enabled: !!user && !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null",
+    initialPageParam: 1,
   });
+
+  // Flatten all pages into a single array
+  const customers = useMemo(() => {
+    if (!customersData?.pages) return [];
+    return customersData.pages.flat();
+  }, [customersData]);
+
+  // Infinite scroll handler
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollContainer = document.querySelector('.scroll-container');
+      if (!scrollContainer) return;
+
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      // Load more when user is 200px from bottom
+      if (scrollHeight - scrollTop - clientHeight < 200 && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    };
+
+    const scrollContainer = document.querySelector('.scroll-container');
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll);
+      return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Fetch spreadsheet details
   const { data: spreadsheet } = useQuery({
@@ -931,6 +970,17 @@ const Index = () => {
                   </Fragment>
                 ))}
 
+                {/* Loading more indicator */}
+                {isFetchingNextPage && (
+                  <tr>
+                    <td colSpan={showCheckboxes ? 10 : 9} className="py-8 text-center">
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <div className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                        <span>Loading more customers...</span>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </>
             )}
           </ResizableTableBody>
