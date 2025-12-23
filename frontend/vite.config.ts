@@ -22,10 +22,26 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         manualChunks: {
+          // Core React libraries
           vendor: ["react", "react-dom", "react-router-dom"],
-          ui: ["@radix-ui/react-dialog", "@radix-ui/react-popover", "@radix-ui/react-dropdown-menu"],
+          // UI component libraries
+          ui: [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-popover",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tooltip",
+            "@radix-ui/react-slot",
+          ],
+          // Utilities and helpers
           utils: ["date-fns", "axios", "clsx", "tailwind-merge"],
+          // Query and state management
+          query: ["@tanstack/react-query"],
         },
+        // Optimize chunk file names
+        chunkFileNames: "assets/js/[name]-[hash].js",
+        entryFileNames: "assets/js/[name]-[hash].js",
+        assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
       },
     },
     chunkSizeWarningLimit: 1000,
@@ -34,7 +50,14 @@ export default defineConfig(({ mode }) => ({
       compress: {
         drop_console: mode === "production",
         drop_debugger: mode === "production",
+        pure_funcs: mode === "production" ? ["console.log", "console.info"] : [],
       },
+    },
+    // Enable CSS code splitting
+    cssCodeSplit: true,
+    // Optimize dependencies
+    commonjsOptions: {
+      transformMixedEsModules: true,
     },
   },
 }));
