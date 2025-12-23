@@ -61,6 +61,9 @@ const Index = () => {
   // Row height state
   const [rowHeights, setRowHeights] = useState<Record<string, number>>({});
 
+  // Focused cell state (format: "rowId-fieldName" or "new-fieldName" for new row)
+  const [focusedCell, setFocusedCell] = useState<string | null>(null);
+
   // New row state
   const [newRow, setNewRow] = useState({
     customer_name: "",
@@ -897,6 +900,8 @@ const Index = () => {
                       showCheckboxes={showCheckboxes}
                       rowHeights={rowHeights}
                       setRowHeights={setRowHeights}
+                      focusedCell={focusedCell}
+                      setFocusedCell={setFocusedCell}
                     />
 
                     {/* Drop zone after last row */}
@@ -958,7 +963,9 @@ function SpreadsheetRow({
   onDragEnd,
   showCheckboxes,
   rowHeights,
-  setRowHeights
+  setRowHeights,
+  focusedCell,
+  setFocusedCell
 }: {
   customer: Customer;
   index: number;
@@ -978,6 +985,8 @@ function SpreadsheetRow({
   showCheckboxes: boolean;
   rowHeights: Record<string, number>;
   setRowHeights: React.Dispatch<React.SetStateAction<Record<string, number>>>;
+  focusedCell: string | null;
+  setFocusedCell: React.Dispatch<React.SetStateAction<string | null>>;
 }) {
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
@@ -1073,29 +1082,52 @@ function SpreadsheetRow({
               </div>
             </PopoverContent>
           </Popover>
-          <AutoResizeTextarea
-            defaultValue={customer.customer_name}
-            onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
-            className="border-0 rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors"
-            style={{ height: '100%' }}
-          />
+          <div
+            className={cn(
+              "flex items-center h-full flex-1 transition-all",
+              focusedCell === `${customer.id}-customer_name` && "ring-2 ring-primary ring-inset"
+            )}
+            onClick={() => setFocusedCell(`${customer.id}-customer_name`)}
+          >
+            <AutoResizeTextarea
+              defaultValue={customer.customer_name}
+              onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
+              onFocus={() => setFocusedCell(`${customer.id}-customer_name`)}
+              className="border-0 rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors"
+              style={{ height: '100%' }}
+            />
+          </div>
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0">
-        <div className="flex items-center h-full">
+        <div
+          className={cn(
+            "flex items-center h-full transition-all",
+            focusedCell === `${customer.id}-company_name` && "ring-2 ring-primary ring-inset"
+          )}
+          onClick={() => setFocusedCell(`${customer.id}-company_name`)}
+        >
           <AutoResizeTextarea
             defaultValue={customer.company_name}
             onBlur={(e) => onCellChange(customer.id, "company_name", e.target.value)}
+            onFocus={() => setFocusedCell(`${customer.id}-company_name`)}
             className="border-0 rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors"
             style={{ height: '100%' }}
           />
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0">
-        <div className="flex items-center h-full">
+        <div
+          className={cn(
+            "flex items-center h-full transition-all",
+            focusedCell === `${customer.id}-phone_number` && "ring-2 ring-primary ring-inset"
+          )}
+          onClick={() => setFocusedCell(`${customer.id}-phone_number`)}
+        >
           <AutoResizeTextarea
             defaultValue={customer.phone_number}
             onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
+            onFocus={() => setFocusedCell(`${customer.id}-phone_number`)}
             className="border-0 rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors"
             style={{ height: '100%' }}
           />
@@ -1140,19 +1172,35 @@ function SpreadsheetRow({
         </Popover>
       </ResizableTableCell>
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0">
-        <Input
-          type="time"
-          defaultValue={customer.next_call_time || ""}
-          onBlur={(e) => onCellChange(customer.id, "next_call_time", e.target.value)}
-          className="border-0 rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors"
-          style={{ height: '100%' }}
-        />
+        <div
+          className={cn(
+            "flex items-center h-full transition-all",
+            focusedCell === `${customer.id}-next_call_time` && "ring-2 ring-primary ring-inset"
+          )}
+          onClick={() => setFocusedCell(`${customer.id}-next_call_time`)}
+        >
+          <Input
+            type="time"
+            defaultValue={customer.next_call_time || ""}
+            onBlur={(e) => onCellChange(customer.id, "next_call_time", e.target.value)}
+            onFocus={() => setFocusedCell(`${customer.id}-next_call_time`)}
+            className="border-0 rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors"
+            style={{ height: '100%' }}
+          />
+        </div>
       </ResizableTableCell>
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0">
-        <div className="flex items-center h-full">
+        <div
+          className={cn(
+            "flex items-center h-full transition-all",
+            focusedCell === `${customer.id}-remark` && "ring-2 ring-primary ring-inset"
+          )}
+          onClick={() => setFocusedCell(`${customer.id}-remark`)}
+        >
           <AutoResizeTextarea
             defaultValue={customer.remark || ""}
             onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
+            onFocus={() => setFocusedCell(`${customer.id}-remark`)}
             className="border-0 rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full resize-none hover:bg-muted/30 transition-colors"
             style={{ height: '100%', minHeight: 'auto' }}
           />
