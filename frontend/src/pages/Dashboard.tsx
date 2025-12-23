@@ -10,6 +10,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchSpreadsheets, fetchSharedSpreadsheets, createSpreadsheet, deleteSpreadsheet, shareSpreadsheet, Spreadsheet } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Dashboard = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -169,6 +170,7 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <div className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
               <User className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium text-white/90">{user?.username}</span>

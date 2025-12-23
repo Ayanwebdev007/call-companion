@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { Phone } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -51,8 +52,14 @@ const Login = () => {
   };
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 bg-background">
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen grid lg:grid-cols-2 bg-background overflow-hidden">
+      {/* Left Side - Login Form */}
+      <div className="relative flex flex-col justify-center items-center p-8 lg:p-12 animate-fade-in z-10 w-full max-w-xl mx-auto lg:max-w-none">
+
+        <div className="absolute top-4 right-4 z-50">
+          <ThemeToggle />
+        </div>
+
         <div className="mx-auto grid w-full max-w-[400px] gap-6 animate-fade-in-up relative z-10">
           <div className="flex flex-col items-center gap-2 text-center mb-6">
             <div className="p-4 bg-primary/10 rounded-2xl ring-1 ring-white/10 shadow-xl backdrop-blur-3xl mb-4 animate-pulse-soft">

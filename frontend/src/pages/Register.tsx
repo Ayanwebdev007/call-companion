@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { Phone } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -52,6 +53,9 @@ const Register = () => {
 
   return (
     <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 bg-background">
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       <div className="hidden lg:relative lg:flex lg:flex-col lg:items-center lg:justify-center overflow-hidden bg-muted/20">
         <div className="absolute inset-0 bg-gradient-to-bl from-primary via-purple-900 to-background opacity-90" />
         <div className="relative z-10 flex flex-col items-center justify-center p-16 text-center max-w-2xl animate-fade-in">
