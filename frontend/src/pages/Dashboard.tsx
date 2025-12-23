@@ -30,7 +30,7 @@ const Dashboard = () => {
     queryFn: fetchSpreadsheets,
     enabled: !!user, // Only fetch when user is available
   });
-  
+
 
 
   // Create spreadsheet mutation
@@ -77,7 +77,7 @@ const Dashboard = () => {
       toast({ title: "Please enter a spreadsheet name", variant: "destructive" });
       return;
     }
-    
+
     createMutation.mutate({
       name: newSpreadsheetName,
       description: newSpreadsheetDescription
@@ -92,7 +92,7 @@ const Dashboard = () => {
 
   // Share spreadsheet mutation
   const shareMutation = useMutation({
-    mutationFn: ({ spreadsheetId, username, permission }: { spreadsheetId: string; username: string; permission: "read-only" | "read-write" }) => 
+    mutationFn: ({ spreadsheetId, username, permission }: { spreadsheetId: string; username: string; permission: "read-only" | "read-write" }) =>
       shareSpreadsheet(spreadsheetId, username, permission),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["spreadsheets"] });
@@ -122,11 +122,11 @@ const Dashboard = () => {
       toast({ title: "Please enter a username", variant: "destructive" });
       return;
     }
-    
-    shareMutation.mutate({ 
-      spreadsheetId: selectedSpreadsheetId, 
-      username: shareUsername, 
-      permission: sharePermission 
+
+    shareMutation.mutate({
+      spreadsheetId: selectedSpreadsheetId,
+      username: shareUsername,
+      permission: sharePermission
     });
   };
 
@@ -147,45 +147,50 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-muted/10">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Background gradients */}
+      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-primary/20 to-transparent pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-soft-light pointer-events-none"></div>
+
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md px-4 py-3 shadow-sm">
+      <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/20 backdrop-blur-xl px-4 py-3 shadow-lg transition-all duration-300">
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="hover:bg-white/10 text-white/80 hover:text-white">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="bg-primary/10 p-2 rounded-xl">
-              <FileSpreadsheet className="h-5 w-5 text-primary" />
+            <div className="bg-gradient-to-br from-primary to-blue-600 p-2 rounded-xl shadow-lg shadow-primary/20">
+              <FileSpreadsheet className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">Calling CRM</h1>
+              <h1 className="text-xl font-bold tracking-tight text-white">Calling CRM</h1>
               <p className="text-xs text-muted-foreground">Manage your customer outreach</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 bg-secondary/50 rounded-full border border-border/50">
+            <div className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
               <User className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">{user?.username}</span>
+              <span className="text-sm font-medium text-white/90">{user?.username}</span>
             </div>
-            
+
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+                <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-600/90 border-0">
                   <Plus className="h-4 w-4 mr-2" />
                   New Spreadsheet
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="bg-card border-white/10 shadow-2xl backdrop-blur-3xl">
                 <DialogHeader>
-                  <DialogTitle>Create New Spreadsheet</DialogTitle>
+                  <DialogTitle className="text-xl">Create New Spreadsheet</DialogTitle>
                   <DialogDescription>
                     Enter a name and optional description for your new spreadsheet.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium mb-1">
+                    <label htmlFor="name" className="block text-sm font-medium mb-1.5 text-foreground/80">
                       Name *
                     </label>
                     <Input
@@ -193,10 +198,11 @@ const Dashboard = () => {
                       value={newSpreadsheetName}
                       onChange={(e) => setNewSpreadsheetName(e.target.value)}
                       placeholder="My Customers"
+                      className="bg-secondary/50 border-white/10 focus-visible:ring-primary/50"
                     />
                   </div>
                   <div>
-                    <label htmlFor="description" className="block text-sm font-medium mb-1">
+                    <label htmlFor="description" className="block text-sm font-medium mb-1.5 text-foreground/80">
                       Description
                     </label>
                     <Input
@@ -204,20 +210,23 @@ const Dashboard = () => {
                       value={newSpreadsheetDescription}
                       onChange={(e) => setNewSpreadsheetDescription(e.target.value)}
                       placeholder="Description (optional)"
+                      className="bg-secondary/50 border-white/10 focus-visible:ring-primary/50"
                     />
                   </div>
                 </div>
                 <DialogFooter>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     onClick={() => setIsCreateDialogOpen(false)}
                     disabled={createMutation.isPending}
+                    className="hover:bg-white/5"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleCreateSpreadsheet}
                     disabled={createMutation.isPending || !newSpreadsheetName.trim()}
+                    className="bg-primary hover:bg-primary/90"
                   >
                     {createMutation.isPending ? "Creating..." : "Create"}
                   </Button>
@@ -225,7 +234,7 @@ const Dashboard = () => {
               </DialogContent>
             </Dialog>
             <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-              <DialogContent>
+              <DialogContent className="bg-card border-white/10 shadow-2xl backdrop-blur-3xl">
                 <DialogHeader>
                   <DialogTitle>Share Spreadsheet</DialogTitle>
                   <DialogDescription>
@@ -234,7 +243,7 @@ const Dashboard = () => {
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div>
-                    <label htmlFor="username" className="block text-sm font-medium mb-1">
+                    <label htmlFor="username" className="block text-sm font-medium mb-1.5 text-foreground/80">
                       Username *
                     </label>
                     <Input
@@ -242,56 +251,59 @@ const Dashboard = () => {
                       value={shareUsername}
                       onChange={(e) => setShareUsername(e.target.value)}
                       placeholder="Enter username"
+                      className="bg-secondary/50 border-white/10 focus-visible:ring-primary/50"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">
+                    <label className="block text-sm font-medium mb-1.5 text-foreground/80">
                       Permission
                     </label>
-                    <div className="flex gap-4">
-                      <label className="flex items-center">
+                    <div className="flex gap-4 p-1 bg-secondary/50 rounded-lg border border-white/5">
+                      <label className="flex items-center flex-1 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors">
                         <input
                           type="radio"
                           name="permission"
                           value="read-only"
                           checked={sharePermission === "read-only"}
                           onChange={() => setSharePermission("read-only")}
-                          className="mr-2"
+                          className="mr-2 text-primary"
                         />
-                        Read Only
+                        <span className="text-sm">Read Only</span>
                       </label>
-                      <label className="flex items-center">
+                      <label className="flex items-center flex-1 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors">
                         <input
                           type="radio"
                           name="permission"
                           value="read-write"
                           checked={sharePermission === "read-write"}
                           onChange={() => setSharePermission("read-write")}
-                          className="mr-2"
+                          className="mr-2 text-primary"
                         />
-                        Read & Write
+                        <span className="text-sm">Read & Write</span>
                       </label>
                     </div>
                   </div>
                 </div>
                 <DialogFooter>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     onClick={() => setIsShareDialogOpen(false)}
                     disabled={shareMutation.isPending}
+                    className="hover:bg-white/5"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleConfirmShare}
                     disabled={shareMutation.isPending || !shareUsername.trim()}
+                    className="bg-primary hover:bg-primary/90"
                   >
                     {shareMutation.isPending ? "Sharing..." : "Share"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-            <Button variant="ghost" size="icon" onClick={logout} className="text-muted-foreground hover:text-destructive transition-colors">
+            <Button variant="ghost" size="icon" onClick={logout} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all">
               <LogOut className="h-5 w-5" />
             </Button>
           </div>
@@ -299,15 +311,15 @@ const Dashboard = () => {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+      <main className="container mx-auto px-4 py-8 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 animate-fade-in">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-white">Dashboard</h2>
             <p className="text-muted-foreground mt-1">
               You have {spreadsheets.length} {spreadsheets.length === 1 ? 'spreadsheet' : 'spreadsheets'}
             </p>
           </div>
-          
+
           <div className="flex gap-2">
             {/* Filter/Search placeholders could go here */}
           </div>
@@ -316,49 +328,50 @@ const Dashboard = () => {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="h-48">
+              <Card key={i} className="h-48 bg-card/50 border-white/5">
                 <CardHeader>
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-6 w-3/4 mb-2 bg-white/10" />
+                  <Skeleton className="h-4 w-1/2 bg-white/5" />
                 </CardHeader>
                 <CardContent>
-                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full bg-white/5" />
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : spreadsheets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[60vh] border-2 border-dashed border-border/50 rounded-xl bg-card/50">
-            <div className="bg-primary/10 p-4 rounded-full mb-4">
-              <FileSpreadsheet className="h-8 w-8 text-primary" />
+          <div className="flex flex-col items-center justify-center h-[60vh] border-2 border-dashed border-white/10 rounded-3xl bg-card/20 backdrop-blur-sm animate-fade-in-up">
+            <div className="bg-primary/10 p-6 rounded-full mb-6 ring-1 ring-primary/20 shadow-xl shadow-primary/5">
+              <FileSpreadsheet className="h-10 w-10 text-primary" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">No spreadsheets yet</h3>
-            <p className="text-muted-foreground mb-6 max-w-sm text-center">
+            <h3 className="text-xl font-semibold mb-2 text-white">No spreadsheets yet</h3>
+            <p className="text-muted-foreground mb-8 max-w-sm text-center">
               Create your first spreadsheet to start organizing your customer data and calls.
             </p>
-            <Button onClick={() => setIsCreateDialogOpen(true)} size="lg" className="shadow-lg shadow-primary/20">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={() => setIsCreateDialogOpen(true)} size="lg" className="shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 text-white px-8 py-6 h-auto text-lg rounded-xl transition-all hover:scale-105 active:scale-95">
+              <Plus className="h-5 w-5 mr-2" />
               Create Spreadsheet
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in-up">
             {spreadsheets.map((spreadsheet: Spreadsheet) => (
-              <Card 
-                key={spreadsheet.id} 
-                className="group relative overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-border/50 bg-card/50 backdrop-blur-sm cursor-pointer"
+              <Card
+                key={spreadsheet.id}
+                className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10 border-white/5 bg-card/40 backdrop-blur-md cursor-pointer ring-1 ring-white/10 hover:ring-primary/30"
                 onClick={() => handleOpenSpreadsheet(spreadsheet.id)}
               >
-                <div className={`absolute top-0 left-0 w-1 h-full ${spreadsheet.is_shared ? 'bg-blue-500' : 'bg-primary'} opacity-0 group-hover:opacity-100 transition-opacity`} />
-                
-                <CardHeader className="pb-2">
+                <div className={`absolute top-0 left-0 w-full h-1 ${spreadsheet.is_shared ? 'bg-blue-500' : 'bg-gradient-to-r from-primary to-violet-600'} opacity-80 group-hover:opacity-100 transition-opacity`} />
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+                <CardHeader className="pb-3 pt-5">
                   <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${spreadsheet.is_shared ? 'bg-blue-500/10 text-blue-600' : 'bg-primary/10 text-primary'}`}>
-                        {spreadsheet.is_shared ? <Users className="h-4 w-4" /> : <FileSpreadsheet className="h-4 w-4" />}
+                    <div className="flex items-center gap-3 w-full">
+                      <div className={`p-2.5 rounded-xl transition-colors ${spreadsheet.is_shared ? 'bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20' : 'bg-primary/10 text-primary group-hover:bg-primary/20'}`}>
+                        {spreadsheet.is_shared ? <Users className="h-5 w-5" /> : <FileSpreadsheet className="h-5 w-5" />}
                       </div>
-                      <div className="space-y-1">
-                        <CardTitle className="text-base font-semibold leading-none truncate max-w-[150px]">{spreadsheet.name}</CardTitle>
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <CardTitle className="text-base font-semibold leading-none truncate text-white/90 group-hover:text-white transition-colors">{spreadsheet.name}</CardTitle>
                         {spreadsheet.is_shared && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <span>by {spreadsheet.owner}</span>
@@ -366,58 +379,60 @@ const Dashboard = () => {
                         )}
                       </div>
                     </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {!spreadsheet.is_shared && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 hover:bg-background/80"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleShareSpreadsheet(spreadsheet.id);
-                          }}
-                        >
-                          <Share2 className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      )}
-                      {!spreadsheet.is_shared && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteSpreadsheet(spreadsheet.id, spreadsheet.name);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pb-2">
+                <CardContent className="pb-4">
                   {spreadsheet.description ? (
-                    <CardDescription className="line-clamp-2 text-xs">
+                    <CardDescription className="line-clamp-2 text-xs h-8 text-muted-foreground/80">
                       {spreadsheet.description}
                     </CardDescription>
                   ) : (
-                     <p className="text-xs text-muted-foreground italic">No description</p>
+                    <p className="text-xs text-muted-foreground/50 italic h-8 flex items-center">No description</p>
                   )}
-                  
+
                   <div className="mt-4 flex flex-wrap gap-2">
                     {spreadsheet.is_shared && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-500/10 text-blue-300 ring-1 ring-blue-500/20">
                         {spreadsheet.permission_level === 'read-write' ? 'Can edit' : 'View only'}
                       </span>
                     )}
                   </div>
                 </CardContent>
-                <CardFooter className="pt-2 border-t border-border/50 bg-muted/20">
-                   <div className="w-full flex justify-between items-center text-xs text-muted-foreground">
-                      <span>{new Date(spreadsheet.created_at).toLocaleDateString()}</span>
-                      <span className="group-hover:text-primary transition-colors">Open &rarr;</span>
-                   </div>
+                <CardFooter className="pt-3 pb-3 border-t border-white/5 bg-black/20">
+                  <div className="w-full flex justify-between items-center text-xs text-muted-foreground">
+                    <span>{new Date(spreadsheet.created_at).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      {!spreadsheet.is_shared && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 hover:bg-white/10 hover:text-white rounded-full transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleShareSpreadsheet(spreadsheet.id);
+                            }}
+                          >
+                            <Share2 className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 hover:bg-destructive/20 hover:text-destructive rounded-full transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSpreadsheet(spreadsheet.id, spreadsheet.name);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                      <span className="ml-2 group-hover:translate-x-1 transition-transform duration-300 text-primary group-hover:text-primary-foreground font-medium flex items-center gap-0.5">
+                        Open <ArrowLeft className="h-3 w-3 rotate-180" />
+                      </span>
+                    </div>
+                  </div>
                 </CardFooter>
               </Card>
             ))}

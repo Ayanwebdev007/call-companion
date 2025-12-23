@@ -7,151 +7,153 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 220 10% 15%;
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 10% 15%;
+    --card: 224 71% 4%;
+    --card-foreground: 213 31% 91%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 15%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 215 20.2% 65.1%;
 
-    --primary: 142 70% 40%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 263 70% 50%;
+    /* Vibrant Violet */
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 10% 30%;
+    --secondary: 222 47% 11%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 10% 45%;
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 10% 15%;
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 220 13% 90%;
-    --input: 220 13% 90%;
-    --ring: 142 70% 40%;
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --ring: 263 70% 50%;
 
-    --radius: 0.375rem;
+    --radius: 1rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 224 71% 4%;
     --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary: 263 70% 50%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent: 216 34% 17%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 220 15% 10%;
-    --foreground: 220 10% 95%;
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
 
-    --card: 220 15% 13%;
-    --card-foreground: 220 10% 95%;
+    --card: 224 71% 4%;
+    --card-foreground: 213 31% 91%;
 
-    --popover: 220 15% 13%;
-    --popover-foreground: 220 10% 95%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 215 20.2% 65.1%;
 
-    --primary: 142 70% 45%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 263 70% 50%;
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 220 15% 18%;
-    --secondary-foreground: 220 10% 85%;
+    --secondary: 222 47% 11%;
+    --secondary-foreground: 210 40% 98%;
 
-    --muted: 220 15% 18%;
-    --muted-foreground: 220 10% 55%;
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
 
-    --accent: 220 15% 18%;
-    --accent-foreground: 220 10% 95%;
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 220 15% 22%;
-    --input: 220 15% 22%;
-    --ring: 142 70% 45%;
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --ring: 263 70% 50%;
 
-    --sidebar-background: 220 15% 10%;
+    --sidebar-background: 224 71% 4%;
     --sidebar-foreground: 220 10% 85%;
-    --sidebar-primary: 142 70% 45%;
+    --sidebar-primary: 263 70% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 15%;
+    --sidebar-accent: 223 47% 11%;
     --sidebar-accent-foreground: 220 10% 85%;
-    --sidebar-border: 220 15% 22%;
-    --sidebar-ring: 142 70% 45%;
+    --sidebar-border: 216 34% 17%;
+    --sidebar-ring: 263 70% 50%;
   }
 }
 
 @layer base {
   * {
-    /* eslint-disable-next-line */
     @apply border-border;
   }
 
   body {
-    /* eslint-disable-next-line */
     @apply bg-background text-foreground antialiased;
-    font-family: system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
-  
+
   /* Resizable table cells */
-  th, td {
+  th,
+  td {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  
-  th.resizable, td.resizable {
+
+  th.resizable,
+  td.resizable {
     white-space: normal;
     word-wrap: break-word;
     overflow: hidden;
     vertical-align: top;
   }
-  
+
   /* Allow vertical resizing */
   .resizable-cell {
     resize: both;
     overflow: auto;
   }
-  
+
   /* Responsive table for mobile */
   @media (max-width: 768px) {
     .table-container {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
     }
-    
-    th, td {
+
+    th,
+    td {
       min-width: 120px;
       min-height: 40px;
     }
   }
-  
+
   /* Sticky table header */
   .sticky-header {
     position: sticky;
     top: 0;
     z-index: 10;
   }
-  
+
   /* Ensure proper scrolling behavior */
   .scroll-container {
     overflow: auto;
     height: 100%;
   }
-  
+
   /* Table container fixes */
   .table-container-fixed {
     height: 100%;
     display: flex;
     flex-direction: column;
   }
-  
+
   /* Ensure table header stays on top during scroll */
   thead.sticky-header {
     position: sticky;

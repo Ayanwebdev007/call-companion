@@ -39,7 +39,7 @@ const Login = () => {
       } else if (typeof err === 'string') {
         errorMessage = err;
       }
-      
+
       toast({
         variant: "destructive",
         title: "Error",
@@ -51,70 +51,83 @@ const Login = () => {
   };
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2">
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto grid w-full max-w-[350px] gap-6">
-          <div className="flex flex-col items-center gap-2 text-center">
-            <div className="p-3 bg-primary/10 rounded-full">
-              <Phone className="h-6 w-6 text-primary" />
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 bg-background">
+      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <div className="mx-auto grid w-full max-w-[400px] gap-6 animate-fade-in-up relative z-10">
+          <div className="flex flex-col items-center gap-2 text-center mb-6">
+            <div className="p-4 bg-primary/10 rounded-2xl ring-1 ring-white/10 shadow-xl backdrop-blur-3xl mb-4 animate-pulse-soft">
+              <Phone className="h-8 w-8 text-primary" />
             </div>
-            <h1 className="text-3xl font-bold">Welcome back</h1>
-            <p className="text-balance text-muted-foreground">
+            <h1 className="text-4xl font-bold tracking-tight text-white">Welcome back</h1>
+            <p className="text-muted-foreground text-lg">
               Enter your credentials to access your account
             </p>
           </div>
-          <Card className="border-0 shadow-none sm:border sm:shadow-sm">
-            <CardContent className="pt-6">
-              <form onSubmit={handleSubmit}>
+          <Card className="border border-white/10 shadow-2xl bg-black/40 backdrop-blur-xl">
+            <CardContent className="pt-8 px-8">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid w-full items-center gap-4">
-                  <div className="flex flex-col space-y-1.5">
-                    <Label htmlFor="username">Username</Label>
-                    <Input 
-                      id="username" 
+                  <div className="flex flex-col space-y-2">
+                    <Label htmlFor="username" className="text-base text-gray-300">Username</Label>
+                    <Input
+                      id="username"
                       placeholder="Enter your username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       required
-                      className="h-10"
+                      className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus-visible:ring-primary/50 transition-all"
                     />
                   </div>
-                  <div className="flex flex-col space-y-1.5">
+                  <div className="flex flex-col space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password" className="text-base text-gray-300">Password</Label>
                     </div>
-                    <Input 
-                      id="password" 
+                    <Input
+                      id="password"
                       type="password"
                       placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="h-10"
+                      className="h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus-visible:ring-primary/50 transition-all"
                     />
                   </div>
-                  <Button className="w-full h-10 mt-2" type="submit" disabled={loading}>
-                    {loading ? "Logging in..." : "Login"}
+                  <Button className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/25 mt-2" type="submit" disabled={loading}>
+                    {loading ? "Logging in..." : "Sign In"}
                   </Button>
                 </div>
               </form>
             </CardContent>
-            <CardFooter className="flex justify-center border-t p-4 sm:p-6">
-              <p className="text-sm text-muted-foreground">
-                Don't have an account? <Link to="/register" className="text-primary hover:underline font-medium">Register</Link>
+            <CardFooter className="flex justify-center border-t border-white/5 p-6 bg-white/5">
+              <p className="text-sm text-gray-400">
+                Don't have an account? <Link to="/register" className="text-primary hover:text-primary/80 hover:underline font-semibold transition-colors">Register</Link>
               </p>
             </CardFooter>
           </Card>
         </div>
+
+        {/* Abstract Background Shapes for Form Side */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-0 pointer-events-none opacity-20">
+          <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-primary/30 rounded-full blur-[100px]" />
+          <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px]" />
+        </div>
       </div>
-      <div className="hidden bg-muted lg:block relative overflow-hidden">
-        <div className="absolute inset-0 bg-primary/90" />
-        <div className="relative z-10 flex flex-col items-center justify-center h-full text-white p-12 text-center">
-          <h2 className="text-4xl font-bold mb-4">Manage your calls efficiently</h2>
-          <p className="text-lg text-primary-foreground/80 max-w-md">
+
+      <div className="hidden lg:relative lg:flex lg:flex-col lg:items-center lg:justify-center overflow-hidden bg-muted/20">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary via-purple-900 to-background opacity-90" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-soft-light"></div>
+
+        <div className="relative z-10 flex flex-col items-center justify-center p-16 text-center max-w-2xl animate-fade-in">
+          <div className="w-24 h-24 bg-white/10 backdrop-blur-2xl rounded-3xl flex items-center justify-center mb-8 shadow-2xl ring-1 ring-white/20">
+            <Phone className="h-12 w-12 text-white" />
+          </div>
+          <h2 className="text-5xl font-bold mb-6 text-white tracking-tight leading-tight">Manage your calls<br /> <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200">efficiently</span></h2>
+          <p className="text-xl text-blue-100/80 leading-relaxed">
             Track customer interactions, schedule follow-ups, and grow your business with our intuitive calling CRM.
           </p>
         </div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-white/10 rounded-full blur-3xl" />
+
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/40 rounded-full blur-[120px] mix-blend-screen animate-pulse-soft" />
       </div>
     </div>
   );
