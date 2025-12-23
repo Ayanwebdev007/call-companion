@@ -720,7 +720,6 @@ const Index = () => {
                       onKeyDown={handleNewRowKeyDown}
                       className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 font-medium px-3"
                       placeholder="Add New Customer..."
-                      style={{ height: '100%' }}
                       rows={1}
                     />
                   </div>
@@ -734,7 +733,6 @@ const Index = () => {
                     onKeyDown={handleNewRowKeyDown}
                     className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3"
                     placeholder="Company Name"
-                    style={{ height: '100%' }}
                     rows={1}
                   />
                 </div>
@@ -747,7 +745,6 @@ const Index = () => {
                     onKeyDown={handleNewRowKeyDown}
                     className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3"
                     placeholder="Phone Number"
-                    style={{ height: '100%' }}
                     rows={1}
                   />
                 </div>
@@ -808,7 +805,6 @@ const Index = () => {
                     onKeyDown={handleNewRowKeyDown}
                     className="border-0 rounded-none text-sm bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3"
                     placeholder="Remark"
-                    style={{ height: '100%' }}
                     rows={1}
                   />
                 </div>
@@ -1077,7 +1073,6 @@ function SpreadsheetRow({
             defaultValue={customer.customer_name}
             onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors"
-            style={{ height: '100%' }}
           />
         </div>
       </ResizableTableCell>
@@ -1087,7 +1082,6 @@ function SpreadsheetRow({
             defaultValue={customer.company_name}
             onBlur={(e) => onCellChange(customer.id, "company_name", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors"
-            style={{ height: '100%' }}
           />
         </div>
       </ResizableTableCell>
@@ -1097,7 +1091,6 @@ function SpreadsheetRow({
             defaultValue={customer.phone_number}
             onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors"
-            style={{ height: '100%' }}
           />
         </div>
       </ResizableTableCell>
@@ -1154,7 +1147,6 @@ function SpreadsheetRow({
             defaultValue={customer.remark || ""}
             onBlur={(e) => onCellChange(customer.id, "remark", e.target.value)}
             className="border-0 rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full resize-none hover:bg-muted/30 transition-colors"
-            style={{ height: '100%', minHeight: 'auto' }}
           />
         </div>
       </ResizableTableCell>
