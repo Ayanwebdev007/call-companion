@@ -108,17 +108,19 @@ router.post('/forgot-password', async (req, res) => {
       return res.json({ message: 'Reset link generated (check server logs for development)', devMode: true });
     }
 
-    console.log('Creating nodemailer transporter with explicit config...');
+    console.log('Creating nodemailer transporter with Port 587...');
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true, // Use SSL
+      port: 587,
+      secure: false, // STARTTLS
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
       },
-      debug: true, // Enable debug logs
-      logger: true // Log to console
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 10000,
+      debug: true,
+      logger: true
     });
 
     const mailOptions = {
