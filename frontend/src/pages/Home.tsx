@@ -1,12 +1,14 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Phone, User, ArrowRight, LayoutDashboard, ShieldCheck } from "lucide-react";
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, SidebarSeparator, SidebarFooter } from "@/components/ui/sidebar";
+import { Phone, User, LayoutDashboard, LogOut, Home as HomeIcon, ShieldCheck, ArrowRight } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Home = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
 
   const getTimeGreeting = () => {
@@ -17,133 +19,160 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background gradients */}
-      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-primary/10 to-transparent pointer-events-none" />
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-soft-light pointer-events-none"></div>
+    <SidebarProvider>
+      <Sidebar collapsible="icon" className="border-r border-border/40 bg-card/50 backdrop-blur-xl">
+        <SidebarHeader className="h-16 flex items-center justify-between border-b border-border/40 px-4">
+          <div className="flex items-center gap-2 font-bold text-lg text-primary">
+            <div className="bg-primary/10 p-1.5 rounded-lg">
+              <Phone className="h-5 w-5" />
+            </div>
+            <span className="group-data-[collapsible=icon]:hidden">Call Companion</span>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Menu</SidebarGroupLabel>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate("/")}
+                  isActive={location.pathname === "/"}
+                  tooltip="Overview"
+                >
+                  <HomeIcon />
+                  <span>Overview</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate("/calling")}
+                  isActive={location.pathname === "/calling"}
+                  tooltip="Calling Dashboard"
+                >
+                  <LayoutDashboard />
+                  <span>Calling Dashboard</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate("/profile")}
+                  isActive={location.pathname === "/profile"}
+                  tooltip="Profile"
+                >
+                  <User />
+                  <span>Profile</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter className="border-t border-border/40 p-4">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={logout} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                <LogOut />
+                <span>Logout</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
 
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/60 dark:bg-black/20 backdrop-blur-xl px-4 py-3 shadow-sm transition-all duration-300">
-        <div className="container mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-primary to-blue-600 p-2 rounded-xl shadow-lg shadow-primary/20">
-              <Phone className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground dark:text-white">Call Companion</h1>
-            </div>
+      <SidebarInset className="bg-background relative overflow-hidden">
+        {/* Background gradients for the main area */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-soft-light pointer-events-none"></div>
+
+        <header className="sticky top-0 z-50 flex h-16 w-full items-center gap-4 border-b border-border/40 bg-background/60 backdrop-blur-xl px-4 shadow-sm">
+          <SidebarTrigger />
+          <div className="flex-1">
+            <h1 className="text-lg font-semibold">Overview</h1>
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <div className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 bg-secondary/50 dark:bg-white/5 rounded-full border border-border/50 dark:border-white/10 backdrop-blur-md">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground/90 dark:text-white/90">{user?.username}</span>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/50 rounded-full border border-border/50">
+              <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                {user?.username?.charAt(0).toUpperCase()}
+              </div>
+              <span className="text-sm font-medium hidden md:block">{user?.username}</span>
             </div>
-            <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-destructive transition-colors">
-              Logout
-            </Button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="container mx-auto px-4 py-12 relative z-10">
-        {/* Hero Section */}
-        <div className="flex flex-col items-center text-center mb-16 animate-fade-in">
-          <div className="inline-flex items-center justify-center px-4 py-1.5 mb-6 rounded-full bg-primary/10 text-primary text-sm font-medium ring-1 ring-primary/20 shadow-[0_0_20px_-5px_var(--primary)]">
-            Welcome to your dashboard
+        <main className="flex-1 p-6 md:p-8 pt-6 relative z-10 animate-fade-in text-left">
+          <div className="mb-8 flex items-end justify-between">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight text-foreground">{getTimeGreeting()}, {user?.username}</h2>
+              <p className="text-muted-foreground mt-1 text-base">Here's what's happening with your projects today.</p>
+            </div>
           </div>
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground dark:text-white mb-6">
-            {getTimeGreeting()}, <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">{user?.username}</span>
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Streamline your customer interactions, manage your spreadsheets, and track your progress all in one place.
-          </p>
-        </div>
 
-        {/* Quick Actions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto animate-fade-in-up">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Quick Action: Calling */}
+            <Card
+              className="col-span-1 lg:col-span-2 group relative overflow-hidden transition-all hover:shadow-lg border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-primary/50"
+              onClick={() => navigate("/calling")}
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <LayoutDashboard className="h-5 w-5 text-primary" />
+                  Calling Dashboard
+                </CardTitle>
+                <CardDescription>Manage spreadsheets and start calling customers.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mt-2">
+                  <div className="text-sm text-muted-foreground">Go to dashboard</div>
+                  <Button variant="ghost" size="icon" className="group-hover:translate-x-1 transition-transform">
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Calling Module Card */}
-          <Card
-            className="group relative overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 border-border/50 dark:border-white/10 bg-card/60 dark:bg-card/40 backdrop-blur-md cursor-pointer hover:-translate-y-1 lg:col-span-2"
-            onClick={() => navigate("/calling")}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="bg-primary/10 p-3 rounded-2xl group-hover:bg-primary/20 transition-colors">
-                  <LayoutDashboard className="h-6 w-6 text-primary" />
+            {/* Quick Action: Profile */}
+            <Card
+              className="col-span-1 group relative overflow-hidden transition-all hover:shadow-lg border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-blue-500/50"
+              onClick={() => navigate("/profile")}
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-blue-500" />
+                  Profile Settings
+                </CardTitle>
+                <CardDescription>Update your password and account info.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mt-2">
+                  <div className="text-sm text-muted-foreground">Manage profile</div>
+                  <Button variant="ghost" size="icon" className="group-hover:translate-x-1 transition-transform">
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
                 </div>
-                <div className="p-2 rounded-full bg-background/50 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </div>
-              <CardTitle className="mt-4 text-2xl">Calling Dashboard</CardTitle>
-              <CardDescription className="text-base">
-                Access your spreadsheets, manage customer lists, and start your calling sessions.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-32 rounded-xl bg-gradient-to-br from-background/50 to-background/20 dark:from-black/20 dark:to-black/5 border border-border/10 dark:border-white/5 flex items-center justify-center relative overflow-hidden group-hover:border-primary/20 transition-colors">
-                {/* Abstract visual for dashboard preview */}
-                <div className="absolute inset-x-4 top-4 bottom-0 bg-background dark:bg-card rounded-t-lg shadow-lg opacity-80 translate-y-2 group-hover:translate-y-0 transition-transform duration-500 flex flex-col gap-2 p-3">
-                  <div className="h-4 w-1/3 bg-muted rounded-md" />
-                  <div className="h-2 w-full bg-muted/50 rounded-md" />
-                  <div className="h-2 w-2/3 bg-muted/50 rounded-md" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Profile Card */}
-          <Card
-            className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10 border-border/50 dark:border-white/10 bg-card/60 dark:bg-card/40 backdrop-blur-md cursor-pointer hover:-translate-y-1"
-            onClick={() => navigate("/profile")}
-          >
-            <CardHeader>
-              <div className="bg-blue-500/10 p-3 rounded-2xl w-fit mb-4 group-hover:bg-blue-500/20 transition-colors">
-                <User className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <CardTitle>My Profile</CardTitle>
-              <CardDescription>
-                Manage your account settings and preferences.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="flex items-center gap-3 mt-4">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-blue-500 flex items-center justify-center text-white font-bold text-sm">
-                  {user?.username?.charAt(0).toUpperCase()}
+            {/* Stats / Info Card */}
+            <Card className="col-span-1 group relative overflow-hidden border-border/50 bg-card/60 backdrop-blur-md">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-emerald-500" />
+                  System Status
+                </CardTitle>
+                <CardDescription>All systems operational.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 text-sm text-emerald-500 font-medium">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Online
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium leading-none">{user?.username}</span>
-                  <span className="text-xs text-muted-foreground mt-1">View details &rarr;</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Security / Extra Card */}
-          <Card
-            className="group relative overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 border-border/50 dark:border-white/10 bg-card/60 dark:bg-card/40 backdrop-blur-md cursor-pointer hover:-translate-y-1 md:col-span-2 lg:col-span-3"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="bg-emerald-500/10 p-2 rounded-xl group-hover:bg-emerald-500/20 transition-colors">
-                  <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Security & Privacy</CardTitle>
-                  <CardDescription>Your data is encrypted and secure.</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-
-        </div>
-      </main>
-    </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 };
 
