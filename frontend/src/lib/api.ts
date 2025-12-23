@@ -153,6 +153,11 @@ export const updateSharePermission = async (spreadsheetId: string, username: str
   return response.data;
 };
 
+export const changePassword = async (current_password: string, new_password: string): Promise<{ message: string }> => {
+  const response = await axios.post(`${API_BASE_URL}/api/auth/change-password`, { current_password, new_password });
+  return response.data;
+};
+
 export const fetchSharedUsers = async (spreadsheetId: string): Promise<SharedUser[]> => {
   if (!spreadsheetId || spreadsheetId === 'undefined' || spreadsheetId === 'null') {
     throw new Error('Valid spreadsheet ID is required');
