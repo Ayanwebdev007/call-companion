@@ -179,3 +179,12 @@ export const updateSpreadsheet = async (id: string, updates: Partial<Spreadsheet
 export const deleteSpreadsheet = async (id: string): Promise<void> => {
   await axios.delete(`${SPREADSHEETS_API_URL}/${id}`);
 };
+export const forgotPassword = async (email: string): Promise<{ message: string, devMode?: boolean }> => {
+  const response = await axios.post(`${API_BASE_URL}/api/auth/forgot-password`, { email });
+  return response.data;
+};
+
+export const resetPassword = async (token: string, password: string): Promise<{ message: string }> => {
+  const response = await axios.post(`${API_BASE_URL}/api/auth/reset-password/${token}`, { password });
+  return response.data;
+};

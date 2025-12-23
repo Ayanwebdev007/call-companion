@@ -14,6 +14,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Register = () => {
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ const Register = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/auth/register`, { username, password });
+      const res = await axios.post(`${API_BASE_URL}/api/auth/register`, { username, email, password });
       login(res.data.token, res.data.user);
       toast({
         title: "Success",
@@ -94,6 +95,18 @@ const Register = () => {
                       placeholder="Choose a username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
+                      required
+                      className="h-12 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-2">
+                    <Label htmlFor="email" className="text-base text-foreground/80 dark:text-gray-300">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                       className="h-12 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all"
                     />

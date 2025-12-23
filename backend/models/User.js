@@ -2,7 +2,10 @@ import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
+  email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  resetPasswordToken: String,
+  resetPasswordExpires: Date
 }, { timestamps: true });
 
 // Map _id to id
@@ -13,6 +16,8 @@ userSchema.set('toJSON', {
     ret.id = ret._id;
     delete ret._id;
     delete ret.password; // Do not return password
+    delete ret.resetPasswordToken;
+    delete ret.resetPasswordExpires;
   }
 });
 
