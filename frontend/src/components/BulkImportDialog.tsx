@@ -2,14 +2,14 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,29 +48,29 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
       toast({ title: "Template downloaded successfully!" });
     } catch (error) {
       console.error("Error downloading template:", error);
-      toast({ 
-        title: "Error downloading template", 
+      toast({
+        title: "Error downloading template",
         description: "Failed to download the Excel template",
-        variant: "destructive" 
+        variant: "destructive"
       });
     }
   };
 
   const handleImport = async () => {
     if (!file) {
-      toast({ 
-        title: "No file selected", 
+      toast({
+        title: "No file selected",
         description: "Please select an Excel file to import",
-        variant: "destructive" 
+        variant: "destructive"
       });
       return;
     }
 
     if (!spreadsheetId) {
-      toast({ 
-        title: "No spreadsheet selected", 
+      toast({
+        title: "No spreadsheet selected",
         description: "Please select a spreadsheet before importing",
-        variant: "destructive" 
+        variant: "destructive"
       });
       return;
     }
@@ -78,9 +78,9 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
     setIsUploading(true);
     try {
       const result = await bulkImportCustomers(file, spreadsheetId);
-      toast({ 
-        title: "Import successful!", 
-        description: `${result.importedCount || 0} customers imported successfully` 
+      toast({
+        title: "Import successful!",
+        description: `${result.importedCount || 0} customers imported successfully`
       });
       setFile(null);
       setIsOpen(false);
@@ -94,10 +94,10 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
-      toast({ 
-        title: "Import failed", 
+      toast({
+        title: "Import failed",
         description: errorMessage,
-        variant: "destructive" 
+        variant: "destructive"
       });
     } finally {
       setIsUploading(false);
@@ -107,9 +107,8 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
-          <Upload className="h-4 w-4" />
-          Bulk Import
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+          <Download className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
@@ -122,7 +121,7 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
             Import customers from an Excel file. Download the template to see the required format.
           </DialogDescription>
         </DialogHeader>
-        
+
         <Card className="border-dashed border-2">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
@@ -152,18 +151,18 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex justify-between pt-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={handleDownloadTemplate}
                   className="flex items-center gap-2"
                 >
                   <Download className="h-4 w-4" />
                   Download Template
                 </Button>
-                <Button 
-                  onClick={handleImport} 
+                <Button
+                  onClick={handleImport}
                   disabled={isUploading || !file}
                   className="flex items-center gap-2"
                 >
@@ -183,7 +182,7 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
             </div>
           </CardContent>
         </Card>
-        
+
         <div className="text-xs text-muted-foreground mt-2">
           <p>💡 Tip: Make sure your Excel file has headers in the first row</p>
         </div>
