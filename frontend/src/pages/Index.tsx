@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AutoResizeTextarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search } from "lucide-react";
 import { format, isToday, parseISO, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -660,10 +660,10 @@ const Index = () => {
                 Remark
               </ResizableTableHead>
               <ResizableTableHead
-                className="border-b border-border/50 px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-12 sticky top-0 bg-muted/50"
+                className="border-b border-border/50 px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-24 sticky top-0 bg-muted/50"
                 resizable={false}
               >
-                WP
+                Actions
               </ResizableTableHead>
               {showCheckboxes && (
                 <ResizableTableHead
@@ -1207,18 +1207,30 @@ function SpreadsheetRow({
         </div>
       </ResizableTableCell>
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-1 text-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
-            const whatsappUrl = `https://wa.me/${phoneNumber}`;
-            window.open(whatsappUrl, '_blank');
-          }}
-          className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
-        >
-          <MessageCircle className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              window.location.href = `tel:${customer.phone_number}`;
+            }}
+            className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-blue-600 hover:bg-blue-50 transition-colors"
+          >
+            <Phone className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
+              const whatsappUrl = `https://wa.me/${phoneNumber}`;
+              window.open(whatsappUrl, '_blank');
+            }}
+            className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
+          >
+            <MessageCircle className="h-4 w-4" />
+          </Button>
+        </div>
       </ResizableTableCell>
       {showCheckboxes && (
         <ResizableTableCell className="border-b border-border/50 px-1 py-1 text-center">
