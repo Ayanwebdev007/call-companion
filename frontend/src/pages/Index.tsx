@@ -692,7 +692,7 @@ const Index = () => {
                 Remark
               </ResizableTableHead>
               <ResizableTableHead
-                className="border-b border-border/50 px-2 py-1 text-center text-xs font-semibold text-muted-foreground w-20 sticky top-0 bg-muted/50"
+                className="border-b border-border/50 px-2 py-1 text-center text-xs font-semibold text-muted-foreground w-12 sticky top-0 bg-muted/50"
                 resizable={false}
               >
                 Actions
