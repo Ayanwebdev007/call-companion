@@ -11,6 +11,17 @@ import { format, isToday, parseISO, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet } from "@/lib/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import { useAuth } from "@/context/AuthContext";
 import { LogOut } from "lucide-react";
@@ -443,7 +454,7 @@ const Index = () => {
 
               <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-lg border border-border/50">
                 <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={async () => {
+                <Button variant="ghost" size="sm" className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8" onClick={async () => {
                   if (!spreadsheetId) return;
                   try {
                     const blob = await exportCustomers(spreadsheetId);
@@ -464,13 +475,22 @@ const Index = () => {
                     });
                   }
                 }}>
-                  <Download className="h-4 w-4" />
+                  <div className="flex items-center gap-2">
+                    <Download className="h-4 w-4 flex-shrink-0" />
+                    <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
+                      Export
+                    </span>
+                  </div>
                 </Button>
               </div>
 
-              <Button variant="outline" size="sm" onClick={logout} className="ml-2 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20">
-                <LogOut className="h-4 w-4" />
-                Logout
+              <Button variant="ghost" size="sm" onClick={logout} className="ml-2 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8">
+                <div className="flex items-center gap-2">
+                  <LogOut className="h-4 w-4 flex-shrink-0" />
+                  <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
+                    Logout
+                  </span>
+                </div>
               </Button>
             </div>
           </div>
@@ -577,39 +597,49 @@ const Index = () => {
         {/* Bulk Actions Bar */}
         {showCheckboxes && (
           <div className="bg-primary/5 border-b border-border/50 px-4 py-2 flex items-center gap-4 backdrop-blur-sm animate-in slide-in-from-top-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4 flex-1">
               <span className="text-sm font-medium text-primary">
                 {selectedCustomers.size} selected
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={selectAllCustomers}
-                className="h-7 px-2 text-xs"
-              >
-                {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
-              </Button>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" className="h-7 px-3 text-xs gap-2">
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete Selected
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete {selectedCustomers.size} customer(s) from the database.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => {
+                        bulkDeleteMutation.mutate(Array.from(selectedCustomers));
+                      }}
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
-            <div className="h-4 w-px bg-border/50" />
+
             <Button
-              variant="destructive"
-              size="icon"
-              onClick={() => {
-                if (window.confirm(`Are you sure you want to delete ${selectedCustomers.size} customer(s)?`)) {
-                  bulkDeleteMutation.mutate(Array.from(selectedCustomers), {
-                    onSuccess: () => {
-                      setShowCheckboxes(false);
-                      setSelectedCustomers(new Set());
-                    }
-                  });
-                }
-              }}
-              disabled={bulkDeleteMutation.isPending}
-              className="h-7 w-7"
-              aria-label="Delete selected customers"
+              variant="outline"
+              size="sm"
+              onClick={selectAllCustomers}
+              className="h-7 px-3 text-xs ml-auto"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
             </Button>
+
             <Button
               variant="ghost"
               size="sm"
@@ -617,12 +647,14 @@ const Index = () => {
                 setShowCheckboxes(false);
                 setSelectedCustomers(new Set());
               }}
-              className="h-7 px-2 text-xs ml-auto"
+              className="h-7 w-7 p-0 ml-2 text-muted-foreground hover:text-foreground"
+              title="Close Selection Mode"
             >
-              Cancel
+              <span className="text-lg leading-none">&times;</span>
             </Button>
           </div>
         )}
+
       </div>
 
 
@@ -940,8 +972,8 @@ const Index = () => {
             )}
           </ResizableTableBody>
         </ResizableTable>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

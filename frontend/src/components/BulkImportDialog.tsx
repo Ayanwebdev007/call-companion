@@ -107,9 +107,13 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
-          <Upload className="h-4 w-4" />
-          Bulk Import
+        <Button variant="outline" size="sm" className="group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8 border-border/50">
+          <div className="flex items-center gap-2 justify-center w-full">
+            <Upload className="h-4 w-4 flex-shrink-0" />
+            <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden">
+              Bulk Import
+            </span>
+          </div>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
