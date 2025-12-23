@@ -2,11 +2,14 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import User from '../models/User.js';
 import auth from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Initialize Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Register
 router.post('/register', async (req, res) => {
@@ -102,52 +105,29 @@ router.post('/forgot-password', async (req, res) => {
     await user.save();
     console.log('Reset token generated and saved for:', email);
 
-    // For development fallback to log if no credentials
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.log('RESET LINK (Dev Mode):', `http://localhost:5173/reset-password/${token}`);
-      return res.json({ message: 'Reset link generated (check server logs for development)', devMode: true });
-    }
-
-    console.log('--- ATTEMPTING EMAIL SEND (V5: Logging + Verification Timeout) ---');
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      },
-      debug: true,
-      logger: true
-    });
-
-    // Verify connection configuration with a manual timeout
-    console.log('Verifying transporter (10s timeout)...');
+    console.log('--- ATTEMPTING EMAIL SEND (Resend API) ---');
     try {
-      const verifyPromise = transporter.verify();
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Verification timed out after 10s')), 10000)
-      );
+      const { data, error } = await resend.emails.send({
+        from: 'onboarding@resend.dev',
+        to: user.email,
+        subject: 'Password Reset',
+        text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
+          `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
+          `http://localhost:5173/reset-password/${token}\n\n` +
+          `If you did not request this, please ignore this email and your password will remain unchanged.\n`
+      });
 
-      await Promise.race([verifyPromise, timeoutPromise]);
-      console.log('Transporter is ready to take our messages');
-    } catch (verifyError) {
-      console.error('Transporter verification failed or timed out:', verifyError.message);
-      return res.status(500).json({ message: 'Email service connection failed: ' + verifyError.message });
+      if (error) {
+        console.error('Resend Error:', error);
+        return res.status(500).json({ message: 'Email service error: ' + error.message });
+      }
+
+      console.log('Email sent successfully via Resend:', data.id);
+      res.json({ message: 'Email sent' });
+    } catch (sendErr) {
+      console.error('Error sending via Resend:', sendErr);
+      res.status(500).json({ message: 'Server error during email sending: ' + sendErr.message });
     }
-
-    const mailOptions = {
-      to: user.email,
-      from: process.env.EMAIL_USER,
-      subject: 'Password Reset',
-      text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
-        `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
-        `http://localhost:5173/reset-password/${token}\n\n` +
-        `If you did not request this, please ignore this email and your password will remain unchanged.\n`
-    };
-
-    console.log('Sending email...');
-    await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully to:', email);
-    res.json({ message: 'Email sent' });
   } catch (err) {
     console.error('Error in forgot-password:', err);
     res.status(500).json({ message: 'Server error: ' + err.message });
