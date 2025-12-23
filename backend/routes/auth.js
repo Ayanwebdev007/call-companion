@@ -127,13 +127,14 @@ router.post('/forgot-password', async (req, res) => {
       return res.status(500).json({ message: 'Email service connection failed: ' + verifyError.message });
     }
 
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const mailOptions = {
       to: user.email,
       from: process.env.EMAIL_USER,
       subject: 'Password Reset',
       text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n` +
         `Please click on the following link, or paste this into your browser to complete the process:\n\n` +
-        `http://localhost:5173/reset-password/${token}\n\n` +
+        `${frontendUrl}/reset-password/${token}\n\n` +
         `If you did not request this, please ignore this email and your password will remain unchanged.\n`
     };
 
