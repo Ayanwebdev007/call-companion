@@ -1,5 +1,4 @@
 import express from 'express';
-import mongoose from 'mongoose';
 import Customer from '../models/Customer.js';
 import Spreadsheet from '../models/Spreadsheet.js';
 import Sharing from '../models/Sharing.js';
@@ -9,10 +8,10 @@ import fs from 'fs';
 
 const router = express.Router();
 
-// GET all customers for logged in user (supports search and pagination)
+// GET all customers for logged in user (supports search)
 router.get('/', auth, async (req, res) => {
   try {
-    const { spreadsheetId, q, page = 1, limit = 100 } = req.query;
+    const { spreadsheetId, q } = req.query;
 
     console.log('Received spreadsheetId:', spreadsheetId);
 
@@ -65,30 +64,8 @@ router.get('/', auth, async (req, res) => {
       };
     }
 
-    // Pagination
-    const pageNum = Math.max(1, parseInt(page));
-    const limitNum = Math.min(500, Math.max(10, parseInt(limit))); // Max 500 per page
-    const skip = (pageNum - 1) * limitNum;
-
-    // Fetch customers with pagination and total count in parallel
-    const [customers, total] = await Promise.all([
-      Customer.find(filter)
-        .sort({ position: 1, next_call_date: 1, next_call_time: 1 })
-        .skip(skip)
-        .limit(limitNum)
-        .lean(), // Use lean() for better performance
-      Customer.countDocuments(filter)
-    ]);
-
-    res.json({
-      customers,
-      pagination: {
-        page: pageNum,
-        limit: limitNum,
-        total,
-        pages: Math.ceil(total / limitNum)
-      }
-    });
+    const customers = await Customer.find(filter).sort({ position: 1, next_call_date: 1, next_call_time: 1 });
+    res.json(customers);
   } catch (err) {
     console.error('Error loading customers:', err);
     res.status(500).json({ message: err.message });
@@ -498,10 +475,6 @@ router.put('/:id', auth, async (req, res) => {
 // DELETE customer
 router.delete('/:id', auth, async (req, res) => {
   try {
-    if (!mongoose.isValidObjectId(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid customer ID format' });
-    }
-
     // First find the customer to get its spreadsheet_id
     const customer = await Customer.findById(req.params.id);
     if (!customer) {
@@ -536,21 +509,31 @@ router.delete('/:id', auth, async (req, res) => {
     }
     res.json({ message: 'Customer deleted' });
   } catch (err) {
-    console.error('Single delete error:', err);
-    res.status(500).json({ message: 'Error deleting customer', error: err.message });
+    res.status(500).json({ message: err.message });
   }
 });
 
 // BULK DELETE customers (using POST instead of DELETE with data)
 router.post('/bulk-delete', auth, async (req, res) => {
   try {
+    console.log('Bulk delete request received');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('User ID:', req.user.id);
+
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      console.log('No customer IDs provided or invalid format');
       return res.status(400).json({ message: 'No customer IDs provided' });
     }
 
+    console.log('Deleting customers with IDs:', ids);
+    console.log('User ID for query:', req.user.id);
+
     // Validate that all IDs are valid ObjectIds
-    const validIds = ids.filter(id => mongoose.isValidObjectId(id));
+    const mongoose = await import('mongoose');
+    const validIds = ids.filter(id => mongoose.default.isValidObjectId(id));
+    console.log('Valid IDs:', validIds);
+    console.log('Invalid IDs:', ids.filter(id => !mongoose.default.isValidObjectId(id)));
 
     if (validIds.length === 0) {
       return res.status(400).json({ message: 'No valid customer IDs provided' });
@@ -559,18 +542,21 @@ router.post('/bulk-delete', auth, async (req, res) => {
     // Check if user has write access to all these customers
     const customers = await Customer.find({ _id: { $in: validIds } });
 
-    // Group customers by spreadsheet_id to check access efficiently
+    // Group customers by spreadsheet_id
     const spreadsheetIds = [...new Set(customers.map(c => c.spreadsheet_id.toString()))];
 
-    // Check access for each spreadsheet involved
+    // Check access for each spreadsheet
     for (const spreadsheetId of spreadsheetIds) {
       const spreadsheet = await Spreadsheet.findById(spreadsheetId);
-      if (!spreadsheet) continue;
+      if (!spreadsheet) {
+        continue;
+      }
 
       // Check ownership or sharing with write permission
       let hasWriteAccess = spreadsheet.user_id.toString() === req.user.id;
 
       if (!hasWriteAccess) {
+        // Check if shared with this user with write permission
         const sharing = await Sharing.findOne({
           spreadsheet_id: spreadsheetId,
           shared_with_user_id: req.user.id
@@ -579,15 +565,25 @@ router.post('/bulk-delete', auth, async (req, res) => {
       }
 
       if (!hasWriteAccess) {
-        return res.status(403).json({
-          message: `You do not have write access to spreadsheet: ${spreadsheet.name || spreadsheetId}`
-        });
+        return res.status(403).json({ message: `You do not have write access to spreadsheet ${spreadsheet.name || spreadsheetId}` });
       }
+    }
+
+    // First, let's check if we can find the customers
+    try {
+      const customersToCheck = await Customer.find({
+        _id: { $in: validIds }
+      });
+      console.log('Customers to delete (before deletion):', customersToCheck.length);
+    } catch (checkErr) {
+      console.error('Error checking customers before deletion:', checkErr);
     }
 
     const result = await Customer.deleteMany({
       _id: { $in: validIds }
     });
+
+    console.log('Delete result:', result);
 
     res.json({
       message: `${result.deletedCount} customers deleted successfully`,
@@ -595,6 +591,7 @@ router.post('/bulk-delete', auth, async (req, res) => {
     });
   } catch (err) {
     console.error('Bulk delete error:', err);
+    console.error('Error stack:', err.stack);
     res.status(500).json({ message: 'Error deleting customers', error: err.message });
   }
 });

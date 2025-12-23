@@ -6,10 +6,10 @@ import { Input } from "@/components/ui/input";
 import { AutoResizeTextarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search, Upload } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search } from "lucide-react";
 import { format, isToday, parseISO, isPast } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet } from "@/lib/api";
 
 import { useAuth } from "@/context/AuthContext";
@@ -113,19 +113,12 @@ const Index = () => {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  // Fetch customers with infinite scroll
-  const {
-    data: customersData,
-    isLoading,
-    error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
+  // Fetch customers
+  const { data: customers = [], isLoading, error } = useQuery({
     queryKey: ["customers", spreadsheetId, debouncedQuery],
-    queryFn: async ({ pageParam = 1 }) => {
+    queryFn: async () => {
       try {
-        console.log("Fetching customers for spreadsheet:", spreadsheetId, "page:", pageParam);
+        console.log("Fetching customers for spreadsheet:", spreadsheetId);
         // Validate spreadsheetId before making the request
         if (!spreadsheetId) {
           throw new Error("No spreadsheet ID provided");
@@ -133,7 +126,7 @@ const Index = () => {
         if (spreadsheetId === "undefined" || spreadsheetId === "null") {
           throw new Error(`Invalid spreadsheet ID: ${spreadsheetId}`);
         }
-        const data = await fetchCustomers(spreadsheetId, debouncedQuery || undefined, pageParam, 20);
+        const data = await fetchCustomers(spreadsheetId, debouncedQuery || undefined);
         console.log("Customers fetched:", data);
         if (!Array.isArray(data)) {
           throw new Error("API response is not an array");
@@ -144,40 +137,8 @@ const Index = () => {
         throw err;
       }
     },
-    getNextPageParam: (lastPage, allPages) => {
-      // If last page has less than 20 items, we've reached the end
-      if (lastPage.length < 20) return undefined;
-      return allPages.length + 1;
-    },
-    enabled: !!user && !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null",
-    initialPageParam: 1,
+    enabled: !!user && !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null", // Only fetch when user and spreadsheetId are available
   });
-
-  // Flatten all pages into a single array
-  const customers = useMemo(() => {
-    if (!customersData?.pages) return [];
-    return customersData.pages.flat();
-  }, [customersData]);
-
-  // Infinite scroll handler
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollContainer = document.querySelector('.scroll-container');
-      if (!scrollContainer) return;
-
-      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-      // Load more when user is 200px from bottom
-      if (scrollHeight - scrollTop - clientHeight < 200 && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage();
-      }
-    };
-
-    const scrollContainer = document.querySelector('.scroll-container');
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll);
-      return () => scrollContainer.removeEventListener('scroll', handleScroll);
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Fetch spreadsheet details
   const { data: spreadsheet } = useQuery({
@@ -231,13 +192,7 @@ const Index = () => {
   // Delete customer mutation
   const deleteMutation = useMutation({
     mutationFn: deleteCustomer,
-    onSuccess: (_, variables) => {
-      // Remove from selection if present
-      if (selectedCustomers.has(variables)) {
-        const newSelected = new Set(selectedCustomers);
-        newSelected.delete(variables);
-        setSelectedCustomers(newSelected);
-      }
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
       toast({ title: "Customer deleted" });
     },
@@ -254,20 +209,13 @@ const Index = () => {
 
   // Bulk delete mutation
   const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids: string[]) => {
-      console.log('Bulk delete mutation called with IDs:', ids);
-      console.log('IDs count:', ids.length);
-      const result = await bulkDeleteCustomers(ids);
-      console.log('Bulk delete result:', result);
-      return result;
-    },
+    mutationFn: bulkDeleteCustomers,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
       setSelectedCustomers(new Set()); // Clear selection
       toast({ title: `${data.deletedCount} customers deleted successfully` });
     },
     onError: (error: unknown) => {
-      console.error('Bulk delete error:', error);
       let errorMessage = "Failed to delete customers";
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -308,17 +256,12 @@ const Index = () => {
 
   // Toggle customer selection
   const toggleCustomerSelection = (customerId: string) => {
-    console.log('Toggle selection for:', customerId);
-    console.log('Current selection:', Array.from(selectedCustomers));
     const newSelected = new Set(selectedCustomers);
     if (newSelected.has(customerId)) {
       newSelected.delete(customerId);
-      console.log('Removed from selection');
     } else {
       newSelected.add(customerId);
-      console.log('Added to selection');
     }
-    console.log('New selection:', Array.from(newSelected));
     setSelectedCustomers(newSelected);
   };
 
@@ -518,7 +461,7 @@ const Index = () => {
                     });
                   }
                 }}>
-                  <Upload className="h-4 w-4" />
+                  <Download className="h-4 w-4" />
                 </Button>
               </div>
 
@@ -749,7 +692,7 @@ const Index = () => {
                   <Popover>
                     <PopoverTrigger asChild>
                       <button className="ml-2 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
-                        style={{ backgroundColor: newRow.color ? newRow.color : 'white' }} />
+                        style={{ backgroundColor: newRow.color && newRow.color !== "" ? newRow.color : 'white' }} />
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-3 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
                       <div className="grid grid-cols-4 gap-2">
@@ -988,17 +931,6 @@ const Index = () => {
                   </Fragment>
                 ))}
 
-                {/* Loading more indicator */}
-                {isFetchingNextPage && (
-                  <tr>
-                    <td colSpan={showCheckboxes ? 10 : 9} className="py-8 text-center">
-                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                        <div className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                        <span>Loading more customers...</span>
-                      </div>
-                    </td>
-                  </tr>
-                )}
               </>
             )}
           </ResizableTableBody>
@@ -1120,7 +1052,7 @@ function SpreadsheetRow({
           <Popover>
             <PopoverTrigger asChild>
               <button className="ml-2 w-5 h-5 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
-                style={{ backgroundColor: localColor ? localColor : 'white' }} />
+                style={{ backgroundColor: localColor && localColor !== "" ? localColor : 'white' }} />
             </PopoverTrigger>
             <PopoverContent className="w-auto p-3 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
               <div className="grid grid-cols-4 gap-2">
@@ -1236,7 +1168,6 @@ function SpreadsheetRow({
             window.open(whatsappUrl, '_blank');
           }}
           className="h-8 w-8 p-0 rounded-full text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
-          title="Chat on WhatsApp"
         >
           <MessageCircle className="h-4 w-4" />
         </Button>

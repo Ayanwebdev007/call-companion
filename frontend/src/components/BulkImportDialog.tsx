@@ -107,8 +107,9 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-          <Download className="h-4 w-4" />
+        <Button variant="outline" size="sm" className="flex items-center gap-2">
+          <Upload className="h-4 w-4" />
+          Bulk Import
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">

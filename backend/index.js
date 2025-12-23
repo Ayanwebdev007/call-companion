@@ -8,14 +8,10 @@ import customerRoutes from './routes/customers.js';
 import authRoutes from './routes/auth.js';
 import spreadsheetRoutes from './routes/spreadsheets.js';
 import shareRoutes from './routes/shares.js';
-import { apiLimiter, authLimiter } from './middleware/rateLimit.js';
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// Trust first proxy (required for rate limiting when behind reverse proxy like Render)
-app.set('trust proxy', 1);
 
 // Debug logging
 console.log('Starting server...');
@@ -57,11 +53,11 @@ app.use('/api/customers', fileUpload({
   debug: false // Turn off debug to reduce logs
 }));
 
-// Routes with rate limiting
-app.use('/api/auth', authLimiter, authRoutes); // Stricter limit for auth
-app.use('/api/customers', apiLimiter, customerRoutes); // General API limit
-app.use('/api/spreadsheets', apiLimiter, spreadsheetRoutes);
-app.use('/api', apiLimiter, shareRoutes);
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/spreadsheets', spreadsheetRoutes);
+app.use('/api', shareRoutes);
 
 // Test DELETE route
 app.delete('/api/test-delete', (req, res) => {
@@ -77,18 +73,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Database Connection - Enhanced with connection pooling
+// Database Connection - Updated for MongoDB Atlas
 const MONGO_URI = process.env.DATABASE_URL;
 
 console.log('Attempting to connect to MongoDB...');
-mongoose.connect(MONGO_URI, {
-  maxPoolSize: 10, // Maximum number of connections in the pool
-  minPoolSize: 2,  // Minimum number of connections to maintain
-  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-  serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-  family: 4 // Use IPv4, skip trying IPv6
-})
-  .then(() => console.log('Connected to MongoDB Atlas with connection pooling'))
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('Connected to MongoDB Atlas'))
   .catch((err) => {
     console.error('MongoDB Atlas connection error:', err);
   });
