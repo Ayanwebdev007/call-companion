@@ -155,38 +155,38 @@ const Dashboard = () => {
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-soft-light pointer-events-none"></div>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/20 backdrop-blur-xl px-4 py-3 shadow-lg transition-all duration-300">
+      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/60 dark:bg-black/20 backdrop-blur-xl px-4 py-3 shadow-lg transition-all duration-300">
         <div className="container mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="hover:bg-white/10 text-white/80 hover:text-white">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="hover:bg-accent/10 dark:hover:bg-white/10 text-foreground/80 hover:text-foreground dark:text-white/80 dark:hover:text-white">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="bg-gradient-to-br from-primary to-blue-600 p-2 rounded-xl shadow-lg shadow-primary/20">
               <FileSpreadsheet className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-white">Calling CRM</h1>
+              <h1 className="text-xl font-bold tracking-tight text-foreground dark:text-white">Calling CRM</h1>
               <p className="text-xs text-muted-foreground">Manage your customer outreach</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <div className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
+            <div className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 bg-secondary/50 dark:bg-white/5 rounded-full border border-border/50 dark:border-white/10 backdrop-blur-md">
               <User className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-white/90">{user?.username}</span>
+              <span className="text-sm font-medium text-foreground/90 dark:text-white/90">{user?.username}</span>
             </div>
 
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-600/90 border-0">
+                <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-violet-600 hover:from-primary/90 hover:to-violet-600/90 border-0 text-white">
                   <Plus className="h-4 w-4 mr-2" />
                   New Spreadsheet
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-card border-white/10 shadow-2xl backdrop-blur-3xl">
+              <DialogContent className="bg-card dark:bg-card border-border/50 dark:border-white/10 shadow-2xl backdrop-blur-3xl">
                 <DialogHeader>
-                  <DialogTitle className="text-xl">Create New Spreadsheet</DialogTitle>
-                  <DialogDescription>
+                  <DialogTitle className="text-xl text-foreground">Create New Spreadsheet</DialogTitle>
+                  <DialogDescription className="text-muted-foreground">
                     Enter a name and optional description for your new spreadsheet.
                   </DialogDescription>
                 </DialogHeader>
@@ -200,7 +200,7 @@ const Dashboard = () => {
                       value={newSpreadsheetName}
                       onChange={(e) => setNewSpreadsheetName(e.target.value)}
                       placeholder="My Customers"
-                      className="bg-secondary/50 border-white/10 focus-visible:ring-primary/50"
+                      className="bg-secondary/50 dark:bg-secondary/50 border-input dark:border-white/10 focus-visible:ring-primary/50 text-foreground"
                     />
                   </div>
                   <div>
@@ -212,7 +212,7 @@ const Dashboard = () => {
                       value={newSpreadsheetDescription}
                       onChange={(e) => setNewSpreadsheetDescription(e.target.value)}
                       placeholder="Description (optional)"
-                      className="bg-secondary/50 border-white/10 focus-visible:ring-primary/50"
+                      className="bg-secondary/50 dark:bg-secondary/50 border-input dark:border-white/10 focus-visible:ring-primary/50 text-foreground"
                     />
                   </div>
                 </div>
@@ -221,14 +221,14 @@ const Dashboard = () => {
                     variant="ghost"
                     onClick={() => setIsCreateDialogOpen(false)}
                     disabled={createMutation.isPending}
-                    className="hover:bg-white/5"
+                    className="hover:bg-accent/10 dark:hover:bg-white/5 text-foreground"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleCreateSpreadsheet}
                     disabled={createMutation.isPending || !newSpreadsheetName.trim()}
-                    className="bg-primary hover:bg-primary/90"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
                     {createMutation.isPending ? "Creating..." : "Create"}
                   </Button>
@@ -316,7 +316,7 @@ const Dashboard = () => {
       <main className="container mx-auto px-4 py-8 relative z-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 animate-fade-in">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-white">Dashboard</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground dark:text-white">Dashboard</h2>
             <p className="text-muted-foreground mt-1">
               You have {spreadsheets.length} {spreadsheets.length === 1 ? 'spreadsheet' : 'spreadsheets'}
             </p>
@@ -330,23 +330,23 @@ const Dashboard = () => {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="h-48 bg-card/50 border-white/5">
+              <Card key={i} className="h-48 bg-card/50 dark:bg-card/50 border-border/10 dark:border-white/5">
                 <CardHeader>
-                  <Skeleton className="h-6 w-3/4 mb-2 bg-white/10" />
-                  <Skeleton className="h-4 w-1/2 bg-white/5" />
+                  <Skeleton className="h-6 w-3/4 mb-2 bg-muted dark:bg-white/10" />
+                  <Skeleton className="h-4 w-1/2 bg-muted dark:bg-white/5" />
                 </CardHeader>
                 <CardContent>
-                  <Skeleton className="h-20 w-full bg-white/5" />
+                  <Skeleton className="h-20 w-full bg-muted dark:bg-white/5" />
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : spreadsheets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[60vh] border-2 border-dashed border-white/10 rounded-3xl bg-card/20 backdrop-blur-sm animate-fade-in-up">
+          <div className="flex flex-col items-center justify-center h-[60vh] border-2 border-dashed border-border/50 dark:border-white/10 rounded-3xl bg-card/40 dark:bg-card/20 backdrop-blur-sm animate-fade-in-up">
             <div className="bg-primary/10 p-6 rounded-full mb-6 ring-1 ring-primary/20 shadow-xl shadow-primary/5">
               <FileSpreadsheet className="h-10 w-10 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold mb-2 text-white">No spreadsheets yet</h3>
+            <h3 className="text-xl font-semibold mb-2 text-foreground dark:text-white">No spreadsheets yet</h3>
             <p className="text-muted-foreground mb-8 max-w-sm text-center">
               Create your first spreadsheet to start organizing your customer data and calls.
             </p>
@@ -360,7 +360,7 @@ const Dashboard = () => {
             {spreadsheets.map((spreadsheet: Spreadsheet) => (
               <Card
                 key={spreadsheet.id}
-                className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10 border-white/5 bg-card/40 backdrop-blur-md cursor-pointer ring-1 ring-white/10 hover:ring-primary/30"
+                className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10 border-border/50 dark:border-white/5 bg-card/60 dark:bg-card/40 backdrop-blur-md cursor-pointer ring-1 ring-border/10 dark:ring-white/10 hover:ring-primary/30"
                 onClick={() => handleOpenSpreadsheet(spreadsheet.id)}
               >
                 <div className={`absolute top-0 left-0 w-full h-1 ${spreadsheet.is_shared ? 'bg-blue-500' : 'bg-gradient-to-r from-primary to-violet-600'} opacity-80 group-hover:opacity-100 transition-opacity`} />
@@ -369,11 +369,11 @@ const Dashboard = () => {
                 <CardHeader className="pb-3 pt-5">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3 w-full">
-                      <div className={`p-2.5 rounded-xl transition-colors ${spreadsheet.is_shared ? 'bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20' : 'bg-primary/10 text-primary group-hover:bg-primary/20'}`}>
+                      <div className={`p-2.5 rounded-xl transition-colors ${spreadsheet.is_shared ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-500/20' : 'bg-primary/10 text-primary group-hover:bg-primary/20'}`}>
                         {spreadsheet.is_shared ? <Users className="h-5 w-5" /> : <FileSpreadsheet className="h-5 w-5" />}
                       </div>
                       <div className="space-y-1 flex-1 min-w-0">
-                        <CardTitle className="text-base font-semibold leading-none truncate text-white/90 group-hover:text-white transition-colors">{spreadsheet.name}</CardTitle>
+                        <CardTitle className="text-base font-semibold leading-none truncate text-foreground/90 dark:text-white/90 group-hover:text-foreground dark:group-hover:text-white transition-colors">{spreadsheet.name}</CardTitle>
                         {spreadsheet.is_shared && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <span>by {spreadsheet.owner}</span>
@@ -394,13 +394,13 @@ const Dashboard = () => {
 
                   <div className="mt-4 flex flex-wrap gap-2">
                     {spreadsheet.is_shared && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-500/10 text-blue-300 ring-1 ring-blue-500/20">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-300 ring-1 ring-blue-500/20">
                         {spreadsheet.permission_level === 'read-write' ? 'Can edit' : 'View only'}
                       </span>
                     )}
                   </div>
                 </CardContent>
-                <CardFooter className="pt-3 pb-3 border-t border-white/5 bg-black/20">
+                <CardFooter className="pt-3 pb-3 border-t border-border/10 dark:border-white/5 bg-muted/40 dark:bg-black/20">
                   <div className="w-full flex justify-between items-center text-xs text-muted-foreground">
                     <span>{new Date(spreadsheet.created_at).toLocaleDateString()}</span>
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -409,7 +409,7 @@ const Dashboard = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 hover:bg-white/10 hover:text-white rounded-full transition-colors"
+                            className="h-7 w-7 hover:bg-accent/10 dark:hover:bg-white/10 hover:text-foreground dark:hover:text-white rounded-full transition-colors"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleShareSpreadsheet(spreadsheet.id);
