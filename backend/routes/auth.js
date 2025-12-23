@@ -112,6 +112,9 @@ router.post('/forgot-password', async (req, res) => {
     }
 
     console.log('--- ATTEMPTING EMAIL SEND (Resend) ---');
+    console.log('Using API Key:', process.env.RESEND_API_KEY ? 'Present (starts with ' + process.env.RESEND_API_KEY.substring(0, 5) + '...)' : 'MISSING');
+    console.log('Using Sender:', process.env.EMAIL_FROM || 'Default (onboarding@resend.dev)');
+
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const { data, error } = await resend.emails.send({
