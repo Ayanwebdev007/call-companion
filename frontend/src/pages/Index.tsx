@@ -1160,7 +1160,7 @@ function SpreadsheetRow({
             defaultValue={customer.phone_number}
             onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
             onFocus={() => setFocusedCell(`${customer.id}-phone_number`)}
-            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-0.5 leading-none h-full min-h-0"
+            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-1 leading-tight h-full min-h-0"
             style={{ height: '100%' }}
           />
         </div>
