@@ -114,7 +114,7 @@ router.post('/forgot-password', async (req, res) => {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const { data, error } = await resend.emails.send({
-      from: 'Call Companion <onboarding@resend.dev>',
+      from: process.env.SENDER_EMAIL || 'Call Companion <onboarding@resend.dev>',
       to: [user.email],
       subject: 'Password Reset',
       html: `<p>You are receiving this because you (or someone else) have requested the reset of the password for your account.</p>` +
