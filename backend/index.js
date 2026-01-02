@@ -8,6 +8,7 @@ import customerRoutes from './routes/customers.js';
 import authRoutes from './routes/auth.js';
 import spreadsheetRoutes from './routes/spreadsheets.js';
 import shareRoutes from './routes/shares.js';
+import posterRoutes from './routes/poster.js';
 
 dotenv.config();
 const app = express();
@@ -30,10 +31,7 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-
-    // Check if the origin is in our allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -58,6 +56,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/spreadsheets', spreadsheetRoutes);
 app.use('/api', shareRoutes);
+app.use('/api', posterRoutes);
 
 // Test DELETE route
 app.delete('/api/test-delete', (req, res) => {
