@@ -185,7 +185,7 @@ const Profile = () => {
                     <h2 className="text-2xl font-bold text-foreground">{user?.username}</h2>
                     <p className="text-muted-foreground flex items-center gap-2 mt-1">
                       <Mail className="h-4 w-4" />
-                      {user?.email || `username@${user?.username}.com`}
+                      {user?.email}
                     </p>
                   </div>
                 </div>
