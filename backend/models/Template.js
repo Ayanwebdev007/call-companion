@@ -6,6 +6,7 @@ const TemplateSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    name: { type: String, required: true },
     poster: String, // Base64 string
     placeholders: {
         logo: { x: Number, y: Number },

@@ -38,19 +38,25 @@ const PosterGenerator = () => {
     const [companyPhone, setCompanyPhone] = useState("");
     const [companyAddress, setCompanyAddress] = useState("");
     const [companyLogoFile, setCompanyLogoFile] = useState<File | null>(null);
+    const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
     const [isSavingCompany, setIsSavingCompany] = useState(false);
 
     // Template Builder
+    const [templateName, setTemplateName] = useState("");
     const [posterFile, setPosterFile] = useState<File | null>(null);
     const [posterImage, setPosterImage] = useState<HTMLImageElement | null>(null);
+    const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
     // Dynamic canvas dimensions
     const [stageSize, setStageSize] = useState({ width: 600, height: 600 });
 
-    const [placeholders, setPlaceholders] = useState({
+    // Default placeholders
+    const defaultPlaceholders = {
         logo: { x: 50, y: 50 },
         phone: { x: 50, y: 150 },
         address: { x: 50, y: 180 },
-    });
+    };
+
+    const [placeholders, setPlaceholders] = useState(defaultPlaceholders);
     const [isSavingTemplate, setIsSavingTemplate] = useState(false);
 
     // Preview & Export
@@ -127,27 +133,53 @@ const PosterGenerator = () => {
         }
     }, [selectedTemplateId, templates]);
 
+    // Handle Edit Company
+    const handleEditCompany = (company: any) => {
+        setEditingCompanyId(company._id || company.id);
+        setCompanyName(company.name);
+        setCompanyPhone(company.phone);
+        setCompanyAddress(company.address);
+        setCompanyLogoFile(null); // Keep existing unless changed
+    };
+
+    const handleCancelEditCompany = () => {
+        setEditingCompanyId(null);
+        setCompanyName("");
+        setCompanyPhone("");
+        setCompanyAddress("");
+        setCompanyLogoFile(null);
+    };
+
     const handleSaveCompany = async () => {
-        if (!companyName || !companyPhone || !companyAddress || !companyLogoFile) {
-            toast({ title: "Please fill all fields and upload a logo", variant: "destructive" });
+        if (!companyName || !companyPhone || !companyAddress) {
+            toast({ title: "Please fill all fields", variant: "destructive" });
+            return;
+        }
+        if (!editingCompanyId && !companyLogoFile) {
+            toast({ title: "Logo is required for new company", variant: "destructive" });
             return;
         }
 
         setIsSavingCompany(true);
-        const reader = new FileReader();
-        reader.onloadend = async () => {
+
+        const save = async (logoData: string | null) => {
             try {
-                await api.post("/api/companies", {
+                const payload: any = {
                     name: companyName,
                     phone: companyPhone,
                     address: companyAddress,
-                    logo: reader.result,
-                });
-                toast({ title: "Company saved successfully!" });
-                setCompanyName("");
-                setCompanyPhone("");
-                setCompanyAddress("");
-                setCompanyLogoFile(null);
+                };
+                if (logoData) payload.logo = logoData;
+
+                if (editingCompanyId) {
+                    await api.put(`/api/companies/${editingCompanyId}`, payload);
+                    toast({ title: "Company updated successfully!" });
+                } else {
+                    await api.post("/api/companies", payload);
+                    toast({ title: "Company saved successfully!" });
+                }
+
+                handleCancelEditCompany();
                 fetchData();
             } catch (error: any) {
                 console.error(error);
@@ -160,32 +192,82 @@ const PosterGenerator = () => {
                 setIsSavingCompany(false);
             }
         };
-        reader.readAsDataURL(companyLogoFile);
+
+        if (companyLogoFile) {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                await save(reader.result as string);
+            };
+            reader.readAsDataURL(companyLogoFile);
+        } else {
+            await save(null);
+        }
+    };
+
+    // Handle Edit Template
+    const handleEditTemplate = (template: any) => {
+        setEditingTemplateId(template._id || template.id);
+        setTemplateName(template.name || "");
+        setPlaceholders(template.placeholders);
+        setPosterFile(null);
+
+        // Load existing poster to stage
+        const img = new window.Image();
+        img.src = template.poster;
+        img.onload = () => {
+            setPosterImage(img);
+            // Recalculate stage size for existing image
+            const maxDim = 600;
+            const ratio = img.width / img.height;
+            let newW = maxDim;
+            let newH = maxDim;
+            if (ratio > 1) {
+                newH = maxDim / ratio;
+            } else {
+                newW = maxDim * ratio;
+            }
+            setStageSize({ width: newW, height: newH });
+        };
+    };
+
+    const handleCancelEditTemplate = () => {
+        setEditingTemplateId(null);
+        setTemplateName("");
+        setPosterFile(null);
+        setPosterImage(null);
+        setPlaceholders(defaultPlaceholders);
+        setStageSize({ width: 600, height: 600 });
     };
 
     const handleSaveTemplate = async () => {
-        if (!posterFile) {
+        if (!templateName) {
+            toast({ title: "Please enter a template name", variant: "destructive" });
+            return;
+        }
+        if (!editingTemplateId && !posterFile) {
             toast({ title: "Please upload a poster image", variant: "destructive" });
             return;
         }
-        setIsSavingTemplate(true);
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-            try {
-                // Save the original width/height if needed, or just rely on image load
-                // For simplicity, we save placeholders relative to the current stage size?
-                // Actually, best practice is to save relative coordinates (0-1), but sticking to current implementation for now.
-                // NOTE: If stage size changes, absolute coordinates might be off if not scaled.
-                // Since we force the same calculation logic on preview, it should match visually.
 
-                await api.post("/api/templates", {
-                    poster: reader.result,
+        setIsSavingTemplate(true);
+
+        const saveKey = async (posterData: string | null) => {
+            try {
+                const payload: any = {
+                    name: templateName,
                     placeholders,
-                    // Optional: could save dimensions here to be precise
-                });
-                toast({ title: "Template saved successfully!" });
-                setPosterFile(null);
-                setPosterImage(null);
+                };
+                if (posterData) payload.poster = posterData;
+
+                if (editingTemplateId) {
+                    await api.put(`/api/templates/${editingTemplateId}`, payload);
+                    toast({ title: "Template updated successfully!" });
+                } else {
+                    await api.post("/api/templates", payload);
+                    toast({ title: "Template saved successfully!" });
+                }
+
+                handleCancelEditTemplate();
                 fetchData();
             } catch (error: any) {
                 console.error(error);
@@ -198,7 +280,16 @@ const PosterGenerator = () => {
                 setIsSavingTemplate(false);
             }
         };
-        reader.readAsDataURL(posterFile);
+
+        if (posterFile) {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                await saveKey(reader.result as string);
+            };
+            reader.readAsDataURL(posterFile);
+        } else {
+            await saveKey(null);
+        }
     };
 
     const handlePosterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -278,8 +369,15 @@ const PosterGenerator = () => {
                         <TabsContent value="companies">
                             <Card className="border-border/50 bg-card/60 backdrop-blur-md">
                                 <CardHeader>
-                                    <CardTitle>Manage Companies</CardTitle>
-                                    <CardDescription>Add company details to be used in posters.</CardDescription>
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <CardTitle>{editingCompanyId ? "Edit Company" : "Manage Companies"}</CardTitle>
+                                            <CardDescription>{editingCompanyId ? "Update existing company details." : "Add company details to be used in posters."}</CardDescription>
+                                        </div>
+                                        {editingCompanyId && (
+                                            <Button variant="outline" size="sm" onClick={handleCancelEditCompany}>Cancel Edit</Button>
+                                        )}
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -296,14 +394,14 @@ const PosterGenerator = () => {
                                             <Input id="address" value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} placeholder="123 Main St, City" />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="logo">Logo</Label>
+                                            <Label htmlFor="logo">Logo {editingCompanyId && "(Optional to replace)"}</Label>
                                             <div className="flex items-center gap-2">
                                                 <Input id="logo" type="file" onChange={handleCompanyLogoUpload} className="cursor-pointer" />
                                             </div>
                                         </div>
                                     </div>
                                     <Button onClick={handleSaveCompany} disabled={isSavingCompany} className="mt-4">
-                                        {isSavingCompany ? "Saving..." : <><Save className="mr-2 h-4 w-4" /> Save Company</>}
+                                        {isSavingCompany ? "Saving..." : <><Save className="mr-2 h-4 w-4" /> {editingCompanyId ? "Update Company" : "Save Company"}</>}
                                     </Button>
 
                                     {companies.length > 0 && (
@@ -311,12 +409,15 @@ const PosterGenerator = () => {
                                             <h3 className="font-semibold mb-4">Your Companies</h3>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 {companies.map((company) => (
-                                                    <div key={company._id || company.id} className="p-4 rounded-lg bg-secondary/50 border border-border/50 flex items-center gap-4">
-                                                        <img src={company.logo} alt={company.name} className="h-10 w-10 rounded object-contain bg-white" />
-                                                        <div>
-                                                            <p className="font-medium">{company.name}</p>
-                                                            <p className="text-xs text-muted-foreground">{company.phone}</p>
+                                                    <div key={company._id || company.id} className="p-4 rounded-lg bg-secondary/50 border border-border/50 flex items-center justify-between gap-4">
+                                                        <div className="flex items-center gap-4">
+                                                            <img src={company.logo} alt={company.name} className="h-10 w-10 rounded object-contain bg-white" />
+                                                            <div>
+                                                                <p className="font-medium">{company.name}</p>
+                                                                <p className="text-xs text-muted-foreground">{company.phone}</p>
+                                                            </div>
                                                         </div>
+                                                        <Button variant="ghost" size="sm" onClick={() => handleEditCompany(company)}>Edit</Button>
                                                     </div>
                                                 ))}
                                             </div>
@@ -414,7 +515,7 @@ const PosterGenerator = () => {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {templates.map((t, idx) => (
-                                                        <SelectItem key={t._id || t.id} value={t._id || t.id}>Template {idx + 1}</SelectItem>
+                                                        <SelectItem key={t._id || t.id} value={t._id || t.id}>{t.name || `Template ${idx + 1}`}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
