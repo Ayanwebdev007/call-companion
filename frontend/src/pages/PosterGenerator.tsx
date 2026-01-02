@@ -489,7 +489,7 @@ const PosterGenerator = () => {
                                     {posterImage && (
                                         <div className="flex justify-center mt-4">
                                             <Button onClick={handleSaveTemplate} disabled={isSavingTemplate}>
-                                                {isSavingTemplate ? "Saving..." : "Save Template"}
+                                                {isSavingTemplate ? "Saving..." : (editingTemplateId ? "Update Template" : "Save Template")}
                                             </Button>
                                         </div>
                                     )}
@@ -500,9 +500,12 @@ const PosterGenerator = () => {
                                             <h3 className="font-semibold mb-4">Saved Templates</h3>
                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                                 {templates.map((t, idx) => (
-                                                    <div key={t._id || t.id} className="p-2 border rounded-lg text-center text-xs">
+                                                    <div key={t._id || t.id} className="p-3 border rounded-lg text-center text-xs relative group hover:border-primary transition-colors">
                                                         <img src={t.poster} className="w-full h-24 object-cover mb-2 rounded" alt="Mini preview" />
-                                                        Template {idx + 1}
+                                                        <p className="font-semibold truncate">{t.name || `Template ${idx + 1}`}</p>
+                                                        <div className="mt-2">
+                                                            <Button size="sm" variant="secondary" className="w-full" onClick={() => handleEditTemplate(t)}>Edit</Button>
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
