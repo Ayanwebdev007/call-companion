@@ -42,7 +42,7 @@ app.use(cors({
 }));
 
 // Parse JSON bodies for all requests, including DELETE
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 
 // Only apply fileUpload middleware to routes that need it
 app.use('/api/customers', fileUpload({

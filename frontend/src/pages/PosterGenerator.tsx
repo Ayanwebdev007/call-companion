@@ -119,8 +119,13 @@ const PosterGenerator = () => {
                 setCompanyAddress("");
                 setCompanyLogoFile(null);
                 fetchData();
-            } catch (error) {
-                toast({ title: "Failed to save company", variant: "destructive" });
+            } catch (error: any) {
+                console.error(error);
+                toast({
+                    title: "Failed to save company",
+                    description: error.response?.data?.message || error.message || "Unknown error",
+                    variant: "destructive"
+                });
             } finally {
                 setIsSavingCompany(false);
             }
@@ -145,8 +150,13 @@ const PosterGenerator = () => {
                 setPosterFile(null);
                 setPosterImage(null);
                 fetchData();
-            } catch (error) {
-                toast({ title: "Failed to save template", variant: "destructive" });
+            } catch (error: any) {
+                console.error(error);
+                toast({
+                    title: "Failed to save template",
+                    description: error.response?.data?.message || error.message || "Unknown error",
+                    variant: "destructive"
+                });
             } finally {
                 setIsSavingTemplate(false);
             }
