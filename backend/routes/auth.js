@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { Resend } from 'resend';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import auth from '../middleware/auth.js';
 
@@ -208,7 +209,7 @@ router.put('/update-profile', auth, async (req, res) => {
     // Check if username/email is taken by another user
     const existingUser = await User.findOne({
       $or: [{ username }, { email }],
-      _id: { $ne: req.user.id } // Exclude current user
+      _id: { $ne: new mongoose.Types.ObjectId(req.user.id) } // Exclude current user
     });
 
     if (existingUser) {
