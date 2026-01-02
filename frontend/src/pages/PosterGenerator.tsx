@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useToast } from "@/hooks/use-toast";
-import { Phone, User, LayoutDashboard, LogOut, Home as HomeIcon, Building2, ImagePlus, Eye, Save, Download, Upload } from "lucide-react";
+import { Save, Download, ImagePlus } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 
@@ -43,6 +43,9 @@ const PosterGenerator = () => {
     // Template Builder
     const [posterFile, setPosterFile] = useState<File | null>(null);
     const [posterImage, setPosterImage] = useState<HTMLImageElement | null>(null);
+    // Dynamic canvas dimensions
+    const [stageSize, setStageSize] = useState({ width: 600, height: 600 });
+
     const [placeholders, setPlaceholders] = useState({
         logo: { x: 50, y: 50 },
         phone: { x: 50, y: 150 },
@@ -55,6 +58,8 @@ const PosterGenerator = () => {
     const [selectedTemplateId, setSelectedTemplateId] = useState("");
     const [logoImage, setLogoImage] = useState<HTMLImageElement | null>(null);
     const [finalPoster, setFinalPoster] = useState<HTMLImageElement | null>(null);
+    // Preview stage size
+    const [previewStageSize, setPreviewStageSize] = useState({ width: 600, height: 600 });
     const finalStageRef = useRef<any>(null);
 
     // Fetch Data
@@ -64,12 +69,15 @@ const PosterGenerator = () => {
 
     const fetchData = async () => {
         try {
+            console.log("Fetching data...");
             const [compRes, tempRes] = await Promise.all([
                 api.get("/api/companies"),
                 api.get("/api/templates")
             ]);
-            setCompanies(compRes.data.companies);
-            setTemplates(tempRes.data.templates);
+            console.log("Fetched companies:", compRes.data.companies);
+            console.log("Fetched templates:", tempRes.data.templates);
+            setCompanies(compRes.data.companies || []);
+            setTemplates(tempRes.data.templates || []);
         } catch (error) {
             console.error("Failed to fetch data", error);
             toast({ title: "Failed to load data", variant: "destructive" });
@@ -78,7 +86,10 @@ const PosterGenerator = () => {
 
     // Effects for Preview
     useEffect(() => {
-        if (!selectedCompanyId) return;
+        if (!selectedCompanyId) {
+            setLogoImage(null);
+            return;
+        }
         const company = companies.find((c) => c._id === selectedCompanyId || c.id === selectedCompanyId);
         if (company?.logo) {
             const img = new window.Image();
@@ -88,12 +99,31 @@ const PosterGenerator = () => {
     }, [selectedCompanyId, companies]);
 
     useEffect(() => {
-        if (!selectedTemplateId) return;
+        if (!selectedTemplateId) {
+            setFinalPoster(null);
+            return;
+        }
         const template = templates.find((t) => t._id === selectedTemplateId || t.id === selectedTemplateId);
         if (template?.poster) {
             const img = new window.Image();
             img.src = template.poster;
-            img.onload = () => setFinalPoster(img);
+            img.onload = () => {
+                setFinalPoster(img);
+                // Calculate dynamic aspect ratio for preview
+                const maxDim = 600;
+                const ratio = img.width / img.height;
+                let newW = maxDim;
+                let newH = maxDim;
+
+                if (ratio > 1) {
+                    // Wider
+                    newH = maxDim / ratio;
+                } else {
+                    // Taller
+                    newW = maxDim * ratio;
+                }
+                setPreviewStageSize({ width: newW, height: newH });
+            };
         }
     }, [selectedTemplateId, templates]);
 
@@ -142,9 +172,16 @@ const PosterGenerator = () => {
         const reader = new FileReader();
         reader.onloadend = async () => {
             try {
+                // Save the original width/height if needed, or just rely on image load
+                // For simplicity, we save placeholders relative to the current stage size?
+                // Actually, best practice is to save relative coordinates (0-1), but sticking to current implementation for now.
+                // NOTE: If stage size changes, absolute coordinates might be off if not scaled.
+                // Since we force the same calculation logic on preview, it should match visually.
+
                 await api.post("/api/templates", {
                     poster: reader.result,
                     placeholders,
+                    // Optional: could save dimensions here to be precise
                 });
                 toast({ title: "Template saved successfully!" });
                 setPosterFile(null);
@@ -170,7 +207,23 @@ const PosterGenerator = () => {
         setPosterFile(f);
         const img = new window.Image();
         img.src = URL.createObjectURL(f);
-        img.onload = () => setPosterImage(img);
+        img.onload = () => {
+            setPosterImage(img);
+            // Dynamic sizing logic
+            const maxDim = 600; // max width or height
+            const ratio = img.width / img.height;
+            let newW = maxDim;
+            let newH = maxDim;
+
+            if (ratio > 1) {
+                // Wider than tall: Width = 600, Height = 600 / ratio
+                newH = maxDim / ratio;
+            } else {
+                // Taller or square: Height = 600, Width = 600 * ratio
+                newW = maxDim * ratio;
+            }
+            setStageSize({ width: newW, height: newH });
+        };
     };
 
     const handleCompanyLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,7 +234,7 @@ const PosterGenerator = () => {
 
     const downloadPoster = () => {
         if (finalStageRef.current) {
-            const uri = finalStageRef.current.toDataURL({ pixelRatio: 2 });
+            const uri = finalStageRef.current.toDataURL({ pixelRatio: 3 }); // Higher quality export
             const link = document.createElement("a");
             link.download = "poster.jpg";
             link.href = uri;
@@ -287,9 +340,9 @@ const PosterGenerator = () => {
 
                                     {posterImage && (
                                         <div className="mt-6 border rounded-xl overflow-hidden shadow-lg bg-black/5 dark:bg-black/20 max-w-fit mx-auto">
-                                            <Stage width={600} height={600}>
+                                            <Stage width={stageSize.width} height={stageSize.height}>
                                                 <Layer>
-                                                    <KonvaImage image={posterImage} width={600} height={600} />
+                                                    <KonvaImage image={posterImage} width={stageSize.width} height={stageSize.height} />
                                                     <Rect
                                                         {...placeholders.logo}
                                                         width={80}
@@ -326,6 +379,21 @@ const PosterGenerator = () => {
                                             </Button>
                                         </div>
                                     )}
+
+                                    {/* Simple List of Existing Templates to Verify They Exists */}
+                                    {templates.length > 0 && (
+                                        <div className="mt-8 pt-6 border-t border-border/40">
+                                            <h3 className="font-semibold mb-4">Saved Templates</h3>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                {templates.map((t, idx) => (
+                                                    <div key={t._id || t.id} className="p-2 border rounded-lg text-center text-xs">
+                                                        <img src={t.poster} className="w-full h-24 object-cover mb-2 rounded" alt="Mini preview" />
+                                                        Template {idx + 1}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         </TabsContent>
@@ -337,7 +405,7 @@ const PosterGenerator = () => {
                                     <CardDescription>Select a company and a template to generate the final poster.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 md:items-end gap-6">
                                         <div className="space-y-2">
                                             <Label>Select Template</Label>
                                             <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
@@ -345,8 +413,8 @@ const PosterGenerator = () => {
                                                     <SelectValue placeholder="Select a template" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    {templates.map((t) => (
-                                                        <SelectItem key={t._id || t.id} value={t._id || t.id}>Template {(t._id || t.id).slice(-4)}</SelectItem>
+                                                    {templates.map((t, idx) => (
+                                                        <SelectItem key={t._id || t.id} value={t._id || t.id}>Template {idx + 1}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
@@ -369,9 +437,9 @@ const PosterGenerator = () => {
                                     {finalPoster && logoImage && selectedCompanyId && selectedTemplateId && (
                                         <div className="flex flex-col items-center gap-6 mt-8">
                                             <div className="border rounded-xl overflow-hidden shadow-2xl">
-                                                <Stage width={600} height={600} ref={finalStageRef}>
+                                                <Stage width={previewStageSize.width} height={previewStageSize.height} ref={finalStageRef}>
                                                     <Layer>
-                                                        <KonvaImage image={finalPoster} width={600} height={600} />
+                                                        <KonvaImage image={finalPoster} width={previewStageSize.width} height={previewStageSize.height} />
                                                         {(() => {
                                                             const tmpl = templates.find(t => (t._id || t.id) === selectedTemplateId);
                                                             const comp = companies.find(c => (c._id || c.id) === selectedCompanyId);
