@@ -430,13 +430,26 @@ const PosterGenerator = () => {
                         <TabsContent value="templates">
                             <Card className="border-border/50 bg-card/60 backdrop-blur-md">
                                 <CardHeader>
-                                    <CardTitle>Template Builder</CardTitle>
-                                    <CardDescription>Upload a poster design and define placeholder positions.</CardDescription>
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <CardTitle>{editingTemplateId ? "Edit Template" : "Template Builder"}</CardTitle>
+                                            <CardDescription>Upload a poster design and define placeholder positions.</CardDescription>
+                                        </div>
+                                        {editingTemplateId && (
+                                            <Button variant="outline" size="sm" onClick={handleCancelEditTemplate}>Cancel Edit</Button>
+                                        )}
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label>Upload Poster Image</Label>
-                                        <Input type="file" onChange={handlePosterUpload} />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="templateName">Template Name</Label>
+                                            <Input id="templateName" value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="e.g. Sales Flyer" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Upload Poster Image {editingTemplateId && "(Optional to replace)"}</Label>
+                                            <Input type="file" onChange={handlePosterUpload} />
+                                        </div>
                                     </div>
 
                                     {posterImage && (
