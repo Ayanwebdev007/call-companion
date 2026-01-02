@@ -188,4 +188,44 @@ router.post('/change-password', auth, async (req, res) => {
   }
 });
 
+// Update Profile
+router.put('/update-profile', auth, async (req, res) => {
+  const { username, email } = req.body;
+
+  // Basic validation
+  if (!username || !email) {
+    return res.status(400).json({ message: 'Username and email are required' });
+  }
+
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if username/email is taken by another user
+    const existingUser = await User.findOne({
+      $or: [{ username }, { email }],
+      _id: { $ne: req.user.id } // Exclude current user
+    });
+
+    if (existingUser) {
+      if (existingUser.username === username) return res.status(400).json({ message: 'Username is already taken' });
+      if (existingUser.email === email) return res.status(400).json({ message: 'Email is already taken' });
+    }
+
+    user.username = username;
+    user.email = email;
+    await user.save();
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: { id: user.id, username: user.username, email: user.email }
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
 export default router;

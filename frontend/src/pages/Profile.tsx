@@ -6,20 +6,62 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { changePassword } from "@/lib/api";
+import { changePassword, updateProfile } from "@/lib/api";
 import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset, SidebarTrigger, SidebarSeparator, SidebarFooter } from "@/components/ui/sidebar";
 import { User, ArrowLeft, Shield, KeyRound, Check, LogOut, Mail, Phone, LayoutDashboard, Home as HomeIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useEffect } from "react";
 
 const Profile = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, login } = useAuth(); // Assuming login accepts user object/token to update context
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+
+  // Security State
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Personal Info State
+  const [activeTab, setActiveTab] = useState<'security' | 'personal'>('personal');
+  const [editUsername, setEditUsername] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setEditUsername(user.username || "");
+      setEditEmail(user.email || "");
+    }
+  }, [user]);
+
+  const handleUpdateProfile = async () => {
+    if (!editUsername || !editEmail) {
+      toast({ title: "Username and email are required", variant: "destructive" });
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await updateProfile(editUsername, editEmail);
+      toast({ title: res.message });
+      // Update local storage/context if the API returns the updated user
+      // Ideally, the AuthContext should expose a method to update the user state without full login
+      if (res.user) {
+        // Force reload to reflect changes or assume context updates on next fetch
+        // For now, simpler to alert user or rely on future re-fetch
+      }
+    } catch (e: any) {
+      toast({
+        title: "Failed to update profile",
+        description: e.response?.data?.message || "An error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -37,7 +79,7 @@ const Profile = () => {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (e) {
+    } catch (e: any) {
       toast({ title: "Failed to change password", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -143,7 +185,7 @@ const Profile = () => {
                     <h2 className="text-2xl font-bold text-foreground">{user?.username}</h2>
                     <p className="text-muted-foreground flex items-center gap-2 mt-1">
                       <Mail className="h-4 w-4" />
-                      username@{user?.username}.com
+                      {user?.email || `username@${user?.username}.com`}
                     </p>
                   </div>
                 </div>
@@ -151,15 +193,23 @@ const Profile = () => {
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* Settings Sidebar (Visual only for now) */}
+              {/* Settings Sidebar */}
               <div className="space-y-4">
                 <Card className="border-border/50 bg-card/60 backdrop-blur-md p-4 space-y-1">
                   <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">Settings</h3>
-                  <Button variant="ghost" className="w-full justify-start text-primary bg-primary/10 hover:bg-primary/20 hover:text-primary font-medium">
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-start font-medium ${activeTab === 'security' ? 'text-primary bg-primary/10 hover:bg-primary/20 hover:text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                    onClick={() => setActiveTab('security')}
+                  >
                     <KeyRound className="h-4 w-4 mr-2" />
                     Security
                   </Button>
-                  <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground">
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-start font-medium ${activeTab === 'personal' ? 'text-primary bg-primary/10 hover:bg-primary/20 hover:text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                    onClick={() => setActiveTab('personal')}
+                  >
                     <User className="h-4 w-4 mr-2" />
                     Personal Info
                   </Button>
@@ -168,59 +218,102 @@ const Profile = () => {
 
               {/* Main Settings Content */}
               <div className="md:col-span-2 space-y-6">
-                <Card className="border-border/50 bg-card/60 backdrop-blur-md shadow-lg">
-                  <CardHeader>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <Shield className="h-5 w-5 text-primary" />
+                {activeTab === 'security' ? (
+                  <Card className="border-border/50 bg-card/60 backdrop-blur-md shadow-lg">
+                    <CardHeader>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <Shield className="h-5 w-5 text-primary" />
+                        </div>
+                        <CardTitle>Password & Security</CardTitle>
                       </div>
-                      <CardTitle>Password & Security</CardTitle>
-                    </div>
-                    <CardDescription>
-                      Update your password to keep your account secure.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground/80">Current Password</label>
-                      <Input
-                        type="password"
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        className="bg-secondary/50 border-input"
-                      />
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <CardDescription>
+                        Update your password to keep your account secure.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground/80">New Password</label>
+                        <label className="text-sm font-medium text-foreground/80">Current Password</label>
                         <Input
                           type="password"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          className="bg-secondary/50 border-input"
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-foreground/80">New Password</label>
+                          <Input
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="bg-secondary/50 border-input"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-foreground/80">Confirm New Password</label>
+                          <Input
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="bg-secondary/50 border-input"
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-end pt-4 border-t border-border/10">
+                      <Button onClick={handleChangePassword} disabled={loading} className="bg-primary hover:bg-primary/90 min-w-[140px]">
+                        {loading ? "Updating..." : (
+                          <>
+                            <Check className="h-4 w-4 mr-2" /> Update Password
+                          </>
+                        )}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ) : (
+                  <Card className="border-border/50 bg-card/60 backdrop-blur-md shadow-lg">
+                    <CardHeader>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <User className="h-5 w-5 text-primary" />
+                        </div>
+                        <CardTitle>Personal Information</CardTitle>
+                      </div>
+                      <CardDescription>
+                        Update your personal details.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground/80">Username</label>
+                        <Input
+                          value={editUsername}
+                          onChange={(e) => setEditUsername(e.target.value)}
                           className="bg-secondary/50 border-input"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground/80">Confirm New Password</label>
+                        <label className="text-sm font-medium text-foreground/80">Email</label>
                         <Input
-                          type="password"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
                           className="bg-secondary/50 border-input"
                         />
                       </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex justify-end pt-4 border-t border-border/10">
-                    <Button onClick={handleChangePassword} disabled={loading} className="bg-primary hover:bg-primary/90 min-w-[140px]">
-                      {loading ? "Updating..." : (
-                        <>
-                          <Check className="h-4 w-4 mr-2" /> Update Password
-                        </>
-                      )}
-                    </Button>
-                  </CardFooter>
-                </Card>
+                    </CardContent>
+                    <CardFooter className="flex justify-end pt-4 border-t border-border/10">
+                      <Button onClick={handleUpdateProfile} disabled={loading} className="bg-primary hover:bg-primary/90 min-w-[140px]">
+                        {loading ? "Saving..." : (
+                          <>
+                            <Check className="h-4 w-4 mr-2" /> Save Changes
+                          </>
+                        )}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                )}
               </div>
             </div>
 

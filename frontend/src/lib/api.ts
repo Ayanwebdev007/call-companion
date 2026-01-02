@@ -188,3 +188,8 @@ export const resetPassword = async (token: string, password: string): Promise<{ 
   const response = await axios.post(`${API_BASE_URL}/api/auth/reset-password/${token}`, { password });
   return response.data;
 };
+
+export const updateProfile = async (username: string, email: string): Promise<{ message: string, user: { id: string, username: string, email: string } }> => {
+  const response = await axios.put(`${API_BASE_URL}/api/auth/update-profile`, { username, email });
+  return response.data;
+};
