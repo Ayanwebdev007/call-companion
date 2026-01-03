@@ -39,13 +39,6 @@ app.use(cors({
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      // The provided snippet for the 'else' block seems to be from a different context
-      // and would cause a syntax error or incorrect behavior for CORS.
-      // Assuming the intent was to keep the original CORS error message,
-      // or if the user intended to add a specific error message for CORS,
-      // it needs to be structured correctly for the 'callback' function.
-      // For now, I'm preserving the original CORS error message structure
-      // as the provided snippet is not syntactically valid for this context.
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -62,7 +55,16 @@ app.use('/api/customers', fileUpload({
   debug: false // Turn off debug to reduce logs
 }));
 
+// Global request logger for debugging
+app.use((req, res, next) => {
+  if (req.url.includes('meta') || req.url.includes('health')) {
+    console.log(`Incoming Request: ${req.method} ${req.url}`);
+  }
+  next();
+});
+
 // Routes
+app.use('/api/meta', metaRoutes); // Moved up to catch it early
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/spreadsheets', spreadsheetRoutes);
@@ -70,7 +72,6 @@ app.use('/api', shareRoutes);
 app.use('/api', posterRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/googlesheets', googleSheetsRoutes);
-app.use('/api/meta', metaRoutes);
 
 // Test DELETE route
 app.delete('/api/test-delete', (req, res) => {
