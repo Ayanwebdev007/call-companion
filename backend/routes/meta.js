@@ -2,6 +2,7 @@ import express from 'express';
 import metaService from '../services/metaService.js';
 import Customer from '../models/Customer.js';
 import User from '../models/User.js';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -54,9 +55,25 @@ router.post('/webhook', async (req, res) => {
                         const user = users[0];
                         const leadDetails = await metaService.getLeadDetails(leadId, user.settings.metaPageAccessToken);
 
+                        // Ensure there's a spreadsheet for Meta leads
+                        let spreadsheet = await mongoose.model('Spreadsheet').findOne({
+                            user_id: user._id,
+                            name: 'Meta Ads Leads'
+                        });
+
+                        if (!spreadsheet) {
+                            spreadsheet = new (mongoose.model('Spreadsheet'))({
+                                user_id: user._id,
+                                name: 'Meta Ads Leads',
+                                description: 'Leads automatically imported from Meta Ads'
+                            });
+                            await spreadsheet.save();
+                        }
+
                         // Create new customer from lead
                         const customer = new Customer({
                             user_id: user._id,
+                            spreadsheet_id: spreadsheet._id, // Set the spreadsheet ID
                             customer_name: leadDetails.customerName || 'Meta Lead',
                             company_name: leadDetails.companyName || 'Meta Ads',
                             phone_number: leadDetails.phoneNumber || 'N/A',
