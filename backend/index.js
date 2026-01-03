@@ -63,14 +63,23 @@ app.use('/api/customers', fileUpload({
 }));
 
 // Routes
-app.get('/api/webhook-test', (req, res) => {
-  console.log('--- DIRECT WEBHOOK TEST HIT ---');
-  console.log('Query:', JSON.stringify(req.query, null, 2));
+// Consolidated Meta Webhook Verification (Directly in index.js to avoid routing issues)
+app.get('/api/meta/webhook', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
-  res.status(200).send(challenge || 'Direct test ok');
+  const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
+
+  console.log('--- META WEBHOOK VERIFICATION ---');
+  console.log('Token Matched:', token === verifyToken);
+
+  if (mode === 'subscribe' && token === verifyToken) {
+    return res.status(200).send(challenge);
+  }
+  res.status(403).send('Verification failed');
 });
 
-app.use('/api/meta', metaRoutes); // Moved up to catch it early
+// Other Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/spreadsheets', spreadsheetRoutes);
@@ -78,6 +87,7 @@ app.use('/api', shareRoutes);
 app.use('/api', posterRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/googlesheets', googleSheetsRoutes);
+app.use('/api/meta', metaRoutes); // Keep for the POST handler
 
 // Test DELETE route
 app.delete('/api/test-delete', (req, res) => {
