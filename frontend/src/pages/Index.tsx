@@ -29,9 +29,14 @@ import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { SpreadsheetWhatsAppDialog } from "@/components/SpreadsheetWhatsAppDialog";
+
 const Index = () => {
   const { id: spreadsheetId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  // State for WhatsApp Dialog
+  const [selectedWhatsAppCustomer, setSelectedWhatsAppCustomer] = useState<Customer | null>(null);
+  const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
 
   // Redirect if no valid spreadsheetId
   useEffect(() => {
@@ -934,6 +939,10 @@ const Index = () => {
                       setRowHeights={setRowHeights}
                       focusedCell={focusedCell}
                       setFocusedCell={setFocusedCell}
+                      onWhatsAppClick={(c) => {
+                        setSelectedWhatsAppCustomer(c);
+                        setIsWhatsAppDialogOpen(true);
+                      }}
                     />
 
                     {/* Drop zone after last row */}
@@ -973,6 +982,11 @@ const Index = () => {
           </ResizableTableBody>
         </ResizableTable>
       </div >
+      <SpreadsheetWhatsAppDialog
+        customer={selectedWhatsAppCustomer}
+        isOpen={isWhatsAppDialogOpen}
+        onClose={() => setIsWhatsAppDialogOpen(false)}
+      />
     </div >
   );
 };
@@ -997,7 +1011,8 @@ function SpreadsheetRow({
   rowHeights,
   setRowHeights,
   focusedCell,
-  setFocusedCell
+  setFocusedCell,
+  onWhatsAppClick
 }: {
   customer: Customer;
   index: number;
@@ -1019,6 +1034,7 @@ function SpreadsheetRow({
   setRowHeights: React.Dispatch<React.SetStateAction<Record<string, number>>>;
   focusedCell: string | null;
   setFocusedCell: React.Dispatch<React.SetStateAction<string | null>>;
+  onWhatsAppClick: (customer: Customer) => void;
 }) {
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
@@ -1243,11 +1259,7 @@ function SpreadsheetRow({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              const phoneNumber = customer.phone_number.replace(/[^0-9]/g, '');
-              const whatsappUrl = `https://wa.me/${phoneNumber}`;
-              window.open(whatsappUrl, '_blank');
-            }}
+            onClick={() => onWhatsAppClick(customer)}
             className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
           >
             <MessageCircle className="h-3 w-3" />

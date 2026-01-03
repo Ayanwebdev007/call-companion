@@ -8,13 +8,25 @@ import { api } from '../lib/api';
 interface WhatsAppManagerProps {
     onSend: (message: string) => void;
     isSending: boolean;
+    value?: string;
+    onChange?: (value: string) => void;
 }
 
-const WhatsAppManager: React.FC<WhatsAppManagerProps> = ({ onSend, isSending }) => {
+const WhatsAppManager: React.FC<WhatsAppManagerProps> = ({ onSend, isSending, value, onChange }) => {
     const [status, setStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
     const [qr, setQr] = useState<string | null>(null);
-    const [message, setMessage] = useState("");
+    const [internalMessage, setInternalMessage] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+
+    // Use external value if provided, otherwise internal state
+    const message = value !== undefined ? value : internalMessage;
+    const handleMessageChange = (newValue: string) => {
+        if (onChange) {
+            onChange(newValue);
+        } else {
+            setInternalMessage(newValue);
+        }
+    };
 
     const checkStatus = async () => {
         try {
@@ -61,7 +73,7 @@ const WhatsAppManager: React.FC<WhatsAppManagerProps> = ({ onSend, isSending }) 
                         className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         placeholder="Hello! Here is your generated poster..."
                         value={message}
-                        onChange={(e) => setMessage(e.target.value)}
+                        onChange={(e) => handleMessageChange(e.target.value)}
                     />
                 </div>
 
