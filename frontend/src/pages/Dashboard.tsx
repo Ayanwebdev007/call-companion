@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchSpreadsheets, fetchSharedSpreadsheets, createSpreadsheet, deleteSpreadsheet, shareSpreadsheet, Spreadsheet } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft } from "lucide-react";
+import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft, Download } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import GoogleSheetsDialog from "@/components/GoogleSheetsDialog";
 
 const Dashboard = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -18,8 +19,10 @@ const Dashboard = () => {
   const [selectedSpreadsheetId, setSelectedSpreadsheetId] = useState("");
   const [shareUsername, setShareUsername] = useState("");
   const [sharePermission, setSharePermission] = useState<"read-only" | "read-write">("read-only");
-  const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
+const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
   const [newSpreadsheetDescription, setNewSpreadsheetDescription] = useState("");
+  const [isGoogleSheetsDialogOpen, setIsGoogleSheetsDialogOpen] = useState(false);
+  const [selectedSpreadsheetForImport, setSelectedSpreadsheetForImport] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
@@ -417,17 +420,30 @@ const Dashboard = () => {
                           >
                             <Share2 className="h-3.5 w-3.5" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 hover:bg-destructive/20 hover:text-destructive rounded-full transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteSpreadsheet(spreadsheet.id, spreadsheet.name);
-                            }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+<Button
+                             variant="ghost"
+                             size="icon"
+                             className="h-7 w-7 hover:bg-green-100 dark:hover:bg-green-900 hover:text-green-600 dark:hover:text-green-400 rounded-full transition-colors"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               setSelectedSpreadsheetForImport(spreadsheet.id);
+                               setIsGoogleSheetsDialogOpen(true);
+                             }}
+                             title="Import from Google Sheets"
+                           >
+                             <Download className="h-3.5 w-3.5" />
+                           </Button>
+                           <Button
+                             variant="ghost"
+                             size="icon"
+                             className="h-7 w-7 hover:bg-destructive/20 hover:text-destructive rounded-full transition-colors"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               handleDeleteSpreadsheet(spreadsheet.id, spreadsheet.name);
+                             }}
+                           >
+                             <Trash2 className="h-3.5 w-3.5" />
+                           </Button>
                         </>
                       )}
                       <span className="ml-2 group-hover:translate-x-1 transition-transform duration-300 text-primary group-hover:text-primary-foreground font-medium flex items-center gap-0.5">
@@ -440,7 +456,18 @@ const Dashboard = () => {
             ))}
           </div>
         )}
-      </main>
+</main>
+
+      {/* Google Sheets Import Dialog */}
+      <GoogleSheetsDialog
+        open={isGoogleSheetsDialogOpen}
+        onOpenChange={setIsGoogleSheetsDialogOpen}
+        spreadsheetId={selectedSpreadsheetForImport}
+        onImportComplete={() => {
+          queryClient.invalidateQueries({ queryKey: ["spreadsheets"] });
+          toast({ title: "Data imported successfully!" });
+        }}
+      />
     </div>
   );
 };

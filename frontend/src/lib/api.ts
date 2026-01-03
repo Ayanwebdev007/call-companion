@@ -187,6 +187,33 @@ export const updateProfile = async (username: string, email: string): Promise<{ 
   return response.data;
 };
 
+// Google Sheets API functions
+export const validateGoogleSheet = async (sheetUrl: string): Promise<{ valid: boolean; error?: string }> => {
+  const response = await api.post(`${API_BASE_URL}/api/googlesheets/validate`, { sheetUrl });
+  return response.data;
+};
+
+export const fetchGoogleSheetData = async (sheetUrl: string): Promise<{
+  spreadsheetId: string;
+  sheetName: string;
+  headers: string[];
+  data: string[][];
+  totalRows: number;
+}> => {
+  const response = await api.post(`${API_BASE_URL}/api/googlesheets/fetch`, { sheetUrl });
+  return response.data;
+};
+
+export const importFromGoogleSheet = async (data: {
+  spreadsheetId: string;
+  sheetUrl: string;
+  columnMapping: Record<string, string>;
+  sheetData: any;
+}): Promise<{ success: boolean; imported: number; message: string }> => {
+  const response = await api.post(`${API_BASE_URL}/api/googlesheets/import`, data);
+  return response.data;
+};
+
 // Create axios instance with base URL
 export const api = axios.create({
   baseURL: API_BASE_URL
