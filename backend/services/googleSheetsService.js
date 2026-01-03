@@ -24,7 +24,7 @@ class GoogleSheetsService {
     }
   }
 
-  async getSheetData(sheetUrl, selectedSheetName = null) {
+  async getSheetData(sheetUrl, selectedSheetName = null, range = null) {
     if (!this.sheets) {
       throw new Error('Google Sheets API not initialized. Check your GOOGLE_API_KEY.');
     }
@@ -49,25 +49,33 @@ class GoogleSheetsService {
         sheetName = firstSheet.properties.title;
       }
 
-      // Get the first 100 rows to analyze headers and data
+      // Fetch headers first (always from Row 1)
+      const headerResponse = await this.sheets.spreadsheets.values.get({
+        spreadsheetId,
+        range: `${sheetName}!A1:Z1`,
+        valueRenderOption: 'UNFORMATTED_VALUE'
+      });
+      const headers = headerResponse.data.values?.[0] || [];
+
+      // Determine the data range
+      // If range is provided (e.g. "A10:Z50"), use it. Otherwise default to A2:Z500 for preview
+      const dataRange = range || `${sheetName}!A2:Z500`;
+
+      // Get the data
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: `${sheetName}!A1:Z100`,
+        range: dataRange,
         valueRenderOption: 'UNFORMATTED_VALUE'
       });
 
       const values = response.data.values || [];
 
-      if (values.length === 0) {
-        throw new Error('No data found in the sheet');
-      }
-
       return {
         spreadsheetId,
         sheetName,
-        headers: values[0] || [],
-        data: values.slice(1), // All rows except headers
-        totalRows: values.length - 1
+        headers,
+        data: values,
+        totalRows: values.length
       };
 
     } catch (error) {
@@ -110,13 +118,16 @@ class GoogleSheetsService {
       });
 
       const sheets = response.data.sheets || [];
-      const sheetNames = sheets.map(s => s.properties.title);
+      const sheetDetails = sheets.map(s => ({
+        name: s.properties.title,
+        rowCount: s.properties.gridProperties.rowCount
+      }));
       const title = response.data.properties.title;
 
       return {
         valid: true,
         title,
-        sheetNames
+        sheets: sheetDetails
       };
     } catch (error) {
       return {

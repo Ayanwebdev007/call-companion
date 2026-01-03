@@ -20,6 +20,11 @@ interface GoogleSheetsDialogProps {
   onImportComplete?: () => void;
 }
 
+interface Sheet {
+  name: string;
+  rowCount: number;
+}
+
 interface SheetData {
   spreadsheetId: string;
   sheetName: string;
@@ -45,10 +50,16 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
   const [isValidating, setIsValidating] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [availableSheets, setAvailableSheets] = useState<string[]>([]);
+  const [availableSheets, setAvailableSheets] = useState<Sheet[]>([]);
   const [selectedSheetName, setSelectedSheetName] = useState("");
   const [spreadsheetTitle, setSpreadsheetTitle] = useState("");
   const [sheetData, setSheetData] = useState<SheetData | null>(null);
+
+  // Row range selection
+  const [importMode, setImportMode] = useState<'all' | 'range'>('all');
+  const [startRow, setStartRow] = useState<string>("2");
+  const [endRow, setEndRow] = useState<string>("100");
+  const [totalRowsInSheet, setTotalRowsInSheet] = useState<number>(0);
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({
     customerName: '',
     companyName: '',
@@ -81,15 +92,19 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
 
       if (response.data.valid) {
         setSpreadsheetTitle(response.data.title || "Spreadsheet");
-        setAvailableSheets(response.data.sheetNames || []);
+        const sheets = response.data.sheets || [];
+        setAvailableSheets(sheets);
 
-        if (response.data.sheetNames && response.data.sheetNames.length > 1) {
-          toast({ title: `Found ${response.data.sheetNames.length} sheets in ${response.data.title}` });
+        if (sheets.length > 1) {
+          toast({ title: `Found ${sheets.length} sheets in ${response.data.title}` });
           setStep('sheets');
         } else {
           toast({ title: "Sheet access validated successfully!" });
-          const firstSheet = response.data.sheetNames?.[0] || "";
+          const firstSheet = sheets[0]?.name || "";
+          const firstSheetRows = sheets[0]?.rowCount || 0;
           setSelectedSheetName(firstSheet);
+          setTotalRowsInSheet(firstSheetRows);
+          setEndRow(Math.min(firstSheetRows, 100).toString());
           await fetchSheetData(firstSheet);
         }
       } else {
@@ -183,7 +198,12 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
         spreadsheetId,
         sheetUrl,
         columnMapping,
-        sheetData
+        sheetData: importMode === 'all' ? sheetData : null,
+        importRange: importMode === 'range' ? {
+          startRow: parseInt(startRow),
+          endRow: parseInt(endRow),
+          sheetName: selectedSheetName
+        } : null
       });
 
       toast({
@@ -299,18 +319,25 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4">
-                  {availableSheets.map((name) => (
+                  {availableSheets.map((sheet) => (
                     <Button
-                      key={name}
-                      variant={selectedSheetName === name ? "default" : "outline"}
+                      key={sheet.name}
+                      variant={selectedSheetName === sheet.name ? "default" : "outline"}
                       className={cn(
                         "h-auto py-4 px-6 justify-start text-left font-medium transition-all hover:scale-[1.02]",
-                        selectedSheetName === name ? "ring-2 ring-primary ring-offset-2" : ""
+                        selectedSheetName === sheet.name ? "ring-2 ring-primary ring-offset-2" : ""
                       )}
-                      onClick={() => setSelectedSheetName(name)}
+                      onClick={() => {
+                        setSelectedSheetName(sheet.name);
+                        setTotalRowsInSheet(sheet.rowCount);
+                        setEndRow(Math.min(sheet.rowCount, 100).toString());
+                      }}
                     >
                       <FileSpreadsheet className="h-5 w-5 mr-3 shrink-0 opacity-70" />
-                      <span className="truncate">{name}</span>
+                      <div className="flex flex-col">
+                        <span className="truncate">{sheet.name}</span>
+                        <span className="text-[10px] opacity-60 font-normal">{sheet.rowCount} rows</span>
+                      </div>
                     </Button>
                   ))}
                 </div>
@@ -363,6 +390,60 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
                       </Badge>
                     ))}
                   </div>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold">Rows to Import</Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant={importMode === 'all' ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setImportMode('all')}
+                      >
+                        All Rows
+                      </Button>
+                      <Button
+                        variant={importMode === 'range' ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setImportMode('range')}
+                      >
+                        Custom Range
+                      </Button>
+                    </div>
+                  </div>
+
+                  {importMode === 'range' && (
+                    <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div>
+                        <Label htmlFor="startRow" className="text-xs text-muted-foreground">Start Row</Label>
+                        <Input
+                          id="startRow"
+                          type="number"
+                          min="2"
+                          max={totalRowsInSheet}
+                          value={startRow}
+                          onChange={(e) => setStartRow(e.target.value)}
+                          className="h-8"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="endRow" className="text-xs text-muted-foreground">End Row</Label>
+                        <Input
+                          id="endRow"
+                          type="number"
+                          min={startRow}
+                          max={totalRowsInSheet}
+                          value={endRow}
+                          onChange={(e) => setEndRow(e.target.value)}
+                          className="h-8"
+                        />
+                      </div>
+                      <p className="col-span-2 text-[10px] text-muted-foreground italic">
+                        Note: Headers are assumed to be on Row 1. Start Row should be at least 2.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <Separator className="my-4" />
@@ -427,7 +508,7 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
           </div>
         )}
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 };
 

@@ -26,13 +26,18 @@ router.post('/validate', auth, async (req, res) => {
 // Get sheet data and headers
 router.post('/fetch', auth, async (req, res) => {
   try {
-    const { sheetUrl, sheetName } = req.body;
+    const { sheetUrl, sheetName, startRow, endRow } = req.body;
 
     if (!sheetUrl) {
       return res.status(400).json({ message: 'Sheet URL is required' });
     }
 
-    const sheetData = await googleSheetsService.getSheetData(sheetUrl, sheetName);
+    let range = null;
+    if (startRow && endRow) {
+      range = `${sheetName}!A${startRow}:Z${endRow}`;
+    }
+
+    const sheetData = await googleSheetsService.getSheetData(sheetUrl, sheetName, range);
     res.json(sheetData);
   } catch (error) {
     console.error('Error fetching Google Sheets:', error);
@@ -47,10 +52,11 @@ router.post('/import', auth, async (req, res) => {
       spreadsheetId,
       sheetUrl,
       columnMapping,
-      sheetData
+      sheetData,
+      importRange // { startRow, endRow, sheetName }
     } = req.body;
 
-    if (!spreadsheetId || !columnMapping || !sheetData) {
+    if (!spreadsheetId || !columnMapping || (!sheetData && !importRange)) {
       return res.status(400).json({ message: 'Missing required import data' });
     }
 
@@ -81,10 +87,25 @@ router.post('/import', auth, async (req, res) => {
       user_id: req.user.id
     });
 
+    // If a specific range is requested, fetch fresh data on the backend to avoid payload limits
+    let finalData = sheetData?.data;
+    let finalHeaders = sheetData?.headers;
+
+    if (importRange && importRange.startRow && importRange.endRow) {
+      const grange = `${importRange.sheetName}!A${importRange.startRow}:Z${importRange.endRow}`;
+      const freshData = await googleSheetsService.getSheetData(sheetUrl, importRange.sheetName, grange);
+      finalData = freshData.data;
+      finalHeaders = freshData.headers;
+    }
+
+    if (!finalData || !finalHeaders) {
+      return res.status(400).json({ message: 'No data source found for import' });
+    }
+
     // Map and import customers
     const customers = [];
-    const headers = sheetData.headers;
-    const data = sheetData.data;
+    const headers = finalHeaders;
+    const data = finalData;
 
     for (const row of data) {
       if (row.length === 0 || row.every(cell => !cell)) continue; // Skip empty rows
