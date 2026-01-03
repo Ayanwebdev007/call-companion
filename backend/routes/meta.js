@@ -14,13 +14,17 @@ router.get('/webhook', (req, res) => {
 
     const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
 
-    if (mode && token) {
-        if (mode === 'subscribe' && token === verifyToken) {
-            console.log('WEBHOOK_VERIFIED');
-            res.status(200).send(challenge);
-        } else {
-            res.sendStatus(403);
-        }
+    console.log('--- WEBHOOK VERIFICATION ATTEMPT ---');
+    console.log('Mode:', mode);
+    console.log('Token Received:', token);
+    console.log('Expected Token (from env):', verifyToken ? 'SET' : 'NOT SET');
+
+    if (mode === 'subscribe' && token === verifyToken) {
+        console.log('WEBHOOK_VERIFIED');
+        res.status(200).send(challenge);
+    } else {
+        console.warn('WEBHOOK_VERIFICATION_FAILED');
+        res.status(mode && token ? 403 : 400).send('Verification failed');
     }
 });
 
