@@ -17,12 +17,6 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// GLOBAL REQUEST LOGGER - MUST BE AT TOP
-app.use((req, res, next) => {
-  console.log(`[ACCESS LOG] ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
-  console.log('Headers:', JSON.stringify(req.headers, null, 2));
-  next();
-});
 
 // Debug logging
 console.log('Starting server...');
@@ -70,8 +64,6 @@ app.get('/api/meta/webhook', (req, res) => {
   const challenge = req.query['hub.challenge'];
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
 
-  console.log('--- META WEBHOOK VERIFICATION ---');
-  console.log('Token Matched:', token === verifyToken);
 
   if (mode === 'subscribe' && token === verifyToken) {
     return res.status(200).send(challenge);
