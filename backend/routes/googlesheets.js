@@ -10,7 +10,7 @@ const router = express.Router();
 router.post('/validate', auth, async (req, res) => {
   try {
     const { sheetUrl } = req.body;
-    
+
     if (!sheetUrl) {
       return res.status(400).json({ message: 'Sheet URL is required' });
     }
@@ -27,7 +27,7 @@ router.post('/validate', auth, async (req, res) => {
 router.post('/fetch', auth, async (req, res) => {
   try {
     const { sheetUrl } = req.body;
-    
+
     if (!sheetUrl) {
       return res.status(400).json({ message: 'Sheet URL is required' });
     }
@@ -43,11 +43,11 @@ router.post('/fetch', auth, async (req, res) => {
 // Import mapped data to customers
 router.post('/import', auth, async (req, res) => {
   try {
-    const { 
-      spreadsheetId, 
-      sheetUrl, 
-      columnMapping, 
-      sheetData 
+    const {
+      spreadsheetId,
+      sheetUrl,
+      columnMapping,
+      sheetData
     } = req.body;
 
     if (!spreadsheetId || !columnMapping || !sheetData) {
@@ -76,9 +76,9 @@ router.post('/import', auth, async (req, res) => {
     }
 
     // Clear existing customers for this spreadsheet (optional - you might want to merge instead)
-    await Customer.deleteMany({ 
+    await Customer.deleteMany({
       spreadsheet_id: spreadsheetId,
-      user_id: req.user.id 
+      user_id: req.user.id
     });
 
     // Map and import customers
@@ -87,7 +87,7 @@ router.post('/import', auth, async (req, res) => {
     const data = sheetData.data;
 
     for (const row of data) {
-      if (row.length === 0) continue; // Skip empty rows
+      if (row.length === 0 || row.every(cell => !cell)) continue; // Skip empty rows
 
       const customer = {
         user_id: req.user.id,
@@ -102,38 +102,50 @@ router.post('/import', auth, async (req, res) => {
         position: customers.length // Maintain order from sheet
       };
 
-      // Only add if we have at least a customer name or phone number
+      // Ensure required fields for the Customer model have at least some value
+      // Even if mapped, the row might have empty values in these columns
       if (customer.customer_name || customer.phone_number) {
+        // Fallback for company_name which is required but might be missing in some rows
+        if (!customer.company_name) customer.company_name = 'N/A';
+        // Fallback for name/phone if one is present but other is missing
+        if (!customer.customer_name) customer.customer_name = 'Unknown';
+        if (!customer.phone_number) customer.phone_number = 'N/A';
+
         customers.push(customer);
       }
     }
 
     // Bulk insert customers
     if (customers.length > 0) {
-      await Customer.insertMany(customers);
+      try {
+        await Customer.insertMany(customers);
+      } catch (dbError) {
+        console.error('Database error during Google Sheets import:', dbError);
+        throw new Error(`Database validation failed: ${dbError.message}`);
+      }
     }
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       imported: customers.length,
       message: `Successfully imported ${customers.length} customers`
     });
 
   } catch (error) {
     console.error('Error importing Google Sheets data:', error);
-    res.status(500).json({ message: 'Failed to import data' });
+    res.status(500).json({ message: error.message || 'Failed to import data' });
   }
 });
 
 // Helper method to get mapped value from row
 function getMappedValue(row, headers, mapping) {
-  if (!mapping || mapping === '') return '';
-  
-  const headerIndex = headers.findIndex(header => 
+  if (!mapping || mapping === '' || mapping === 'no-import') return '';
+
+  const headerIndex = headers.findIndex(header =>
     header.toLowerCase() === mapping.toLowerCase()
   );
-  
-  return headerIndex !== -1 && headerIndex < row.length 
+
+  return headerIndex !== -1 && headerIndex < row.length
     ? row[headerIndex]?.toString().trim() || ''
     : '';
 }
