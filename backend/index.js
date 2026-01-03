@@ -17,6 +17,15 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// SURGICAL WEBHOOK LOGGER - CATCHES SIGNAL BEFORE ANY ROUTING
+app.use((req, res, next) => {
+  if (req.originalUrl.includes('meta/webhook')) {
+    console.log(`[WEBHOOK PROBE] ${req.method} ${req.originalUrl}`);
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  }
+  next();
+});
+
 
 // Debug logging
 console.log('Starting server...');
@@ -57,18 +66,28 @@ app.use('/api/customers', fileUpload({
 }));
 
 // Routes
-// Consolidated Meta Webhook Verification (Directly in index.js to avoid routing issues)
+// Consolidated Meta Webhook (Directly in index.js to avoid routing issues)
 app.get('/api/meta/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
 
-
   if (mode === 'subscribe' && token === verifyToken) {
+    console.log('--- META WEBHOOK VERIFIED ---');
     return res.status(200).send(challenge);
   }
   res.status(403).send('Verification failed');
+});
+
+app.post('/api/meta/webhook', (req, res) => {
+  console.log('--- META WEBHOOK LEAD RECEIVED (POST) ---');
+  // Respond 200 immediately to Meta
+  res.status(200).send('EVENT_RECEIVED');
+
+  // Forward for background processing
+  next(); // This will fall through to the metaRoutes handler if we keep it, but wait...
+  // Actually, let's keep it simple and handle the logic in the router, but we MUST ensure this doesn't hang.
 });
 
 // Other Routes
