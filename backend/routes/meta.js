@@ -32,7 +32,13 @@ router.get('/webhook', (req, res) => {
 
 // Real-time Lead Reception
 router.post('/webhook', async (req, res) => {
+    console.log('--- NEW WEBHOOK POST RECEIVED ---');
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+
     const body = req.body;
+
+    // Acknowledge the event immediately to Meta to prevent timeouts
+    res.status(200).send('EVENT_RECEIVED');
 
     if (body.object === 'page') {
         for (const entry of body.entry) {
@@ -50,9 +56,10 @@ router.post('/webhook', async (req, res) => {
                         // In a real multi-tenant app, you'd map Page IDs to specific User IDs.
 
                         const users = await User.find({ 'settings.metaPageAccessToken': { $exists: true, $ne: '' } });
+                        console.log(`Found ${users.length} users with Meta tokens.`);
 
                         if (users.length === 0) {
-                            console.warn('No users found with Meta Access Token configured.');
+                            console.warn('WEBHOOK_ERROR: No users found with Meta Access Token configured.');
                             continue;
                         }
 
@@ -96,9 +103,8 @@ router.post('/webhook', async (req, res) => {
                 }
             }
         }
-        res.status(200).send('EVENT_RECEIVED');
     } else {
-        res.sendStatus(404);
+        console.warn(`WEBHOOK_ERROR: Received object type ${body.object}, expected 'page'`);
     }
 });
 
