@@ -43,12 +43,12 @@ export const fetchCustomers = async (spreadsheetId?: string, q?: string): Promis
   if (spreadsheetId) params.set('spreadsheetId', spreadsheetId);
   if (q && q.trim().length > 0) params.set('q', q.trim());
   const url = params.toString().length > 0 ? `${API_URL}?${params.toString()}` : API_URL;
-  const response = await axios.get(url);
+  const response = await api.get(url);
   return response.data;
 };
 
 export const addCustomer = async (customer: Omit<Customer, 'id'> & { spreadsheet_id: string }): Promise<Customer> => {
-  const response = await axios.post(API_URL, customer);
+  const response = await api.post(API_URL, customer);
   return response.data;
 };
 
@@ -64,7 +64,7 @@ export const bulkImportCustomers = async (file: File, spreadsheetId: string): Pr
   formData.append('file', file);
   formData.append('spreadsheetId', spreadsheetId);
 
-  const response = await axios.post<BulkImportResponse>(`${API_URL}/bulk-import`, formData, {
+  const response = await api.post<BulkImportResponse>(`${API_URL}/bulk-import`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -73,36 +73,36 @@ export const bulkImportCustomers = async (file: File, spreadsheetId: string): Pr
 };
 
 export const downloadTemplate = async (): Promise<Blob> => {
-  const response = await axios.get(`${API_URL}/download-template`, {
+  const response = await api.get(`${API_URL}/download-template`, {
     responseType: 'blob',
   });
   return response.data;
 };
 
 export const exportCustomers = async (spreadsheetId: string): Promise<Blob> => {
-  const response = await axios.get(`${API_URL}/export/${spreadsheetId}`, {
+  const response = await api.get(`${API_URL}/export/${spreadsheetId}`, {
     responseType: 'blob',
   });
   return response.data;
 };
 
 export const updateCustomer = async (id: string, updates: Partial<Customer>): Promise<Customer> => {
-  const response = await axios.put(`${API_URL}/${id}`, updates);
+  const response = await api.put(`${API_URL}/${id}`, updates);
   return response.data;
 };
 
 export const deleteCustomer = async (id: string): Promise<void> => {
-  await axios.delete(`${API_URL}/${id}`);
+  await api.delete(`${API_URL}/${id}`);
 };
 
 export const bulkDeleteCustomers = async (ids: string[]): Promise<{ deletedCount: number }> => {
   // Use axios.post instead of axios.delete with data to avoid potential issues
-  const response = await axios.post(`${API_URL}/bulk-delete`, { ids });
+  const response = await api.post(`${API_URL}/bulk-delete`, { ids });
   return response.data;
 };
 
 export const reorderCustomers = async (customerIds: string[]): Promise<void> => {
-  await axios.post(`${API_URL}/reorder`, { customerIds });
+  await api.post(`${API_URL}/reorder`, { customerIds });
 };
 
 export interface SharedUser {
@@ -113,12 +113,12 @@ export interface SharedUser {
 
 // Spreadsheet API functions
 export const fetchSpreadsheets = async (): Promise<Spreadsheet[]> => {
-  const response = await axios.get(SPREADSHEETS_API_URL);
+  const response = await api.get(SPREADSHEETS_API_URL);
   return response.data;
 };
 
 export const fetchSpreadsheet = async (id: string): Promise<Spreadsheet> => {
-  const response = await axios.get(`${SPREADSHEETS_API_URL}/${id}`);
+  const response = await api.get(`${SPREADSHEETS_API_URL}/${id}`);
   return response.data;
 };
 
@@ -126,28 +126,28 @@ export const fetchSharedSpreadsheets = async (): Promise<Spreadsheet[]> => {
   console.log('Fetching shared spreadsheets from:', `${API_BASE_URL}/api/shared-spreadsheets`);
   const token = localStorage.getItem('token');
   console.log('Token:', token);
-  const response = await axios.get(`${API_BASE_URL}/api/shared-spreadsheets`);
+  const response = await api.get(`${API_BASE_URL}/api/shared-spreadsheets`);
   console.log('Shared spreadsheets response:', response);
   return response.data;
 };
 
 export const shareSpreadsheet = async (spreadsheetId: string, username: string, permissionLevel: 'read-only' | 'read-write' = 'read-only'): Promise<unknown> => {
-  const response = await axios.post(`${SPREADSHEETS_API_URL}/${spreadsheetId}/share`, { username, permission_level: permissionLevel });
+  const response = await api.post(`${SPREADSHEETS_API_URL}/${spreadsheetId}/share`, { username, permission_level: permissionLevel });
   return response.data;
 };
 
 export const unshareSpreadsheet = async (spreadsheetId: string, username: string): Promise<unknown> => {
-  const response = await axios.delete(`${SPREADSHEETS_API_URL}/${spreadsheetId}/share/${username}`);
+  const response = await api.delete(`${SPREADSHEETS_API_URL}/${spreadsheetId}/share/${username}`);
   return response.data;
 };
 
 export const updateSharePermission = async (spreadsheetId: string, username: string, permissionLevel: 'read-only' | 'read-write'): Promise<unknown> => {
-  const response = await axios.put(`${SPREADSHEETS_API_URL}/${spreadsheetId}/share/${username}`, { permission_level: permissionLevel });
+  const response = await api.put(`${SPREADSHEETS_API_URL}/${spreadsheetId}/share/${username}`, { permission_level: permissionLevel });
   return response.data;
 };
 
 export const changePassword = async (current_password: string, new_password: string): Promise<{ message: string }> => {
-  const response = await axios.post(`${API_BASE_URL}/api/auth/change-password`, { current_password, new_password });
+  const response = await api.post(`${API_BASE_URL}/api/auth/change-password`, { current_password, new_password });
   return response.data;
 };
 
@@ -155,35 +155,35 @@ export const fetchSharedUsers = async (spreadsheetId: string): Promise<SharedUse
   if (!spreadsheetId || spreadsheetId === 'undefined' || spreadsheetId === 'null') {
     throw new Error('Valid spreadsheet ID is required');
   }
-  const response = await axios.get(`${SPREADSHEETS_API_URL}/${spreadsheetId}/shared-users`);
+  const response = await api.get(`${SPREADSHEETS_API_URL}/${spreadsheetId}/shared-users`);
   return response.data;
 };
 
 export const createSpreadsheet = async (spreadsheet: Omit<Spreadsheet, 'id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<Spreadsheet> => {
-  const response = await axios.post(SPREADSHEETS_API_URL, spreadsheet);
+  const response = await api.post(SPREADSHEETS_API_URL, spreadsheet);
   return response.data;
 };
 
 export const updateSpreadsheet = async (id: string, updates: Partial<Spreadsheet>): Promise<Spreadsheet> => {
-  const response = await axios.put(`${SPREADSHEETS_API_URL}/${id}`, updates);
+  const response = await api.put(`${SPREADSHEETS_API_URL}/${id}`, updates);
   return response.data;
 };
 
 export const deleteSpreadsheet = async (id: string): Promise<void> => {
-  await axios.delete(`${SPREADSHEETS_API_URL}/${id}`);
+  await api.delete(`${SPREADSHEETS_API_URL}/${id}`);
 };
 export const forgotPassword = async (email: string): Promise<{ message: string, devMode?: boolean }> => {
-  const response = await axios.post(`${API_BASE_URL}/api/auth/forgot-password`, { email });
+  const response = await api.post(`${API_BASE_URL}/api/auth/forgot-password`, { email });
   return response.data;
 };
 
 export const resetPassword = async (token: string, password: string): Promise<{ message: string }> => {
-  const response = await axios.post(`${API_BASE_URL}/api/auth/reset-password/${token}`, { password });
+  const response = await api.post(`${API_BASE_URL}/api/auth/reset-password/${token}`, { password });
   return response.data;
 };
 
 export const updateProfile = async (username: string, email: string): Promise<{ message: string, user: { id: string, username: string, email: string } }> => {
-  const response = await axios.put(`${API_BASE_URL}/api/auth/update-profile`, { username, email });
+  const response = await api.put(`${API_BASE_URL}/api/auth/update-profile`, { username, email });
   return response.data;
 };
 
