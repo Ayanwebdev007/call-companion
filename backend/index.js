@@ -80,15 +80,63 @@ app.get('/api/meta/webhook', (req, res) => {
   res.status(403).send('Verification failed');
 });
 
-app.post('/api/meta/webhook', (req, res, next) => {
-  console.log('--- META WEBHOOK LEAD RECEIVED (POST) ---');
+app.post('/api/meta/webhook', async (req, res) => {
+  console.log('!!! META WEBHOOK POST HIT !!!');
+  console.log('Method:', req.method);
+  console.log('URL:', req.originalUrl);
   console.log('Body:', JSON.stringify(req.body, null, 2));
 
-  // Respond 200 immediately to Meta
+  // Respond to Meta IMMEDIATELY to prevent timeout
   res.status(200).send('EVENT_RECEIVED');
 
-  // Forward for background processing
-  next();
+  // Background Processing
+  try {
+    const metaService = (await import('./services/metaService.js')).default;
+    const Customer = (await import('./models/Customer.js')).default;
+    const User = (await import('./models/User.js')).default;
+    const mongoose = (await import('mongoose')).default;
+
+    const body = req.body;
+    if (body.object === 'page') {
+      for (const entry of body.entry) {
+        for (const change of entry.changes) {
+          if (change.field === 'leadgen') {
+            const leadId = change.value.leadgen_id;
+            const pageId = change.value.page_id;
+            console.log(`[Background] Processing lead: ${leadId}`);
+
+            // Find all users with Meta tokens
+            const users = await User.find({ 'settings.metaPageAccessToken': { $exists: true, $ne: '' } });
+            if (users.length > 0) {
+              const user = users[0];
+              const leadDetails = await metaService.getLeadDetails(leadId, user.settings.metaPageAccessToken);
+
+              let spreadsheet = await mongoose.model('Spreadsheet').findOne({ user_id: user._id, name: 'Meta Ads Leads' });
+              if (!spreadsheet) {
+                spreadsheet = new (mongoose.model('Spreadsheet'))({ user_id: user._id, name: 'Meta Ads Leads', description: 'Leads from Meta Ads' });
+                await spreadsheet.save();
+              }
+
+              const customer = new Customer({
+                user_id: user._id,
+                spreadsheet_id: spreadsheet._id,
+                customer_name: leadDetails.customerName || 'Meta Lead',
+                company_name: leadDetails.companyName || 'Meta Ads',
+                phone_number: leadDetails.phoneNumber || 'N/A',
+                email: leadDetails.email || '',
+                remark: `Meta ID: ${leadId}`,
+                status: 'new'
+              });
+              await customer.save();
+              console.log(`[Background] Saved customer: ${customer._id}`);
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[Background Error] Meta Processing:', err.message);
+  }
 });
 
 // Other Routes
