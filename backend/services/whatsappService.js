@@ -36,11 +36,11 @@ async function connectToWhatsApp() {
 
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-            console.log('Connection closed due to ', lastDisconnect.error, ', reconnecting ', shouldReconnect);
             connectionStatus = 'disconnected';
             qrCodeData = null;
             if (shouldReconnect) {
-                connectToWhatsApp();
+                // Throttle reconnection to avoid log flooding
+                setTimeout(connectToWhatsApp, 10000);
             } else {
                 // Clean up auth folder if logged out
                 if (fs.existsSync(authPath)) {
