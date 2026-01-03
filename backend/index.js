@@ -80,14 +80,15 @@ app.get('/api/meta/webhook', (req, res) => {
   res.status(403).send('Verification failed');
 });
 
-app.post('/api/meta/webhook', (req, res) => {
+app.post('/api/meta/webhook', (req, res, next) => {
   console.log('--- META WEBHOOK LEAD RECEIVED (POST) ---');
+  console.log('Body:', JSON.stringify(req.body, null, 2));
+
   // Respond 200 immediately to Meta
   res.status(200).send('EVENT_RECEIVED');
 
   // Forward for background processing
-  next(); // This will fall through to the metaRoutes handler if we keep it, but wait...
-  // Actually, let's keep it simple and handle the logic in the router, but we MUST ensure this doesn't hang.
+  next();
 });
 
 // Other Routes
