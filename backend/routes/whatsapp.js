@@ -17,14 +17,17 @@ router.post('/connect', (req, res) => {
 router.post('/send', async (req, res) => {
     try {
         const { phone, message, image } = req.body;
+        console.log('[WhatsApp Route] Received request:', { phone, message, image: image ? 'present' : 'none' });
+
         if (!phone) {
             return res.status(400).json({ message: 'Phone number is required' });
         }
 
         await whatsappService.sendMessage(phone, message, image);
+        console.log('[WhatsApp Route] Message sent successfully');
         res.json({ success: true, message: 'Message sent successfully' });
     } catch (error) {
-        console.error(error);
+        console.error('[WhatsApp Route] Error:', error);
         res.status(500).json({ message: error.message || 'Failed to send message' });
     }
 });

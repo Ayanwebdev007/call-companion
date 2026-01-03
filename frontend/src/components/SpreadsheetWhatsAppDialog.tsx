@@ -59,10 +59,12 @@ export const SpreadsheetWhatsAppDialog = ({ customer, isOpen, onClose }: Spreads
         setIsSending(true);
         try {
             const phone = customer.phone_number.replace(/[^0-9]/g, '');
+            console.log('Sending WhatsApp message:', { phone, message: msg });
             await api.post('/api/whatsapp/send', {
                 phone,
                 message: msg
             });
+            console.log('WhatsApp API call successful');
             toast({ title: 'Message sent successfully!' });
             onClose();
         } catch (error) {

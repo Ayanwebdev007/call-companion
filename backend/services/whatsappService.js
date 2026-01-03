@@ -62,7 +62,10 @@ export default {
     getStatus: () => ({ status: connectionStatus, qr: qrCodeData }),
     connect: connectToWhatsApp,
     sendMessage: async (phone, text, imageBase64) => {
+        console.log('[WhatsApp Service] sendMessage called with:', { phone, text, imageBase64: imageBase64 ? 'present' : 'none' });
+
         if (!sock || connectionStatus !== 'connected') {
+            console.error('[WhatsApp Service] Not connected! Status:', connectionStatus);
             throw new Error('WhatsApp not connected');
         }
 
@@ -71,19 +74,23 @@ export default {
         if (!id.endsWith('@s.whatsapp.net')) {
             id += '@s.whatsapp.net';
         }
+        console.log('[WhatsApp Service] Formatted phone ID:', id);
 
         if (imageBase64) {
             // Convert base64 to buffer (remove prefix if present)
             const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
             const buffer = Buffer.from(base64Data, 'base64');
 
+            console.log('[WhatsApp Service] Sending image with caption');
             await sock.sendMessage(id, {
                 image: buffer,
                 caption: text
             });
         } else {
+            console.log('[WhatsApp Service] Sending text-only message:', text);
             await sock.sendMessage(id, { text });
         }
+        console.log('[WhatsApp Service] Message sent successfully');
     },
     logout: async () => {
         try {
