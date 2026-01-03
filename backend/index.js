@@ -63,6 +63,13 @@ app.use('/api/customers', fileUpload({
 }));
 
 // Routes
+app.get('/api/webhook-test', (req, res) => {
+  console.log('--- DIRECT WEBHOOK TEST HIT ---');
+  console.log('Query:', JSON.stringify(req.query, null, 2));
+  const challenge = req.query['hub.challenge'];
+  res.status(200).send(challenge || 'Direct test ok');
+});
+
 app.use('/api/meta', metaRoutes); // Moved up to catch it early
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
