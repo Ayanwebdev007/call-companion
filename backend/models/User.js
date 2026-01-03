@@ -5,7 +5,11 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   resetPasswordToken: String,
-  resetPasswordExpires: Date
+  resetPasswordExpires: Date,
+  settings: {
+    metaPageAccessToken: { type: String, default: '' },
+    metaVerifyToken: { type: String, default: '' }
+  }
 }, { timestamps: true });
 
 // Map _id to id

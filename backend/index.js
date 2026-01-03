@@ -11,6 +11,7 @@ import shareRoutes from './routes/shares.js';
 import posterRoutes from './routes/poster.js';
 import whatsappRoutes from './routes/whatsapp.js';
 import googleSheetsRoutes from './routes/googlesheets.js';
+import metaRoutes from './routes/meta.js';
 
 dotenv.config();
 const app = express();
@@ -69,6 +70,7 @@ app.use('/api', shareRoutes);
 app.use('/api', posterRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/googlesheets', googleSheetsRoutes);
+app.use('/api/meta', metaRoutes);
 
 // Test DELETE route
 app.delete('/api/test-delete', (req, res) => {

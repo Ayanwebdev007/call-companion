@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Phone, User, LayoutDashboard, LogOut, Home as HomeIcon, ArrowRight, Palette } from "lucide-react";
+import { Phone, User, LayoutDashboard, LogOut, Home as HomeIcon, ArrowRight, Palette, Webhook } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Home = () => {
@@ -88,6 +88,26 @@ const Home = () => {
                     <h3 className="text-xl font-bold text-foreground mb-2">Poster Generator</h3>
                     <Button className="w-full bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all border-0">
                       Launch Generator
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Action: Meta Ads Integration */}
+            <Card
+              className="group relative overflow-hidden transition-all hover:shadow-2xl border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-blue-600/50"
+              onClick={() => navigate("/meta-settings")}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-blue-600/10 rounded-2xl ring-1 ring-blue-600/20 shadow-lg group-hover:scale-110 transition-transform">
+                    <Webhook className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-foreground mb-2">Meta Ads</h3>
+                    <Button className="w-full bg-blue-700 text-white shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 transition-all border-0">
+                      Setup Webhook
                     </Button>
                   </div>
                 </div>

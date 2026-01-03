@@ -224,4 +224,37 @@ router.put('/update-profile', auth, async (req, res) => {
   }
 });
 
+// Get current user
+router.get('/me', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// Update user settings
+router.put('/settings', auth, async (req, res) => {
+  try {
+    const { settings } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.settings = {
+      ...user.settings,
+      ...settings
+    };
+
+    await user.save();
+    res.json({ message: 'Settings updated successfully', settings: user.settings });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
 export default router;

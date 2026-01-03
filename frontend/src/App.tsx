@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import PosterGenerator from "./pages/PosterGenerator";
+import MetaSettings from "./pages/MetaSettings";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -39,6 +40,7 @@ const App = () => (
                   <Route path="/" element={<Home />} />
                   <Route path="/calling" element={<Dashboard />} />
                   <Route path="/poster-generator" element={<PosterGenerator />} />
+                  <Route path="/meta-settings" element={<MetaSettings />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/spreadsheet/:id" element={<Index />} />
                 </Route>
