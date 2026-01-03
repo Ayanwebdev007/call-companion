@@ -30,6 +30,7 @@ import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTabl
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { SpreadsheetWhatsAppDialog } from "@/components/SpreadsheetWhatsAppDialog";
+import GoogleSheetsDialog from "@/components/GoogleSheetsDialog";
 
 const Index = () => {
   const { id: spreadsheetId } = useParams<{ id: string }>();
@@ -37,6 +38,7 @@ const Index = () => {
   // State for WhatsApp Dialog
   const [selectedWhatsAppCustomer, setSelectedWhatsAppCustomer] = useState<Customer | null>(null);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
+  const [isGoogleSheetsDialogOpen, setIsGoogleSheetsDialogOpen] = useState(false);
 
   // Redirect if no valid spreadsheetId
   useEffect(() => {
@@ -459,6 +461,14 @@ const Index = () => {
 
               <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-lg border border-border/50">
                 <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
+                <Button variant="ghost" size="sm" className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8" onClick={() => setIsGoogleSheetsDialogOpen(true)} title="Import from Google Sheets">
+                  <div className="flex items-center justify-center gap-2 w-full">
+                    <FileSpreadsheet className="h-4 w-4 flex-shrink-0 text-green-600 dark:text-green-400" />
+                    <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
+                      Google Sheets
+                    </span>
+                  </div>
+                </Button>
                 <Button variant="ghost" size="sm" className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8" onClick={async () => {
                   if (!spreadsheetId) return;
                   try {
@@ -982,10 +992,22 @@ const Index = () => {
           </ResizableTableBody>
         </ResizableTable>
       </div >
+      {/* WhatsApp Message Dialog */}
       <SpreadsheetWhatsAppDialog
-        customer={selectedWhatsAppCustomer}
         isOpen={isWhatsAppDialogOpen}
         onClose={() => setIsWhatsAppDialogOpen(false)}
+        customer={selectedWhatsAppCustomer}
+      />
+
+      {/* Google Sheets Import Dialog */}
+      <GoogleSheetsDialog
+        open={isGoogleSheetsDialogOpen}
+        onOpenChange={setIsGoogleSheetsDialogOpen}
+        spreadsheetId={spreadsheetId || ""}
+        onImportComplete={() => {
+          queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
+          toast({ title: "Data imported from Google Sheets!" });
+        }}
       />
     </div >
   );
