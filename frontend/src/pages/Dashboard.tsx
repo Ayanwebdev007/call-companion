@@ -418,9 +418,9 @@ const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
                               handleShareSpreadsheet(spreadsheet.id);
                             }}
                           >
-                            <Share2 className="h-3.5 w-3.5" />
+<Share2 className="h-3.5 w-3.5" />
                           </Button>
-<Button
+                          <Button
                              variant="ghost"
                              size="icon"
                              className="h-7 w-7 hover:bg-green-100 dark:hover:bg-green-900 hover:text-green-600 dark:hover:text-green-400 rounded-full transition-colors"
