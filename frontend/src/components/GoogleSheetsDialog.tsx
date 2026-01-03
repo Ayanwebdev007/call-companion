@@ -74,22 +74,22 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
     setIsValidating(true);
     try {
       const response = await api.post('/api/googlesheets/validate', { sheetUrl });
-      
+
       if (response.data.valid) {
         toast({ title: "Sheet access validated successfully!" });
         await fetchSheetData();
       } else {
-        toast({ 
-          title: "Cannot access sheet", 
+        toast({
+          title: "Cannot access sheet",
           description: response.data.error,
-          variant: "destructive" 
+          variant: "destructive"
         });
       }
     } catch (error: any) {
-      toast({ 
-        title: "Validation failed", 
+      toast({
+        title: "Validation failed",
         description: error.response?.data?.message || error.message,
-        variant: "destructive" 
+        variant: "destructive"
       });
     } finally {
       setIsValidating(false);
@@ -102,14 +102,14 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
       const response = await api.post('/api/googlesheets/fetch', { sheetUrl });
       setSheetData(response.data);
       setStep('mapping');
-      
+
       // Auto-map common column names
       const headers = response.data.headers;
       const autoMapping = { ...columnMapping };
-      
+
       headers.forEach(header => {
         const lowerHeader = header.toLowerCase();
-        
+
         if (lowerHeader.includes('customer') || lowerHeader.includes('name') || lowerHeader.includes('contact')) {
           if (!autoMapping.customerName) autoMapping.customerName = header;
         }
@@ -132,13 +132,13 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
           if (!autoMapping.lastCallDate) autoMapping.lastCallDate = header;
         }
       });
-      
+
       setColumnMapping(autoMapping);
     } catch (error: any) {
-      toast({ 
-        title: "Failed to fetch sheet data", 
+      toast({
+        title: "Failed to fetch sheet data",
         description: error.response?.data?.message || error.message,
-        variant: "destructive" 
+        variant: "destructive"
       });
     } finally {
       setIsFetching(false);
@@ -149,12 +149,12 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
     // Validate required mappings
     const requiredFields = ['customerName', 'companyName', 'phoneNumber'];
     const missingFields = requiredFields.filter(field => !columnMapping[field as keyof ColumnMapping]);
-    
+
     if (missingFields.length > 0) {
-      toast({ 
-        title: "Missing required mappings", 
+      toast({
+        title: "Missing required mappings",
         description: "Please map Customer Name, Company Name, and Phone Number",
-        variant: "destructive" 
+        variant: "destructive"
       });
       return;
     }
@@ -168,18 +168,18 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
         sheetData
       });
 
-      toast({ 
-        title: "Import successful!", 
-        description: response.data.message 
+      toast({
+        title: "Import successful!",
+        description: response.data.message
       });
 
       onImportComplete?.();
       handleClose();
     } catch (error: any) {
-      toast({ 
-        title: "Import failed", 
+      toast({
+        title: "Import failed",
         description: error.response?.data?.message || error.message,
-        variant: "destructive" 
+        variant: "destructive"
       });
     } finally {
       setIsImporting(false);
@@ -237,7 +237,7 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
                     className="mt-2"
                   />
                 </div>
-                
+
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
@@ -245,7 +245,7 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
                   </AlertDescription>
                 </Alert>
 
-                <Button 
+                <Button
                   onClick={validateUrl}
                   disabled={isValidating || !sheetUrl.trim()}
                   className="w-full"
@@ -300,9 +300,9 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
                         {field.label}
                         {field.required && <span className="text-red-500 ml-1">*</span>}
                       </Label>
-                      <Select 
+                      <Select
                         value={columnMapping[field.key as keyof ColumnMapping]}
-                        onValueChange={(value) => 
+                        onValueChange={(value) =>
                           setColumnMapping(prev => ({ ...prev, [field.key]: value }))
                         }
                       >
@@ -310,7 +310,7 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
                           <SelectValue placeholder="Select column..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">-- Do not import --</SelectItem>
+                          <SelectItem value="no-import">-- Do not import --</SelectItem>
                           {sheetData.headers.map((header) => (
                             <SelectItem key={header} value={header}>
                               {header}
