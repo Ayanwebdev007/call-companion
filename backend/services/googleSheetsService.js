@@ -25,6 +25,9 @@ class GoogleSheetsService {
   }
 
   async getSheetData(sheetUrl) {
+    if (!this.sheets) {
+      throw new Error('Google Sheets API not initialized. Check your GOOGLE_API_KEY.');
+    }
     try {
       // Extract spreadsheet ID from URL
       const spreadsheetId = this.extractSpreadsheetId(sheetUrl);
@@ -52,7 +55,7 @@ class GoogleSheetsService {
       });
 
       const values = response.data.values || [];
-      
+
       if (values.length === 0) {
         throw new Error('No data found in the sheet');
       }
@@ -90,6 +93,9 @@ class GoogleSheetsService {
   }
 
   async validateSheetAccess(sheetUrl) {
+    if (!this.sheets) {
+      return { valid: false, error: 'Google Sheets API not initialized. Check your GOOGLE_API_KEY.' };
+    }
     try {
       const spreadsheetId = this.extractSpreadsheetId(sheetUrl);
       if (!spreadsheetId) {
@@ -103,11 +109,11 @@ class GoogleSheetsService {
 
       return { valid: true };
     } catch (error) {
-      return { 
-        valid: false, 
-        error: error.message.includes('PERMISSION_DENIED') 
-          ? 'Sheet is not publicly accessible or requires permission' 
-          : 'Unable to access the sheet'
+      return {
+        valid: false,
+        error: error.message.includes('PERMISSION_DENIED')
+          ? 'Sheet is not publicly accessible or requires permission'
+          : `Unable to access the sheet: ${error.message}`
       };
     }
   }

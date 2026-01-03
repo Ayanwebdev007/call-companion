@@ -27,6 +27,7 @@ console.log('Final PORT value:', PORT);
 const allowedOrigins = [
   'http://localhost:8080',
   'http://localhost:8081',
+  'http://localhost:5173',
   'http://192.168.31.210:8081',
   'https://call-companion-frontend.onrender.com'
 ];
@@ -37,6 +38,13 @@ app.use(cors({
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      // The provided snippet for the 'else' block seems to be from a different context
+      // and would cause a syntax error or incorrect behavior for CORS.
+      // Assuming the intent was to keep the original CORS error message,
+      // or if the user intended to add a specific error message for CORS,
+      // it needs to be structured correctly for the 'callback' function.
+      // For now, I'm preserving the original CORS error message structure
+      // as the provided snippet is not syntactically valid for this context.
       callback(new Error('Not allowed by CORS'));
     }
   },
