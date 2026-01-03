@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Link, CheckCircle, AlertCircle, ArrowRight, Download } from "lucide-react";
+import { Loader2, Link, CheckCircle, AlertCircle, ArrowRight, Download, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 interface GoogleSheetsDialogProps {
   open: boolean;
@@ -39,11 +40,14 @@ interface ColumnMapping {
 
 const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplete }: GoogleSheetsDialogProps) => {
   const { toast } = useToast();
-  const [step, setStep] = useState<'url' | 'mapping' | 'importing'>('url');
+  const [step, setStep] = useState<'url' | 'sheets' | 'mapping' | 'importing'>('url');
   const [sheetUrl, setSheetUrl] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [availableSheets, setAvailableSheets] = useState<string[]>([]);
+  const [selectedSheetName, setSelectedSheetName] = useState("");
+  const [spreadsheetTitle, setSpreadsheetTitle] = useState("");
   const [sheetData, setSheetData] = useState<SheetData | null>(null);
   const [columnMapping, setColumnMapping] = useState<ColumnMapping>({
     customerName: '',
@@ -76,8 +80,18 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
       const response = await api.post('/api/googlesheets/validate', { sheetUrl });
 
       if (response.data.valid) {
-        toast({ title: "Sheet access validated successfully!" });
-        await fetchSheetData();
+        setSpreadsheetTitle(response.data.title || "Spreadsheet");
+        setAvailableSheets(response.data.sheetNames || []);
+
+        if (response.data.sheetNames && response.data.sheetNames.length > 1) {
+          toast({ title: `Found ${response.data.sheetNames.length} sheets in ${response.data.title}` });
+          setStep('sheets');
+        } else {
+          toast({ title: "Sheet access validated successfully!" });
+          const firstSheet = response.data.sheetNames?.[0] || "";
+          setSelectedSheetName(firstSheet);
+          await fetchSheetData(firstSheet);
+        }
       } else {
         toast({
           title: "Cannot access sheet",
@@ -96,10 +110,14 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
     }
   };
 
-  const fetchSheetData = async () => {
+  const fetchSheetData = async (sheetName?: string) => {
     setIsFetching(true);
     try {
-      const response = await api.post('/api/googlesheets/fetch', { sheetUrl });
+      const targetSheet = sheetName || selectedSheetName;
+      const response = await api.post('/api/googlesheets/fetch', {
+        sheetUrl,
+        sheetName: targetSheet
+      });
       setSheetData(response.data);
       setStep('mapping');
 
@@ -190,6 +208,9 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
     setStep('url');
     setSheetUrl("");
     setSheetData(null);
+    setAvailableSheets([]);
+    setSelectedSheetName("");
+    setSpreadsheetTitle("");
     setColumnMapping({
       customerName: '',
       companyName: '',
@@ -262,6 +283,59 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
                     </>
                   )}
                 </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {step === 'sheets' && (
+          <div className="space-y-6 animate-fade-in text-left">
+            <Card className="border-green-100 dark:border-green-900/30">
+              <CardHeader>
+                <CardTitle className="text-lg">Step 2: Select a Sheet</CardTitle>
+                <CardDescription>
+                  Found multiple sheets in "{spreadsheetTitle}". Please select one to import data from.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4">
+                  {availableSheets.map((name) => (
+                    <Button
+                      key={name}
+                      variant={selectedSheetName === name ? "default" : "outline"}
+                      className={cn(
+                        "h-auto py-4 px-6 justify-start text-left font-medium transition-all hover:scale-[1.02]",
+                        selectedSheetName === name ? "ring-2 ring-primary ring-offset-2" : ""
+                      )}
+                      onClick={() => setSelectedSheetName(name)}
+                    >
+                      <FileSpreadsheet className="h-5 w-5 mr-3 shrink-0 opacity-70" />
+                      <span className="truncate">{name}</span>
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <Button variant="outline" onClick={() => setStep('url')}>
+                    Back
+                  </Button>
+                  <Button
+                    onClick={() => fetchSheetData(selectedSheetName)}
+                    disabled={isFetching || !selectedSheetName}
+                  >
+                    {isFetching ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Fetching Data...
+                      </>
+                    ) : (
+                      <>
+                        Next: Map Columns
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

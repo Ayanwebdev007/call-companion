@@ -26,13 +26,13 @@ router.post('/validate', auth, async (req, res) => {
 // Get sheet data and headers
 router.post('/fetch', auth, async (req, res) => {
   try {
-    const { sheetUrl } = req.body;
+    const { sheetUrl, sheetName } = req.body;
 
     if (!sheetUrl) {
       return res.status(400).json({ message: 'Sheet URL is required' });
     }
 
-    const sheetData = await googleSheetsService.getSheetData(sheetUrl);
+    const sheetData = await googleSheetsService.getSheetData(sheetUrl, sheetName);
     res.json(sheetData);
   } catch (error) {
     console.error('Error fetching Google Sheets:', error);

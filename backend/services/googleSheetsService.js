@@ -24,7 +24,7 @@ class GoogleSheetsService {
     }
   }
 
-  async getSheetData(sheetUrl) {
+  async getSheetData(sheetUrl, selectedSheetName = null) {
     if (!this.sheets) {
       throw new Error('Google Sheets API not initialized. Check your GOOGLE_API_KEY.');
     }
@@ -35,17 +35,19 @@ class GoogleSheetsService {
         throw new Error('Invalid Google Sheets URL');
       }
 
-      // Get spreadsheet metadata to find the first sheet
+      // Get spreadsheet metadata
       const spreadsheet = await this.sheets.spreadsheets.get({
         spreadsheetId
       });
 
-      const firstSheet = spreadsheet.data.sheets[0];
-      if (!firstSheet) {
-        throw new Error('No sheets found in the spreadsheet');
+      let sheetName = selectedSheetName;
+      if (!sheetName) {
+        const firstSheet = spreadsheet.data.sheets[0];
+        if (!firstSheet) {
+          throw new Error('No sheets found in the spreadsheet');
+        }
+        sheetName = firstSheet.properties.title;
       }
-
-      const sheetName = firstSheet.properties.title;
 
       // Get the first 100 rows to analyze headers and data
       const response = await this.sheets.spreadsheets.values.get({
@@ -102,12 +104,20 @@ class GoogleSheetsService {
         return { valid: false, error: 'Invalid Google Sheets URL' };
       }
 
-      // Try to access the spreadsheet
-      await this.sheets.spreadsheets.get({
+      // Try to access the spreadsheet and get its metadata
+      const response = await this.sheets.spreadsheets.get({
         spreadsheetId
       });
 
-      return { valid: true };
+      const sheets = response.data.sheets || [];
+      const sheetNames = sheets.map(s => s.properties.title);
+      const title = response.data.properties.title;
+
+      return {
+        valid: true,
+        title,
+        sheetNames
+      };
     } catch (error) {
       return {
         valid: false,
