@@ -17,6 +17,13 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// GLOBAL REQUEST LOGGER - MUST BE AT TOP
+app.use((req, res, next) => {
+  console.log(`[ACCESS LOG] ${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  next();
+});
+
 // Debug logging
 console.log('Starting server...');
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
@@ -54,14 +61,6 @@ app.use('/api/customers', fileUpload({
   useTempFiles: false,
   debug: false // Turn off debug to reduce logs
 }));
-
-// Global request logger for debugging
-app.use((req, res, next) => {
-  if (req.url.includes('meta') || req.url.includes('health')) {
-    console.log(`Incoming Request: ${req.method} ${req.url}`);
-  }
-  next();
-});
 
 // Routes
 app.use('/api/meta', metaRoutes); // Moved up to catch it early
