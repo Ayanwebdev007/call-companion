@@ -193,3 +193,6 @@ export const updateProfile = async (username: string, email: string): Promise<{ 
   const response = await axios.put(`${API_BASE_URL}/api/auth/update-profile`, { username, email });
   return response.data;
 };
+
+export const api = axios;
+export default api;
