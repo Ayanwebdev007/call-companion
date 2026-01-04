@@ -75,38 +75,70 @@ app.get('/api/meta/webhook', async (req, res) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
+  console.log('=========================================');
   console.log('--- META WEBHOOK VERIFICATION ATTEMPT ---');
+  console.log('=========================================');
+  console.log('Full URL:', req.protocol + '://' + req.get('host') + req.originalUrl);
+  console.log('Query Params:', JSON.stringify(req.query, null, 2));
   console.log('Mode:', mode);
-  console.log('Token received:', token ? 'PRESENT' : 'MISSING');
+  console.log('Token received:', token ? `PRESENT (${token.substring(0, 10)}...)` : 'MISSING');
+  console.log('Challenge:', challenge ? 'PRESENT' : 'MISSING');
 
   if (mode === 'subscribe') {
     // Try to find user with matching verify token
     const User = (await import('./models/User.js')).default;
+    
+    // Log all users with verify tokens for debugging
+    const usersWithTokens = await User.find({ 
+      'settings.metaVerifyToken': { $exists: true, $ne: '' } 
+    }).select('username settings.metaVerifyToken');
+    
+    console.log(`Found ${usersWithTokens.length} user(s) with verify tokens:`);
+    usersWithTokens.forEach(u => {
+      const tokenMatch = u.settings.metaVerifyToken === token ? '✅ MATCH' : '❌ NO MATCH';
+      console.log(`  - ${u.username}: ${tokenMatch}`);
+    });
+
     const user = await User.findOne({ 'settings.metaVerifyToken': token });
 
     if (user) {
-      console.log(`--- META WEBHOOK VERIFIED (User: ${user.username}) ---`);
+      console.log('=========================================');
+      console.log(`✅ META WEBHOOK VERIFIED (User: ${user.username})`);
+      console.log('=========================================');
       return res.status(200).send(challenge);
     }
 
     // Fallback to environment variable for backward compatibility
     const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
-    if (token === verifyToken) {
-      console.log('--- META WEBHOOK VERIFIED (Global Token) ---');
+    if (verifyToken && token === verifyToken) {
+      console.log('=========================================');
+      console.log('✅ META WEBHOOK VERIFIED (Global Token)');
+      console.log('=========================================');
       return res.status(200).send(challenge);
     }
 
-    console.warn('--- WEBHOOK VERIFICATION FAILED ---');
+    console.log('=========================================');
+    console.warn('❌ WEBHOOK VERIFICATION FAILED');
+    console.log('Reason: No matching verify token found');
+    console.log('Make sure:');
+    console.log('  1. Verify token is saved in CRM settings');
+    console.log('  2. Verify token in Meta Developer Console matches exactly');
+    console.log('  3. Token is case-sensitive and has no extra spaces');
+    console.log('=========================================');
     return res.status(403).send('Verification failed');
   }
 
+  console.warn('Invalid mode:', mode);
   res.status(400).send('Invalid mode');
 });
 
 app.post('/api/meta/webhook', async (req, res) => {
-  console.log('!!! META WEBHOOK POST HIT !!!');
+  console.log('=========================================');
+  console.log('!!! META WEBHOOK POST RECEIVED !!!');
+  console.log('=========================================');
   console.log('Method:', req.method);
   console.log('URL:', req.originalUrl);
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
   console.log('Body:', JSON.stringify(req.body, null, 2));
 
   // Respond to Meta IMMEDIATELY to prevent timeout
@@ -226,7 +258,42 @@ app.all('/api/meta-debug', (req, res) => {
   console.log('!!! META DEBUG ROUTE HIT !!!');
   console.log('Method:', req.method);
   console.log('Query:', req.query);
-  res.status(200).send('DEBUG_OK');
+  console.log('Body:', req.body);
+  res.status(200).json({ 
+    message: 'DEBUG_OK',
+    method: req.method,
+    query: req.query,
+    body: req.body,
+    headers: req.headers
+  });
+});
+
+// Debug endpoint to check webhook configuration
+app.get('/api/meta/debug-config', async (req, res) => {
+  try {
+    const User = (await import('./models/User.js')).default;
+    const users = await User.find({ 
+      'settings.metaPageAccessToken': { $exists: true, $ne: '' } 
+    }).select('username settings.metaPageId settings.metaVerifyToken').lean();
+
+    const config = users.map(u => ({
+      username: u.username,
+      hasPageAccessToken: !!u.settings?.metaPageAccessToken,
+      pageId: u.settings?.metaPageId || 'NOT SET',
+      hasVerifyToken: !!u.settings?.metaVerifyToken,
+      verifyTokenPreview: u.settings?.metaVerifyToken ? 
+        `${u.settings.metaVerifyToken.substring(0, 10)}...` : 'NOT SET'
+    }));
+
+    res.json({
+      message: 'Webhook configuration status',
+      users: config,
+      globalToken: process.env.META_WEBHOOK_VERIFY_TOKEN ? 'SET' : 'NOT SET',
+      webhookUrl: `${req.protocol}://${req.get('host')}/api/meta/webhook`
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Database Connection - Updated for MongoDB Atlas
