@@ -42,31 +42,17 @@ app.use(cors({
   credentials: true
 }));
 
-// 2. GLOBAL REQUEST LOGGING - MUST BE FIRST (after parsing)
+// 2. GLOBAL REQUEST LOGGER (Minimal for production)
 app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-  const fullUrl = `${protocol}://${req.get('host')}${req.originalUrl}`;
-
-  console.log(`[REQUEST] [${timestamp}] ${req.method} ${fullUrl}`);
-
   if (req.originalUrl.toLowerCase().includes('meta') || req.originalUrl.toLowerCase().includes('webhook')) {
-    console.log(`[META-PROBE] Headers:`, JSON.stringify(req.headers, null, 2));
-    if (req.body && Object.keys(req.body).length > 0) {
-      console.log(`[META-PROBE] Body:`, JSON.stringify(req.body, null, 2));
-    }
+    console.log(`[META-WEBHOOK] ${req.method} ${req.originalUrl}`);
   }
   next();
 });
 
-// HEARTBEAT LOG - Confirm logging is active every 60s
-setInterval(() => {
-  console.log(`[HEARTBEAT] [${new Date().toISOString()}] Server is alive (v3.1)`);
-}, 60000);
-
 // Debug logging
 console.log('=========================================');
-console.log('SERVER STARTING - VERSION 3.1 (PROTOCOL FIX)');
+console.log('SERVER STARTING - VERSION 3.2 (PRODUCTION)');
 console.log('=========================================');
 
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');

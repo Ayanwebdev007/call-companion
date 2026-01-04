@@ -167,16 +167,5 @@ router.get('/debug-config', async (req, res) => {
     }
 });
 
-// Manual test endpoint to verify path reachability
-router.post('/test-receive', (req, res) => {
-    console.log('--- [META-WEBHOOK] MANUAL TEST RECEIVED ---');
-    console.log('Body:', JSON.stringify(req.body, null, 2));
-    res.status(200).json({
-        message: 'MANUAL_TEST_OK',
-        receivedBody: req.body,
-        timestamp: new Date().toISOString()
-    });
-});
-
 export default router;
 
