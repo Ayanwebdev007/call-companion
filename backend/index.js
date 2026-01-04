@@ -29,7 +29,9 @@ app.use((req, res, next) => {
 
 
 // Debug logging
-console.log('Starting server...');
+console.log('=========================================');
+console.log('SERVER STARTING - VERSION 3.0 (META FIX)');
+console.log('=========================================');
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
 console.log('PORT from env:', process.env.PORT || 'NOT SET (using default 5000)');
@@ -148,7 +150,7 @@ app.use('/api', shareRoutes);
 app.use('/api', posterRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/googlesheets', googleSheetsRoutes);
-app.use('/api/meta', metaRoutes); // Keep for the POST handler
+// app.use('/api/meta', metaRoutes); // Handled directly in index.js for maximum stability
 
 // Test DELETE route
 app.delete('/api/test-delete', (req, res) => {
