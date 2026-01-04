@@ -36,11 +36,11 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
 
   const handleDownloadTemplate = async () => {
     try {
-      const blob = await downloadTemplate();
+      const blob = await downloadTemplate(spreadsheetId);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "customers_template.xlsx";
+      a.download = `customers_template_${spreadsheetId || 'default'}.xlsx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

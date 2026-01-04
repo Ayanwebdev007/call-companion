@@ -287,17 +287,53 @@ router.post('/bulk-import', auth, async (req, res) => {
 // DOWNLOAD Excel template
 router.get('/download-template', auth, async (req, res) => {
   try {
-    // Create template data with exact column names
-    const templateData = [{
-      'customer_name': 'John Doe',
-      'company_name': 'ABC Company',
-      'phone_number': '+1234567890',
-      'last_call_date': '2023-12-20',
-      'next_call_date': '2023-12-25',
-      'next_call_time': '14:30',
-      'remark': 'Important client',
-      'color': ''
-    }];
+    const { spreadsheetId } = req.query;
+    let templateData = [];
+
+    // Default headers
+    let headers = [
+      'customer_name',
+      'company_name',
+      'phone_number',
+      'last_call_date',
+      'next_call_date',
+      'next_call_time',
+      'remark',
+      'color'
+    ];
+
+    // If spreadsheetId is provided, check for dynamic headers
+    if (spreadsheetId) {
+      // Validate that spreadsheetId is a valid ObjectId
+      const mongoose = await import('mongoose');
+      if (mongoose.default.isValidObjectId(spreadsheetId)) {
+        const spreadsheet = await Spreadsheet.findById(spreadsheetId);
+
+        if (spreadsheet && spreadsheet.is_meta && spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
+          // Use dynamic headers for Meta spreadsheets
+          headers = spreadsheet.meta_headers;
+        }
+      }
+    }
+
+    // Create a single row object with empty values (or example values)
+    const row = {};
+    headers.forEach(header => {
+      // Provide some example data for standards fields to guide the user
+      switch (header) {
+        case 'customer_name': row[header] = 'John Doe'; break;
+        case 'company_name': row[header] = 'ABC Company'; break;
+        case 'phone_number': row[header] = '+1234567890'; break;
+        case 'last_call_date': row[header] = '2023-12-20'; break;
+        case 'next_call_date': row[header] = '2023-12-25'; break;
+        case 'next_call_time': row[header] = '14:30'; break;
+        case 'remark': row[header] = 'Important client'; break;
+        case 'color': row[header] = ''; break;
+        default: row[header] = ''; // Empty for dynamic/unknown fields
+      }
+    });
+
+    templateData.push(row);
 
     // Create workbook and worksheet
     const workbook = XLSX.utils.book_new();

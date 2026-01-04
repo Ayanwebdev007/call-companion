@@ -78,8 +78,9 @@ export const bulkImportCustomers = async (file: File, spreadsheetId: string): Pr
   return response.data;
 };
 
-export const downloadTemplate = async (): Promise<Blob> => {
-  const response = await api.get(`${API_URL}/download-template`, {
+export const downloadTemplate = async (spreadsheetId?: string): Promise<Blob> => {
+  const url = spreadsheetId ? `${API_URL}/download-template?spreadsheetId=${spreadsheetId}` : `${API_URL}/download-template`;
+  const response = await api.get(url, {
     responseType: 'blob',
   });
   return response.data;
