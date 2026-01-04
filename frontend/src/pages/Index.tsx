@@ -91,6 +91,7 @@ const Index = () => {
     last_call_date: "",
     next_call_time: "",
     remark: "",
+    meta_data: {} as Record<string, string>,
     color: null as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null,
   });
 
@@ -188,6 +189,7 @@ const Index = () => {
         last_call_date: "",
         next_call_time: "",
         remark: "",
+        meta_data: {},
         color: null,
       });
     },
@@ -393,13 +395,40 @@ const Index = () => {
   }
 
   const handleAddRow = () => {
-    if (!newRow.customer_name.trim() || !newRow.company_name.trim() || !newRow.phone_number.trim()) {
-      toast({ title: "Please fill Customer Name, Company Name, and Phone No.", variant: "destructive" });
-      return;
+    const isMeta = spreadsheet?.is_meta;
+
+    if (!isMeta) {
+      if (!newRow.customer_name.trim() || !newRow.company_name.trim() || !newRow.phone_number.trim()) {
+        toast({ title: "Please fill Customer Name, Company Name, and Phone No.", variant: "destructive" });
+        return;
+      }
+    } else {
+      // For Meta sheets, we need at least one field filled in meta_data or the standard fields
+      const hasMetaData = Object.values(newRow.meta_data).some(v => v.trim().length > 0);
+      if (!hasMetaData && !newRow.customer_name.trim()) {
+        toast({ title: "Please fill at least one field", variant: "destructive" });
+        return;
+      }
     }
+
+    // Prepare data
+    const rowData: any = {
+      ...newRow,
+      spreadsheet_id: spreadsheetId!
+    };
+
+    // If meta, we must still satisfy the backend's required fields
+    if (isMeta) {
+      // Use the first few meta fields as defaults for the required fields if they are empty
+      const metaValues = Object.values(newRow.meta_data);
+      if (!rowData.customer_name) rowData.customer_name = metaValues[0] || 'Meta Lead';
+      if (!rowData.company_name) rowData.company_name = metaValues[1] || 'Meta Ads';
+      if (!rowData.phone_number) rowData.phone_number = metaValues[2] || 'N/A';
+    }
+
     // Remove color field if it's null to avoid sending unnecessary data
-    const { color, ...newRowWithoutNullColor } = newRow;
-    const rowData = color ? newRow : newRowWithoutNullColor;
+    if (!rowData.color) delete rowData.color;
+
     addMutation.mutate(rowData as Omit<Customer, 'id'>);
   };
 
@@ -747,71 +776,122 @@ const Index = () => {
               <ResizableTableCell className="border-b border-primary/20 px-1 py-0.5 text-xs text-primary font-bold text-center bg-primary/5 sticky left-0 h-6">
                 <Plus className="h-3 w-3 mx-auto" />
               </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
-                <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button className="ml-1 w-3 h-3 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
-                        style={{ backgroundColor: newRow.color || 'white' }} />
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-2 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
-                      <div className="grid grid-cols-4 gap-1">
-                        {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
-                          <Button
-                            key={color || 'none'}
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 rounded-full hover:scale-110 transition-transform"
-                            onClick={() => setNewRow({ ...newRow, color: color as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null })}
-                          >
-                            <div
-                              className={`w-4 h-4 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`}
-                              style={{ backgroundColor: color || 'transparent' }}
-                            />
-                          </Button>
-                        ))}
+              {spreadsheet?.is_meta && spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0 ? (
+                spreadsheet.meta_headers.map((header, idx) => (
+                  <ResizableTableCell key={header} className="border-b border-primary/20 p-0 h-6">
+                    <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
+                      {idx === 0 && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="ml-1 w-3 h-3 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
+                              style={{ backgroundColor: newRow.color || 'white' }} />
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-2 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
+                            <div className="grid grid-cols-4 gap-1">
+                              {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
+                                <Button
+                                  key={color || 'none'}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 rounded-full hover:scale-110 transition-transform"
+                                  onClick={() => setNewRow({ ...newRow, color: color as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null })}
+                                >
+                                  <div
+                                    className={`w-4 h-4 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`}
+                                    style={{ backgroundColor: color || 'transparent' }}
+                                  />
+                                </Button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                      <div className="flex items-center h-full flex-1">
+                        <AutoResizeTextarea
+                          value={newRow.meta_data[header] || ""}
+                          onChange={(e) => setNewRow({
+                            ...newRow,
+                            meta_data: { ...newRow.meta_data, [header]: e.target.value }
+                          })}
+                          onKeyDown={handleNewRowKeyDown}
+                          className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 font-medium px-3 leading-none h-full min-h-0"
+                          placeholder={header.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                          style={{ height: '100%' }}
+                          rows={1}
+                        />
                       </div>
-                    </PopoverContent>
-                  </Popover>
-                  <div className="flex items-center h-full flex-1">
-                    <AutoResizeTextarea
-                      value={newRow.customer_name}
-                      onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
-                      onKeyDown={handleNewRowKeyDown}
-                      className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 font-medium px-3 leading-none h-full min-h-0"
-                      placeholder="Add New "
-                      style={{ height: '100%' }}
-                      rows={1}
-                    />
-                  </div>
-                </div>
-              </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
-                <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
-                  <AutoResizeTextarea
-                    value={newRow.company_name}
-                    onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
-                    onKeyDown={handleNewRowKeyDown}
-                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3 leading-none h-full min-h-0"
-                    placeholder="Company"
-                    style={{ height: '100%' }}
-                    rows={1}
-                  />
-                </div>
-              </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
-                <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
-                  <AutoResizeTextarea
-                    value={newRow.phone_number}
-                    onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
-                    onKeyDown={handleNewRowKeyDown}
-                    className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3 leading-none h-full min-h-0"
-                    placeholder="Phone"
-                    style={{ height: '100%' }}
-                    rows={1}
-                  />
-                </div>
-              </ResizableTableCell>
+                    </div>
+                  </ResizableTableCell>
+                ))
+              ) : (
+                <>
+                  <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
+                    <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button className="ml-1 w-3 h-3 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
+                            style={{ backgroundColor: newRow.color || 'white' }} />
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-2 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
+                          <div className="grid grid-cols-4 gap-1">
+                            {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
+                              <Button
+                                key={color || 'none'}
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 rounded-full hover:scale-110 transition-transform"
+                                onClick={() => setNewRow({ ...newRow, color: color as 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null })}
+                              >
+                                <div
+                                  className={`w-4 h-4 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`}
+                                  style={{ backgroundColor: color || 'transparent' }}
+                                />
+                              </Button>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                      <div className="flex items-center h-full flex-1">
+                        <AutoResizeTextarea
+                          value={newRow.customer_name}
+                          onChange={(e) => setNewRow({ ...newRow, customer_name: e.target.value })}
+                          onKeyDown={handleNewRowKeyDown}
+                          className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 font-medium px-3 leading-none h-full min-h-0"
+                          placeholder="Add New "
+                          style={{ height: '100%' }}
+                          rows={1}
+                        />
+                      </div>
+                    </div>
+                  </ResizableTableCell>
+                  <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
+                    <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
+                      <AutoResizeTextarea
+                        value={newRow.company_name}
+                        onChange={(e) => setNewRow({ ...newRow, company_name: e.target.value })}
+                        onKeyDown={handleNewRowKeyDown}
+                        className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3 leading-none h-full min-h-0"
+                        placeholder="Company"
+                        style={{ height: '100%' }}
+                        rows={1}
+                      />
+                    </div>
+                  </ResizableTableCell>
+                  <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
+                    <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
+                      <AutoResizeTextarea
+                        value={newRow.phone_number}
+                        onChange={(e) => setNewRow({ ...newRow, phone_number: e.target.value })}
+                        onKeyDown={handleNewRowKeyDown}
+                        className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-xs bg-transparent focus-visible:ring-0 placeholder:text-muted-foreground/50 px-3 leading-none h-full min-h-0"
+                        placeholder="Phone"
+                        style={{ height: '100%' }}
+                        rows={1}
+                      />
+                    </div>
+                  </ResizableTableCell>
+                </>
+              )}
               <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
                 <Popover>
                   <PopoverTrigger asChild>
@@ -883,6 +963,9 @@ const Index = () => {
                   {addMutation.isPending ? "..." : "Add"}
                 </Button>
               </ResizableTableCell>
+              {showCheckboxes && (
+                <ResizableTableCell className="border-b border-primary/20 bg-background group-hover:bg-accent/5 transition-colors" />
+              )}
             </ResizableTableRow>
           </ResizableTableHeader>
           <ResizableTableBody>
