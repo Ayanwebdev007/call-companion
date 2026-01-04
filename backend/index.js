@@ -13,38 +13,13 @@ import whatsappRoutes from './routes/whatsapp.js';
 import googleSheetsRoutes from './routes/googlesheets.js';
 import metaRoutes from './routes/meta.js';
 
+// 1. CORE CONFIG & PARSING
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// GLOBAL REQUEST LOGGING - MUST BE FIRST
-app.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  const fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
-  console.log(`[REQUEST] [${timestamp}] ${req.method} ${fullUrl}`);
-
-  // Specific probe for Meta/Webhook
-  if (req.originalUrl.toLowerCase().includes('meta') || req.originalUrl.toLowerCase().includes('webhook')) {
-    console.log(`[META-PROBE] Headers:`, JSON.stringify(req.headers, null, 2));
-  }
-  next();
-});
-
-// HEARTBEAT LOG - Confirm logging is active every 60s
-setInterval(() => {
-  console.log(`[HEARTBEAT] [${new Date().toISOString()}] Server is alive and logging.`);
-}, 60000);
-
-
-
-// Debug logging
-console.log('=========================================');
-console.log('SERVER STARTING - VERSION 3.0 (META FIX)');
-console.log('=========================================');
-console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
-console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
-console.log('PORT from env:', process.env.PORT || 'NOT SET (using default 5000)');
-console.log('Final PORT value:', PORT);
+// Parse JSON bodies early so logs can see them
+app.use(express.json({ limit: "50mb" }));
 
 // More flexible CORS for production
 const allowedOrigins = [
@@ -67,8 +42,41 @@ app.use(cors({
   credentials: true
 }));
 
-// Parse JSON bodies for all requests, including DELETE
-app.use(express.json({ limit: "50mb" }));
+// 2. GLOBAL REQUEST LOGGING - MUST BE FIRST (after parsing)
+app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const fullUrl = `${protocol}://${req.get('host')}${req.originalUrl}`;
+
+  console.log(`[REQUEST] [${timestamp}] ${req.method} ${fullUrl}`);
+
+  if (req.originalUrl.toLowerCase().includes('meta') || req.originalUrl.toLowerCase().includes('webhook')) {
+    console.log(`[META-PROBE] Headers:`, JSON.stringify(req.headers, null, 2));
+    if (req.body && Object.keys(req.body).length > 0) {
+      console.log(`[META-PROBE] Body:`, JSON.stringify(req.body, null, 2));
+    }
+  }
+  next();
+});
+
+// HEARTBEAT LOG - Confirm logging is active every 60s
+setInterval(() => {
+  console.log(`[HEARTBEAT] [${new Date().toISOString()}] Server is alive (v3.1)`);
+}, 60000);
+
+// Debug logging
+console.log('=========================================');
+console.log('SERVER STARTING - VERSION 3.1 (PROTOCOL FIX)');
+console.log('=========================================');
+
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
+console.log('PORT from env:', process.env.PORT || 'NOT SET (using default 5000)');
+console.log('Final PORT value:', PORT);
+
+// CORS already initialized at top
+
+// Body parser already initialized at top
 
 // Only apply fileUpload middleware to routes that need it
 app.use('/api/customers', fileUpload({

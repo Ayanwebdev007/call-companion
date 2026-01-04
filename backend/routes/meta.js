@@ -24,6 +24,9 @@ router.get('/webhook', async (req, res) => {
 
         console.log(`[META-WEBHOOK] Found ${usersWithTokens.length} user(s) with local verify tokens.`);
 
+        // Log the search
+        console.log(`[META-WEBHOOK] Searching for token: "${token}"`);
+
         const user = await User.findOne({ 'settings.metaVerifyToken': token });
 
         if (user) {
