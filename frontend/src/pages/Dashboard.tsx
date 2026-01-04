@@ -23,7 +23,8 @@ const Dashboard = () => {
   const [newSpreadsheetDescription, setNewSpreadsheetDescription] = useState("");
   const [isGoogleSheetsDialogOpen, setIsGoogleSheetsDialogOpen] = useState(false);
   const [selectedSpreadsheetForImport, setSelectedSpreadsheetForImport] = useState("");
-  const [filterMode, setFilterMode] = useState<"all" | "manual" | "meta">("all");
+  const [filterMode, setFilterMode] = useState<"manual" | "meta">("manual");
+  const [selectedMetaPage, setSelectedMetaPage] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
@@ -38,13 +39,30 @@ const Dashboard = () => {
 
 
 
-  // Filter spreadsheets based on filterMode
+  // Get unique page names from meta spreadsheets for the filter
+  const metaPages = useMemo(() => {
+    const pages = spreadsheets
+      .filter((s: Spreadsheet) => s.is_meta && s.page_name)
+      .map((s: Spreadsheet) => s.page_name as string);
+    return Array.from(new Set(pages)).sort();
+  }, [spreadsheets]);
+
+  // Filter spreadsheets based on filterMode and selectedMetaPage
   const filteredSpreadsheets = useMemo(() => {
-    if (filterMode === "all") return spreadsheets;
-    if (filterMode === "manual") return spreadsheets.filter((s: Spreadsheet) => !s.is_meta);
-    if (filterMode === "meta") return spreadsheets.filter((s: Spreadsheet) => s.is_meta);
+    if (filterMode === "manual") {
+      return spreadsheets.filter((s: Spreadsheet) => !s.is_meta);
+    }
+
+    if (filterMode === "meta") {
+      let metaSheets = spreadsheets.filter((s: Spreadsheet) => s.is_meta);
+      if (selectedMetaPage !== "all") {
+        metaSheets = metaSheets.filter((s: Spreadsheet) => s.page_name === selectedMetaPage);
+      }
+      return metaSheets;
+    }
+
     return spreadsheets;
-  }, [spreadsheets, filterMode]);
+  }, [spreadsheets, filterMode, selectedMetaPage]);
 
   // Create spreadsheet mutation
   const createMutation = useMutation({
@@ -184,15 +202,6 @@ const Dashboard = () => {
 
           <div className="hidden lg:flex items-center gap-1 bg-secondary/50 dark:bg-white/5 p-1 rounded-xl border border-border/50 dark:border-white/10 backdrop-blur-md">
             <Button
-              variant={filterMode === "all" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setFilterMode("all")}
-              className={`h-8 gap-2 rounded-lg transition-all ${filterMode === "all" ? "shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              <span>All</span>
-            </Button>
-            <Button
               variant={filterMode === "manual" ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setFilterMode("manual")}
@@ -204,7 +213,10 @@ const Dashboard = () => {
             <Button
               variant={filterMode === "meta" ? "secondary" : "ghost"}
               size="sm"
-              onClick={() => setFilterMode("meta")}
+              onClick={() => {
+                setFilterMode("meta");
+                setSelectedMetaPage("all"); // Reset page filter when switching to Meta
+              }}
               className={`h-8 gap-2 rounded-lg transition-all ${filterMode === "meta" ? "shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             >
               <Webhook className="h-4 w-4 text-blue-500" />
@@ -354,6 +366,36 @@ const Dashboard = () => {
           </div>
         </div>
       </header>
+
+      {/* Meta Filter Sub-navigation */}
+      {filterMode === "meta" && metaPages.length > 0 && (
+        <div className="sticky top-[65px] z-40 w-full border-b border-border/40 bg-background/40 backdrop-blur-lg animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="container mx-auto px-4 py-2 overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-2 min-w-max">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-2">Filter by Page:</span>
+              <Button
+                variant={selectedMetaPage === "all" ? "default" : "secondary"}
+                size="sm"
+                onClick={() => setSelectedMetaPage("all")}
+                className="h-7 px-3 text-xs rounded-full"
+              >
+                All Pages
+              </Button>
+              {metaPages.map((page) => (
+                <Button
+                  key={page}
+                  variant={selectedMetaPage === page ? "default" : "secondary"}
+                  size="sm"
+                  onClick={() => setSelectedMetaPage(page)}
+                  className="h-7 px-3 text-xs rounded-full"
+                >
+                  {page}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 relative z-10">
