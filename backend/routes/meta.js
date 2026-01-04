@@ -85,17 +85,34 @@ router.post('/webhook', async (req, res) => {
                         try {
                             const leadDetails = await metaService.getLeadDetails(leadId, user.settings.metaPageAccessToken);
 
+                            // Fetch granular details
+                            const [pageInfo, formInfo, adInfo] = await Promise.all([
+                                metaService.getPageDetails(pageId, user.settings.metaPageAccessToken),
+                                metaService.getFormDetails(change.value.form_id, user.settings.metaPageAccessToken),
+                                metaService.getAdDetails(change.value.ad_id, user.settings.metaPageAccessToken)
+                            ]);
+
+                            const pageName = pageInfo?.name || pageId;
+                            const formName = formInfo?.name || 'Meta Form';
+                            const campaignName = adInfo?.campaign?.name || 'Standard Campaign';
+
+                            // Create a descriptive spreadsheet name
+                            const spreadsheetName = `${pageName} - ${formName}`;
+
                             // Find or create spreadsheet
                             let spreadsheet = await mongoose.model('Spreadsheet').findOne({
                                 user_id: user._id,
-                                name: 'Meta Ads Leads'
+                                name: spreadsheetName
                             });
 
                             if (!spreadsheet) {
                                 spreadsheet = new (mongoose.model('Spreadsheet'))({
                                     user_id: user._id,
-                                    name: 'Meta Ads Leads',
-                                    description: 'Leads automatically imported from Meta Ads'
+                                    name: spreadsheetName,
+                                    description: `Leads from Page: ${pageName}, Form: ${formName}`,
+                                    page_name: pageName,
+                                    form_name: formName,
+                                    campaign_name: campaignName
                                 });
                                 await spreadsheet.save();
                             }
@@ -122,7 +139,7 @@ router.post('/webhook', async (req, res) => {
                                 company_name: leadDetails.companyName || 'Meta Ads',
                                 phone_number: leadDetails.phoneNumber || 'N/A',
                                 email: leadDetails.email || '',
-                                remark: `Meta Lead ID: ${leadId}`,
+                                remark: `Campaign: ${campaignName} | Page: ${pageName} | Lead ID: ${leadId}`,
                                 status: 'new'
                             });
 

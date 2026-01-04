@@ -395,6 +395,27 @@ const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
                     <p className="text-xs text-muted-foreground/50 italic h-8 flex items-center">No description</p>
                   )}
 
+                  <div className="mt-4 space-y-2">
+                    {spreadsheet.page_name && (
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground/70 bg-secondary/30 px-2 py-1 rounded-md border border-border/30">
+                        <span className="font-bold uppercase opacity-50">Page:</span>
+                        <span className="truncate">{spreadsheet.page_name}</span>
+                      </div>
+                    )}
+                    {spreadsheet.form_name && (
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground/70 bg-secondary/30 px-2 py-1 rounded-md border border-border/30">
+                        <span className="font-bold uppercase opacity-50">Form:</span>
+                        <span className="truncate">{spreadsheet.form_name}</span>
+                      </div>
+                    )}
+                    {spreadsheet.campaign_name && (
+                      <div className="flex items-center gap-2 text-[10px] text-primary/70 bg-primary/5 px-2 py-1 rounded-md border border-primary/20">
+                        <span className="font-bold uppercase opacity-50">Campaign:</span>
+                        <span className="truncate font-semibold">{spreadsheet.campaign_name}</span>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="mt-4 flex flex-wrap gap-2">
                     {spreadsheet.is_shared && (
                       <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-300 ring-1 ring-blue-500/20">

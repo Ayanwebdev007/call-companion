@@ -26,6 +26,9 @@ export interface Spreadsheet {
   user_id: string;
   name: string;
   description: string;
+  page_name?: string;
+  form_name?: string;
+  campaign_name?: string;
   created_at: string;
   updated_at: string;
   permission_level?: 'read-only' | 'read-write';

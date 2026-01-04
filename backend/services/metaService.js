@@ -5,6 +5,51 @@ class MetaService {
         this.baseUrl = 'https://graph.facebook.com/v19.0';
     }
 
+    async getPageDetails(pageId, pageAccessToken) {
+        try {
+            const response = await axios.get(`${this.baseUrl}/${pageId}`, {
+                params: {
+                    access_token: pageAccessToken,
+                    fields: 'name'
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching Meta page details:', error.response?.data || error.message);
+            return { name: pageId }; // Fallback to ID
+        }
+    }
+
+    async getAdDetails(adId, pageAccessToken) {
+        try {
+            const response = await axios.get(`${this.baseUrl}/${adId}`, {
+                params: {
+                    access_token: pageAccessToken,
+                    fields: 'campaign{id,name}'
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching Meta ad details:', error.response?.data || error.message);
+            return null;
+        }
+    }
+
+    async getFormDetails(formId, pageAccessToken) {
+        try {
+            const response = await axios.get(`${this.baseUrl}/${formId}`, {
+                params: {
+                    access_token: pageAccessToken,
+                    fields: 'name'
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching Meta form details:', error.response?.data || error.message);
+            return { name: 'Meta Ads Leads' }; // Fallback
+        }
+    }
+
     async getLeadDetails(leadId, pageAccessToken) {
         try {
             if (!pageAccessToken) {

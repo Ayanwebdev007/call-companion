@@ -4,6 +4,9 @@ const spreadsheetSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   name: { type: String, required: true },
   description: { type: String, default: '' },
+  page_name: { type: String, default: '' },
+  form_name: { type: String, default: '' },
+  campaign_name: { type: String, default: '' },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });
