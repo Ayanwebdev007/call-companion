@@ -8,7 +8,8 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: Date,
   settings: {
     metaPageAccessToken: { type: String, default: '' },
-    metaVerifyToken: { type: String, default: '' }
+    metaVerifyToken: { type: String, default: '' },
+    metaPageId: { type: String, default: '' }
   }
 }, { timestamps: true });
 

@@ -13,7 +13,8 @@ const MetaSettings = () => {
     const [loading, setLoading] = useState(false);
     const [settings, setSettings] = useState({
         metaPageAccessToken: '',
-        metaVerifyToken: ''
+        metaVerifyToken: '',
+        metaPageId: ''
     });
 
     useEffect(() => {
@@ -26,7 +27,8 @@ const MetaSettings = () => {
             if (response.data.settings) {
                 setSettings({
                     metaPageAccessToken: response.data.settings.metaPageAccessToken || '',
-                    metaVerifyToken: response.data.settings.metaVerifyToken || ''
+                    metaVerifyToken: response.data.settings.metaVerifyToken || '',
+                    metaPageId: response.data.settings.metaPageId || ''
                 });
             }
         } catch (error) {
@@ -77,12 +79,24 @@ const MetaSettings = () => {
                         <div className="space-y-2">
                             <Label>Webhook Payload URL</Label>
                             <div className="flex gap-2">
-                                <Input value={`${window.location.origin.replace('5173', '5000')}/api/meta/webhook`} readOnly className="bg-muted" />
+                                <Input 
+                                    value={(() => {
+                                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                                        // Remove /api suffix if present, then add /api/meta/webhook
+                                        const baseUrl = apiUrl.replace(/\/api$/, '');
+                                        return `${baseUrl}/api/meta/webhook`;
+                                    })()} 
+                                    readOnly 
+                                    className="bg-muted" 
+                                />
                                 <Button variant="outline" size="sm" onClick={() => {
-                                    navigator.clipboard.writeText(`${window.location.origin.replace('5173', '5000')}/api/meta/webhook`);
+                                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                                    const baseUrl = apiUrl.replace(/\/api$/, '');
+                                    navigator.clipboard.writeText(`${baseUrl}/api/meta/webhook`);
                                     toast({ title: "URL copied to clipboard" });
                                 }}>Copy</Button>
                             </div>
+                            <p className="text-xs text-muted-foreground">Use this URL in your Meta Developer App webhook settings.</p>
                         </div>
 
                         <div className="space-y-2">
@@ -112,6 +126,16 @@ const MetaSettings = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
+                            <Label>Meta Page ID</Label>
+                            <Input
+                                value={settings.metaPageId}
+                                onChange={(e) => setSettings(prev => ({ ...prev, metaPageId: e.target.value }))}
+                                placeholder="806449735881894"
+                            />
+                            <p className="text-xs text-muted-foreground">Your Facebook Page ID. Find it in your Page Settings or Meta Business Suite.</p>
+                        </div>
+
+                        <div className="space-y-2">
                             <Label>Meta Page Access Token</Label>
                             <Input
                                 type="password"
@@ -119,7 +143,7 @@ const MetaSettings = () => {
                                 onChange={(e) => setSettings(prev => ({ ...prev, metaPageAccessToken: e.target.value }))}
                                 placeholder="EAAG...."
                             />
-                            <p className="text-xs text-muted-foreground">Get this from Meta Graph API Explorer or your App settings.</p>
+                            <p className="text-xs text-muted-foreground">Get this from Meta Graph API Explorer or your App settings. Must have <code>leads_retrieval</code> permission.</p>
                         </div>
 
                         <Button onClick={handleSave} disabled={loading} className="w-full">

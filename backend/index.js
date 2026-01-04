@@ -70,17 +70,37 @@ app.use('/api/customers', fileUpload({
 
 // Routes
 // Consolidated Meta Webhook (Directly in index.js to avoid routing issues)
-app.get('/api/meta/webhook', (req, res) => {
+app.get('/api/meta/webhook', async (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
-  const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
 
-  if (mode === 'subscribe' && token === verifyToken) {
-    console.log('--- META WEBHOOK VERIFIED ---');
-    return res.status(200).send(challenge);
+  console.log('--- META WEBHOOK VERIFICATION ATTEMPT ---');
+  console.log('Mode:', mode);
+  console.log('Token received:', token ? 'PRESENT' : 'MISSING');
+
+  if (mode === 'subscribe') {
+    // Try to find user with matching verify token
+    const User = (await import('./models/User.js')).default;
+    const user = await User.findOne({ 'settings.metaVerifyToken': token });
+
+    if (user) {
+      console.log(`--- META WEBHOOK VERIFIED (User: ${user.username}) ---`);
+      return res.status(200).send(challenge);
+    }
+
+    // Fallback to environment variable for backward compatibility
+    const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
+    if (token === verifyToken) {
+      console.log('--- META WEBHOOK VERIFIED (Global Token) ---');
+      return res.status(200).send(challenge);
+    }
+
+    console.warn('--- WEBHOOK VERIFICATION FAILED ---');
+    return res.status(403).send('Verification failed');
   }
-  res.status(403).send('Verification failed');
+
+  res.status(400).send('Invalid mode');
 });
 
 app.post('/api/meta/webhook', async (req, res) => {
@@ -106,18 +126,45 @@ app.post('/api/meta/webhook', async (req, res) => {
           if (change.field === 'leadgen') {
             const leadId = change.value.leadgen_id;
             const pageId = change.value.page_id;
-            console.log(`[Background] Processing lead: ${leadId}`);
+            console.log(`[Background] Processing lead: ${leadId} for page: ${pageId}`);
 
-            // Find all users with Meta tokens
-            const users = await User.find({ 'settings.metaPageAccessToken': { $exists: true, $ne: '' } });
-            if (users.length > 0) {
-              const user = users[0];
+            // Find user by page_id (exact match)
+            const user = await User.findOne({
+              'settings.metaPageId': pageId,
+              'settings.metaPageAccessToken': { $exists: true, $ne: '' }
+            });
+
+            if (!user) {
+              console.error(`[Background Error] No user found for page_id: ${pageId}`);
+              console.error('Make sure a user has configured metaPageId matching this page_id');
+              continue;
+            }
+
+            console.log(`[Background] Found user: ${user.username} for page: ${pageId}`);
+
+            try {
               const leadDetails = await metaService.getLeadDetails(leadId, user.settings.metaPageAccessToken);
 
               let spreadsheet = await mongoose.model('Spreadsheet').findOne({ user_id: user._id, name: 'Meta Ads Leads' });
               if (!spreadsheet) {
                 spreadsheet = new (mongoose.model('Spreadsheet'))({ user_id: user._id, name: 'Meta Ads Leads', description: 'Leads from Meta Ads' });
                 await spreadsheet.save();
+              }
+
+              // Check for duplicate leads (by Meta Lead ID in remark or email/phone)
+              const existingCustomer = await Customer.findOne({
+                user_id: user._id,
+                spreadsheet_id: spreadsheet._id,
+                $or: [
+                  { remark: { $regex: `Meta ID: ${leadId}`, $options: 'i' } },
+                  { email: leadDetails.email || '' },
+                  { phone_number: leadDetails.phoneNumber || 'N/A' }
+                ]
+              });
+
+              if (existingCustomer) {
+                console.log(`[Background] Lead ${leadId} already exists as customer ${existingCustomer._id}`);
+                continue;
               }
 
               const customer = new Customer({
@@ -127,11 +174,13 @@ app.post('/api/meta/webhook', async (req, res) => {
                 company_name: leadDetails.companyName || 'Meta Ads',
                 phone_number: leadDetails.phoneNumber || 'N/A',
                 email: leadDetails.email || '',
-                remark: `Meta ID: ${leadId}`,
+                remark: `Meta Lead ID: ${leadId}`,
                 status: 'new'
               });
               await customer.save();
-              console.log(`[Background] Saved customer: ${customer._id}`);
+              console.log(`[Background] Successfully saved customer: ${customer._id} for lead: ${leadId}`);
+            } catch (leadError) {
+              console.error(`[Background Error] Failed to process lead ${leadId}:`, leadError.message);
             }
           }
         }
