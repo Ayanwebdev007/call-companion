@@ -17,15 +17,24 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// FUZZY WEBHOOK PROBE - CATCHES ANYTHING WITH 'meta' OR 'webhook'
+// GLOBAL REQUEST LOGGING - MUST BE FIRST
 app.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
   const fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
+  console.log(`[REQUEST] [${timestamp}] ${req.method} ${fullUrl}`);
+
+  // Specific probe for Meta/Webhook
   if (req.originalUrl.toLowerCase().includes('meta') || req.originalUrl.toLowerCase().includes('webhook')) {
-    console.log(`[FUZZY PROBE] ${req.method} ${fullUrl}`);
-    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+    console.log(`[META-PROBE] Headers:`, JSON.stringify(req.headers, null, 2));
   }
   next();
 });
+
+// HEARTBEAT LOG - Confirm logging is active every 60s
+setInterval(() => {
+  console.log(`[HEARTBEAT] [${new Date().toISOString()}] Server is alive and logging.`);
+}, 60000);
+
 
 
 // Debug logging
@@ -69,6 +78,9 @@ app.use('/api/customers', fileUpload({
 }));
 
 // Routes
+// Routes - PRIORITY ROUTES FIRST
+app.use('/api/meta', metaRoutes); // Moved to top priority
+
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/spreadsheets', spreadsheetRoutes);
@@ -76,7 +88,7 @@ app.use('/api', shareRoutes);
 app.use('/api', posterRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/googlesheets', googleSheetsRoutes);
-app.use('/api/meta', metaRoutes);
+
 
 
 // Test DELETE route
