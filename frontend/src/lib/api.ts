@@ -179,6 +179,11 @@ export const updateSpreadsheet = async (id: string, updates: Partial<Spreadsheet
 export const deleteSpreadsheet = async (id: string): Promise<void> => {
   await api.delete(`${SPREADSHEETS_API_URL}/${id}`);
 };
+
+export const mergeSpreadsheets = async (spreadsheetIds: string[], name?: string): Promise<Spreadsheet> => {
+  const response = await api.post(`${SPREADSHEETS_API_URL}/merge`, { spreadsheetIds, name });
+  return response.data;
+};
 export const forgotPassword = async (email: string): Promise<{ message: string, devMode?: boolean }> => {
   const response = await api.post(`${API_BASE_URL}/api/auth/forgot-password`, { email });
   return response.data;

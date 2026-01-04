@@ -110,24 +110,35 @@ router.post('/webhook', async (req, res) => {
                             const pageName = pageInfo?.name || pageId;
                             const formName = formInfo?.name || 'Meta Form';
                             const campaignName = adInfo?.campaign?.name || 'Standard Campaign';
+                            const adSetName = adInfo?.adset?.name || 'Standard Ad Set';
+                            const adName = adInfo?.name || 'Standard Ad';
 
                             // Create a descriptive spreadsheet name
-                            const spreadsheetName = `${pageName} - ${formName}`;
+                            // Format: Page - Campaign - Ad Set - Ad (Form is usually implied by Ad, but we keep it for clarity or put it in description)
+                            // User wants spreadsheet to appear based on Page, Form, Campaign, Ad Set, Ad.
+                            const spreadsheetName = `${pageName} - ${campaignName} - ${adName}`;
 
                             // Find or create spreadsheet
+                            // Must match ALL criteria to ensure separation
                             let spreadsheet = await mongoose.model('Spreadsheet').findOne({
                                 user_id: user._id,
-                                name: spreadsheetName
+                                page_name: pageName,
+                                form_name: formName,
+                                campaign_name: campaignName,
+                                ad_set_name: adSetName,
+                                ad_name: adName
                             });
 
                             if (!spreadsheet) {
                                 spreadsheet = new (mongoose.model('Spreadsheet'))({
                                     user_id: user._id,
                                     name: spreadsheetName,
-                                    description: `Leads from Page: ${pageName}, Form: ${formName}`,
+                                    description: `Leads from Page: ${pageName}, Form: ${formName}, Campaign: ${campaignName}, Ad Set: ${adSetName}, Ad: ${adName}`,
                                     page_name: pageName,
                                     form_name: formName,
                                     campaign_name: campaignName,
+                                    ad_set_name: adSetName,
+                                    ad_name: adName,
                                     is_meta: true
                                 });
                                 await spreadsheet.save();
@@ -155,7 +166,7 @@ router.post('/webhook', async (req, res) => {
                                 company_name: leadDetails.companyName || 'Meta Ads',
                                 phone_number: leadDetails.phoneNumber || 'N/A',
                                 email: leadDetails.email || '',
-                                remark: `Campaign: ${campaignName} | Page: ${pageName} | Lead ID: ${leadId}`,
+                                remark: `Campaign: ${campaignName} | Ad Set: ${adSetName} | Ad: ${adName}`,
                                 meta_data: leadDetails.fieldMap || {}, // Save all field data
                                 status: 'new'
                             });

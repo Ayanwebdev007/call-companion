@@ -148,4 +148,82 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+// MERGE spreadsheets
+router.post('/merge', auth, async (req, res) => {
+  const { spreadsheetIds, name } = req.body;
+
+  if (!spreadsheetIds || !Array.isArray(spreadsheetIds) || spreadsheetIds.length < 2) {
+    return res.status(400).json({ message: 'At least two spreadsheets are required for merging.' });
+  }
+
+  try {
+    // 1. Verify ownership and existence of all spreadsheets
+    const spreadsheets = await Spreadsheet.find({
+      _id: { $in: spreadsheetIds },
+      user_id: req.user.id
+    });
+
+    if (spreadsheets.length !== spreadsheetIds.length) {
+      return res.status(400).json({ message: 'One or more spreadsheets not found or permission denied.' });
+    }
+
+    // 2. Validate consistency (Optional: Check if they are all Meta and share same page/form)
+    // For now, we trust the frontend grouping, but basic check is good.
+    const firstSheet = spreadsheets[0];
+    const isConsistent = spreadsheets.every(s =>
+      s.is_meta === firstSheet.is_meta &&
+      s.page_name === firstSheet.page_name &&
+      s.form_name === firstSheet.form_name
+    );
+
+    if (!isConsistent) {
+      // We can allow merging inconsistent sheets if user wants, but per requirements: "merge only for same form"
+      return res.status(400).json({ message: 'Spreadsheets must share the same Page, Form, and Meta status to be merged.' });
+    }
+
+    // 3. Create new Merged Spreadsheet
+    const newSpreadsheet = new Spreadsheet({
+      user_id: req.user.id,
+      name: name || `Merged: ${firstSheet.page_name} - ${firstSheet.form_name}`,
+      description: `Merged from ${spreadsheets.length} spreadsheets. Source Page: ${firstSheet.page_name}, Form: ${firstSheet.form_name}`,
+      is_meta: firstSheet.is_meta,
+      meta_headers: firstSheet.meta_headers, // Assume headers are compatible if form is same
+      page_name: firstSheet.page_name,
+      form_name: firstSheet.form_name,
+      campaign_name: 'Merged Campaign',
+      ad_set_name: 'Merged Ad Set',
+      ad_name: 'Merged Ad'
+    });
+
+    await newSpreadsheet.save();
+
+    // 4. Fetch and Copy Customers
+    // We want to copy everything. Duplicate check? User said "merge data", usually implies union.
+    // We'll simplisticly copy all.
+    const customers = await Customer.find({ spreadsheet_id: { $in: spreadsheetIds } }).lean();
+
+    const newCustomers = customers.map(c => {
+      const { _id, ...rest } = c; // Remove _id
+      return {
+        ...rest,
+        user_id: req.user.id, // Ensure user_id is set
+        spreadsheet_id: newSpreadsheet._id,
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+    });
+
+    if (newCustomers.length > 0) {
+      // Chunk insert if too large? For now insertMany is fine for reasonable sizes
+      await Customer.insertMany(newCustomers);
+    }
+
+    res.status(201).json(newSpreadsheet);
+
+  } catch (err) {
+    console.error('Merge error:', err);
+    res.status(500).json({ message: 'Failed to merge spreadsheets. ' + err.message });
+  }
+});
+
 export default router;

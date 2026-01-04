@@ -7,6 +7,8 @@ const spreadsheetSchema = new mongoose.Schema({
   page_name: { type: String, default: '' },
   form_name: { type: String, default: '' },
   campaign_name: { type: String, default: '' },
+  ad_set_name: { type: String, default: '' },
+  ad_name: { type: String, default: '' },
   meta_headers: { type: [String], default: [] },
   is_meta: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },

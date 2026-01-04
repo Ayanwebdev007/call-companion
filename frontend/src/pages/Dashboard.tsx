@@ -14,6 +14,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import GoogleSheetsDialog from "@/components/GoogleSheetsDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MergeDialog } from "@/components/MergeDialog";
 
 const Dashboard = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -28,6 +29,7 @@ const Dashboard = () => {
   const [filterMode, setFilterMode] = useState<"manual" | "meta">("manual");
   const [selectedMetaPage, setSelectedMetaPage] = useState<string>("all");
   const [selectedMetaCampaign, setSelectedMetaCampaign] = useState<string>("all");
+  const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
@@ -245,6 +247,17 @@ const Dashboard = () => {
               <User className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium text-foreground/90 dark:text-white/90">{user?.username}</span>
             </div>
+
+            {filterMode === "meta" && (
+              <Button
+                variant="outline"
+                onClick={() => setIsMergeDialogOpen(true)}
+                className="hidden md:flex shadow-sm gap-2 border-dashed border-primary/20 bg-background/50 hover:bg-background/80"
+              >
+                <Filter className="h-4 w-4 rotate-90 text-primary" />
+                Merge Duplicates
+              </Button>
+            )}
 
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
@@ -644,6 +657,12 @@ const Dashboard = () => {
           queryClient.invalidateQueries({ queryKey: ["spreadsheets"] });
           toast({ title: "Data imported successfully!" });
         }}
+      />
+
+      <MergeDialog
+        open={isMergeDialogOpen}
+        onOpenChange={setIsMergeDialogOpen}
+        spreadsheets={spreadsheets}
       />
     </div>
   );

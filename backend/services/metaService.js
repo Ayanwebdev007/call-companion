@@ -25,7 +25,7 @@ class MetaService {
             const response = await axios.get(`${this.baseUrl}/${adId}`, {
                 params: {
                     access_token: pageAccessToken,
-                    fields: 'campaign{id,name}'
+                    fields: 'name,campaign{id,name},adset{id,name}'
                 }
             });
             return response.data;
