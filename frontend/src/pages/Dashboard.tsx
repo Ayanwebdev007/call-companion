@@ -9,9 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchSpreadsheets, fetchSharedSpreadsheets, createSpreadsheet, deleteSpreadsheet, shareSpreadsheet, Spreadsheet } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft, Download, Webhook, LayoutDashboard } from "lucide-react";
+import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft, Download, Webhook, LayoutDashboard, Filter, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import GoogleSheetsDialog from "@/components/GoogleSheetsDialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Dashboard = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -25,6 +27,7 @@ const Dashboard = () => {
   const [selectedSpreadsheetForImport, setSelectedSpreadsheetForImport] = useState("");
   const [filterMode, setFilterMode] = useState<"manual" | "meta">("manual");
   const [selectedMetaPage, setSelectedMetaPage] = useState<string>("all");
+  const [selectedMetaCampaign, setSelectedMetaCampaign] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
@@ -47,6 +50,14 @@ const Dashboard = () => {
     return Array.from(new Set(pages)).sort();
   }, [spreadsheets]);
 
+  // Get unique campaign names
+  const metaCampaigns = useMemo(() => {
+    const campaigns = spreadsheets
+      .filter((s: Spreadsheet) => s.is_meta && s.campaign_name)
+      .map((s: Spreadsheet) => s.campaign_name as string);
+    return Array.from(new Set(campaigns)).sort();
+  }, [spreadsheets]);
+
   // Filter spreadsheets based on filterMode and selectedMetaPage
   const filteredSpreadsheets = useMemo(() => {
     if (filterMode === "manual") {
@@ -57,6 +68,9 @@ const Dashboard = () => {
       let metaSheets = spreadsheets.filter((s: Spreadsheet) => s.is_meta);
       if (selectedMetaPage !== "all") {
         metaSheets = metaSheets.filter((s: Spreadsheet) => s.page_name === selectedMetaPage);
+      }
+      if (selectedMetaCampaign !== "all") {
+        metaSheets = metaSheets.filter((s: Spreadsheet) => s.campaign_name === selectedMetaCampaign);
       }
       return metaSheets;
     }
@@ -216,6 +230,7 @@ const Dashboard = () => {
               onClick={() => {
                 setFilterMode("meta");
                 setSelectedMetaPage("all"); // Reset page filter when switching to Meta
+                setSelectedMetaCampaign("all"); // Reset campaign filter
               }}
               className={`h-8 gap-2 rounded-lg transition-all ${filterMode === "meta" ? "shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             >
@@ -368,30 +383,89 @@ const Dashboard = () => {
       </header>
 
       {/* Meta Filter Sub-navigation */}
-      {filterMode === "meta" && metaPages.length > 0 && (
+      {filterMode === "meta" && (
         <div className="sticky top-[65px] z-40 w-full border-b border-border/40 bg-background/40 backdrop-blur-lg animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="container mx-auto px-4 py-2 overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-2 min-w-max">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mr-2">Filter by Page:</span>
-              <Button
-                variant={selectedMetaPage === "all" ? "default" : "secondary"}
-                size="sm"
-                onClick={() => setSelectedMetaPage("all")}
-                className="h-7 px-3 text-xs rounded-full"
-              >
-                All Pages
-              </Button>
-              {metaPages.map((page) => (
-                <Button
-                  key={page}
-                  variant={selectedMetaPage === page ? "default" : "secondary"}
-                  size="sm"
-                  onClick={() => setSelectedMetaPage(page)}
-                  className="h-7 px-3 text-xs rounded-full"
-                >
-                  {page}
+          <div className="container mx-auto px-4 py-2 flex items-center gap-4">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 gap-2 border-dashed bg-background/50 hover:bg-background/80">
+                  <Filter className="h-4 w-4" />
+                  Filter Sheets
+                  {(selectedMetaPage !== "all" || selectedMetaCampaign !== "all") && (
+                    <span className="ml-1 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                      {Number(selectedMetaPage !== "all") + Number(selectedMetaCampaign !== "all")}
+                    </span>
+                  )}
                 </Button>
-              ))}
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" align="start">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <h4 className="font-medium leading-none text-sm">Filter Meta Sheets</h4>
+                    <p className="text-xs text-muted-foreground">Narrow down by Page or Campaign</p>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium">Page</label>
+                    <Select value={selectedMetaPage} onValueChange={setSelectedMetaPage}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Pages" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Pages</SelectItem>
+                        {metaPages.map(page => (
+                          <SelectItem key={page} value={page}>{page}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium">Campaign</label>
+                    <Select value={selectedMetaCampaign} onValueChange={setSelectedMetaCampaign}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Campaigns" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Campaigns</SelectItem>
+                        {metaCampaigns.map(campaign => (
+                          <SelectItem key={campaign} value={campaign}>{campaign}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {(selectedMetaPage !== "all" || selectedMetaCampaign !== "all") && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start text-muted-foreground h-8 px-2 hover:text-foreground"
+                      onClick={() => {
+                        setSelectedMetaPage("all");
+                        setSelectedMetaCampaign("all");
+                      }}
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+              {/* Active Filter Chips */}
+              {selectedMetaPage !== "all" && (
+                <div className="flex items-center gap-1 text-xs bg-secondary/50 px-2.5 py-1 rounded-full border border-border/50 animate-in fade-in zoom-in-95">
+                  <span className="opacity-60 font-medium">Page:</span>
+                  <span className="font-semibold">{selectedMetaPage}</span>
+                  <button onClick={() => setSelectedMetaPage("all")} className="ml-1 hover:text-destructive transition-colors p-0.5"><X className="h-3 w-3" /></button>
+                </div>
+              )}
+              {selectedMetaCampaign !== "all" && (
+                <div className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full border border-primary/20 animate-in fade-in zoom-in-95">
+                  <span className="opacity-60 font-medium">Campaign:</span>
+                  <span className="font-semibold">{selectedMetaCampaign}</span>
+                  <button onClick={() => setSelectedMetaCampaign("all")} className="ml-1 hover:text-destructive transition-colors p-0.5"><X className="h-3 w-3" /></button>
+                </div>
+              )}
             </div>
           </div>
         </div>
