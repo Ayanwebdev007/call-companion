@@ -93,6 +93,38 @@ const MetaSettings = () => {
         handleSave(updatedSettings);
     };
 
+    const migrateLegacySettings = async () => {
+        if (!settings.metaPageId || !settings.metaPageAccessToken) return;
+
+        setLoading(true);
+        try {
+            const response = await api.get(`/api/meta/page-details?pageId=${settings.metaPageId}&token=${settings.metaPageAccessToken}`);
+            const pageName = response.data.name || 'Legacy Page';
+
+            const updatedPages = [...settings.metaPages, {
+                pageId: settings.metaPageId,
+                pageAccessToken: settings.metaPageAccessToken,
+                pageName
+            }];
+
+            const updatedSettings = {
+                ...settings,
+                metaPages: updatedPages,
+                metaPageId: '',
+                metaPageAccessToken: ''
+            };
+
+            setSettings(updatedSettings);
+            await handleSave(updatedSettings);
+            toast({ title: "Successfully migrated to new system!" });
+        } catch (error) {
+            console.error('Migration failed:', error);
+            toast({ title: "Migration failed", description: "Could not verify legacy credentials.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const generateVerifyToken = () => {
         const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
         setSettings(prev => ({ ...prev, metaVerifyToken: token }));
@@ -231,7 +263,10 @@ const MetaSettings = () => {
                                     <Input type="password" value={settings.metaPageAccessToken} onChange={(e) => setSettings(prev => ({ ...prev, metaPageAccessToken: e.target.value }))} className="h-8 text-xs" />
                                 </div>
                             </div>
-                            <Button size="sm" variant="outline" className="w-full h-8 text-xs" onClick={() => handleSave()} disabled={loading}>Update Legacy Settings</Button>
+                            <div className="flex gap-4">
+                                <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={() => handleSave()} disabled={loading}>Update Legacy Settings</Button>
+                                <Button size="sm" className="flex-1 h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white" onClick={migrateLegacySettings} disabled={loading}>Move to Connected Pages →</Button>
+                            </div>
                         </CardContent>
                     </Card>
                 )}
