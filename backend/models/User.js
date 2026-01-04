@@ -9,7 +9,12 @@ const userSchema = new mongoose.Schema({
   settings: {
     metaPageAccessToken: { type: String, default: '' },
     metaVerifyToken: { type: String, default: '' },
-    metaPageId: { type: String, default: '' }
+    metaPageId: { type: String, default: '' },
+    metaPages: [{
+      pageId: { type: String, required: true },
+      pageAccessToken: { type: String, required: true },
+      pageName: { type: String, default: '' }
+    }]
   }
 }, { timestamps: true });
 

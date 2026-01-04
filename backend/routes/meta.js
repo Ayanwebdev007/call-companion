@@ -69,10 +69,12 @@ router.post('/webhook', async (req, res) => {
 
                         console.log(`[META-WEBHOOK] Processing lead: ${leadId} for Page: ${pageId}`);
 
-                        // Find user by pageId
+                        // Find user by pageId (either legacy field or in metaPages array)
                         const user = await User.findOne({
-                            'settings.metaPageId': pageId,
-                            'settings.metaPageAccessToken': { $exists: true, $ne: '' }
+                            $or: [
+                                { 'settings.metaPageId': pageId },
+                                { 'settings.metaPages.pageId': pageId }
+                            ]
                         });
 
                         if (!user) {
@@ -80,16 +82,29 @@ router.post('/webhook', async (req, res) => {
                             continue;
                         }
 
-                        console.log(`[META-WEBHOOK] Found user: ${user.username}`);
+                        // Determine the correct access token for this specific page
+                        let pageAccessToken = user.settings.metaPageAccessToken; // Default to legacy token
+
+                        const specificPage = user.settings.metaPages?.find(p => p.pageId === pageId);
+                        if (specificPage?.pageAccessToken) {
+                            pageAccessToken = specificPage.pageAccessToken;
+                        }
+
+                        if (!pageAccessToken) {
+                            console.warn(`[META-WEBHOOK] ERROR: No access token found for Page ID: ${pageId} (User: ${user.username})`);
+                            continue;
+                        }
+
+                        console.log(`[META-WEBHOOK] Using token for user: ${user.username} (Page: ${pageId})`);
 
                         try {
-                            const leadDetails = await metaService.getLeadDetails(leadId, user.settings.metaPageAccessToken);
+                            const leadDetails = await metaService.getLeadDetails(leadId, pageAccessToken);
 
                             // Fetch granular details
                             const [pageInfo, formInfo, adInfo] = await Promise.all([
-                                metaService.getPageDetails(pageId, user.settings.metaPageAccessToken),
-                                metaService.getFormDetails(change.value.form_id, user.settings.metaPageAccessToken),
-                                metaService.getAdDetails(change.value.ad_id, user.settings.metaPageAccessToken)
+                                metaService.getPageDetails(pageId, pageAccessToken),
+                                metaService.getFormDetails(change.value.form_id, pageAccessToken),
+                                metaService.getAdDetails(change.value.ad_id, pageAccessToken)
                             ]);
 
                             const pageName = pageInfo?.name || pageId;
@@ -157,6 +172,21 @@ router.post('/webhook', async (req, res) => {
         }
     } else {
         console.warn(`[META-WEBHOOK] Received object type ${body.object}, expected 'page'`);
+    }
+});
+
+// Fetch Page Details for UI setup
+router.get('/page-details', async (req, res) => {
+    const { pageId, token } = req.query;
+    if (!pageId || !token) {
+        return res.status(400).json({ error: 'pageId and token are required' });
+    }
+
+    try {
+        const details = await metaService.getPageDetails(pageId, token);
+        res.json(details);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
