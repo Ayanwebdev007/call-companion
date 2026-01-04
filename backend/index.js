@@ -17,12 +17,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// SURGICAL WEBHOOK LOGGER - CATCHES SIGNAL BEFORE ANY ROUTING
+// GLOBAL PROBE - LOGS EVERY SINGLE REQUEST
 app.use((req, res, next) => {
-  if (req.originalUrl.includes('meta/webhook')) {
-    console.log(`[WEBHOOK PROBE] ${req.method} ${req.originalUrl}`);
-    console.log('Headers:', JSON.stringify(req.headers, null, 2));
-  }
+  console.log(`[GLOBAL PROBE] ${req.method} ${req.url}`);
   next();
 });
 
@@ -161,6 +158,12 @@ app.get('/api/health', (req, res) => {
     message: 'Server is running',
     port: PORT
   });
+});
+
+// Specialized POST test endpoint
+app.post('/api/test-post', (req, res) => {
+  console.log('!!! MANUAL POST TEST RECEIVED !!!');
+  res.status(200).json({ message: 'POST received successfully' });
 });
 
 // Database Connection - Updated for MongoDB Atlas
