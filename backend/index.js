@@ -17,9 +17,13 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// GLOBAL PROBE - LOGS EVERY SINGLE REQUEST
+// FUZZY WEBHOOK PROBE - CATCHES ANYTHING WITH 'meta' OR 'webhook'
 app.use((req, res, next) => {
-  console.log(`[GLOBAL PROBE] ${req.method} ${req.url}`);
+  const fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
+  if (req.originalUrl.toLowerCase().includes('meta') || req.originalUrl.toLowerCase().includes('webhook')) {
+    console.log(`[FUZZY PROBE] ${req.method} ${fullUrl}`);
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  }
   next();
 });
 
@@ -164,6 +168,14 @@ app.get('/api/health', (req, res) => {
 app.post('/api/test-post', (req, res) => {
   console.log('!!! MANUAL POST TEST RECEIVED !!!');
   res.status(200).json({ message: 'POST received successfully' });
+});
+
+// Meta Delivery Diagnosis Route (Accepts anything)
+app.all('/api/meta-debug', (req, res) => {
+  console.log('!!! META DEBUG ROUTE HIT !!!');
+  console.log('Method:', req.method);
+  console.log('Query:', req.query);
+  res.status(200).send('DEBUG_OK');
 });
 
 // Database Connection - Updated for MongoDB Atlas
