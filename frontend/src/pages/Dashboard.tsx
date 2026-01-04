@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchSpreadsheets, fetchSharedSpreadsheets, createSpreadsheet, deleteSpreadsheet, shareSpreadsheet, Spreadsheet } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft, Download } from "lucide-react";
+import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft, Download, Webhook, LayoutDashboard } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import GoogleSheetsDialog from "@/components/GoogleSheetsDialog";
 
@@ -19,10 +19,11 @@ const Dashboard = () => {
   const [selectedSpreadsheetId, setSelectedSpreadsheetId] = useState("");
   const [shareUsername, setShareUsername] = useState("");
   const [sharePermission, setSharePermission] = useState<"read-only" | "read-write">("read-only");
-const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
+  const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
   const [newSpreadsheetDescription, setNewSpreadsheetDescription] = useState("");
   const [isGoogleSheetsDialogOpen, setIsGoogleSheetsDialogOpen] = useState(false);
   const [selectedSpreadsheetForImport, setSelectedSpreadsheetForImport] = useState("");
+  const [filterMode, setFilterMode] = useState<"all" | "manual" | "meta">("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
@@ -36,6 +37,14 @@ const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
   });
 
 
+
+  // Filter spreadsheets based on filterMode
+  const filteredSpreadsheets = useMemo(() => {
+    if (filterMode === "all") return spreadsheets;
+    if (filterMode === "manual") return spreadsheets.filter((s: Spreadsheet) => !s.is_meta);
+    if (filterMode === "meta") return spreadsheets.filter((s: Spreadsheet) => s.is_meta);
+    return spreadsheets;
+  }, [spreadsheets, filterMode]);
 
   // Create spreadsheet mutation
   const createMutation = useMutation({
@@ -172,6 +181,37 @@ const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
               <p className="text-xs text-muted-foreground">Manage your customer outreach</p>
             </div>
           </div>
+
+          <div className="hidden lg:flex items-center gap-1 bg-secondary/50 dark:bg-white/5 p-1 rounded-xl border border-border/50 dark:border-white/10 backdrop-blur-md">
+            <Button
+              variant={filterMode === "all" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setFilterMode("all")}
+              className={`h-8 gap-2 rounded-lg transition-all ${filterMode === "all" ? "shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              <span>All</span>
+            </Button>
+            <Button
+              variant={filterMode === "manual" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setFilterMode("manual")}
+              className={`h-8 gap-2 rounded-lg transition-all ${filterMode === "manual" ? "shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <User className="h-4 w-4" />
+              <span>Manual</span>
+            </Button>
+            <Button
+              variant={filterMode === "meta" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setFilterMode("meta")}
+              className={`h-8 gap-2 rounded-lg transition-all ${filterMode === "meta" ? "shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Webhook className="h-4 w-4 text-blue-500" />
+              <span>Meta Ads</span>
+            </Button>
+          </div>
+
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <div className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 bg-secondary/50 dark:bg-white/5 rounded-full border border-border/50 dark:border-white/10 backdrop-blur-md">
@@ -321,7 +361,7 @@ const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-foreground dark:text-white">Dashboard</h2>
             <p className="text-muted-foreground mt-1">
-              You have {spreadsheets.length} {spreadsheets.length === 1 ? 'spreadsheet' : 'spreadsheets'}
+              Showing {filteredSpreadsheets.length} {filteredSpreadsheets.length === 1 ? 'spreadsheet' : 'spreadsheets'} ({filterMode})
             </p>
           </div>
 
@@ -360,7 +400,7 @@ const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in-up">
-            {spreadsheets.map((spreadsheet: Spreadsheet) => (
+            {filteredSpreadsheets.map((spreadsheet: Spreadsheet) => (
               <Card
                 key={spreadsheet.id}
                 className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10 border-border/50 dark:border-white/5 bg-card/60 dark:bg-card/40 backdrop-blur-md cursor-pointer ring-1 ring-border/10 dark:ring-white/10 hover:ring-primary/30"
@@ -439,32 +479,32 @@ const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
                               handleShareSpreadsheet(spreadsheet.id);
                             }}
                           >
-<Share2 className="h-3.5 w-3.5" />
+                            <Share2 className="h-3.5 w-3.5" />
                           </Button>
                           <Button
-                             variant="ghost"
-                             size="icon"
-                             className="h-7 w-7 hover:bg-green-100 dark:hover:bg-green-900 hover:text-green-600 dark:hover:text-green-400 rounded-full transition-colors"
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               setSelectedSpreadsheetForImport(spreadsheet.id);
-                               setIsGoogleSheetsDialogOpen(true);
-                             }}
-                             title="Import from Google Sheets"
-                           >
-                             <Download className="h-3.5 w-3.5" />
-                           </Button>
-                           <Button
-                             variant="ghost"
-                             size="icon"
-                             className="h-7 w-7 hover:bg-destructive/20 hover:text-destructive rounded-full transition-colors"
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               handleDeleteSpreadsheet(spreadsheet.id, spreadsheet.name);
-                             }}
-                           >
-                             <Trash2 className="h-3.5 w-3.5" />
-                           </Button>
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 hover:bg-green-100 dark:hover:bg-green-900 hover:text-green-600 dark:hover:text-green-400 rounded-full transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedSpreadsheetForImport(spreadsheet.id);
+                              setIsGoogleSheetsDialogOpen(true);
+                            }}
+                            title="Import from Google Sheets"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 hover:bg-destructive/20 hover:text-destructive rounded-full transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSpreadsheet(spreadsheet.id, spreadsheet.name);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </>
                       )}
                       <span className="ml-2 group-hover:translate-x-1 transition-transform duration-300 text-primary group-hover:text-primary-foreground font-medium flex items-center gap-0.5">
@@ -477,7 +517,7 @@ const [newSpreadsheetName, setNewSpreadsheetName] = useState("");
             ))}
           </div>
         )}
-</main>
+      </main>
 
       {/* Google Sheets Import Dialog */}
       <GoogleSheetsDialog

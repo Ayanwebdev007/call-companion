@@ -112,7 +112,8 @@ router.post('/webhook', async (req, res) => {
                                     description: `Leads from Page: ${pageName}, Form: ${formName}`,
                                     page_name: pageName,
                                     form_name: formName,
-                                    campaign_name: campaignName
+                                    campaign_name: campaignName,
+                                    is_meta: true
                                 });
                                 await spreadsheet.save();
                             }

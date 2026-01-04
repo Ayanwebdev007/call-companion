@@ -29,6 +29,7 @@ export interface Spreadsheet {
   page_name?: string;
   form_name?: string;
   campaign_name?: string;
+  is_meta?: boolean;
   created_at: string;
   updated_at: string;
   permission_level?: 'read-only' | 'read-write';
