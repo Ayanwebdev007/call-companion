@@ -69,161 +69,6 @@ app.use('/api/customers', fileUpload({
 }));
 
 // Routes
-// Consolidated Meta Webhook (Directly in index.js to avoid routing issues)
-app.get('/api/meta/webhook', async (req, res) => {
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
-  const challenge = req.query['hub.challenge'];
-
-  console.log('=========================================');
-  console.log('--- META WEBHOOK VERIFICATION ATTEMPT ---');
-  console.log('=========================================');
-  console.log('Full URL:', req.protocol + '://' + req.get('host') + req.originalUrl);
-  console.log('Query Params:', JSON.stringify(req.query, null, 2));
-  console.log('Mode:', mode);
-  console.log('Token received:', token ? `PRESENT (${token.substring(0, 10)}...)` : 'MISSING');
-  console.log('Challenge:', challenge ? 'PRESENT' : 'MISSING');
-
-  if (mode === 'subscribe') {
-    // Try to find user with matching verify token
-    const User = (await import('./models/User.js')).default;
-    
-    // Log all users with verify tokens for debugging
-    const usersWithTokens = await User.find({ 
-      'settings.metaVerifyToken': { $exists: true, $ne: '' } 
-    }).select('username settings.metaVerifyToken');
-    
-    console.log(`Found ${usersWithTokens.length} user(s) with verify tokens:`);
-    usersWithTokens.forEach(u => {
-      const tokenMatch = u.settings.metaVerifyToken === token ? '✅ MATCH' : '❌ NO MATCH';
-      console.log(`  - ${u.username}: ${tokenMatch}`);
-    });
-
-    const user = await User.findOne({ 'settings.metaVerifyToken': token });
-
-    if (user) {
-      console.log('=========================================');
-      console.log(`✅ META WEBHOOK VERIFIED (User: ${user.username})`);
-      console.log('=========================================');
-      return res.status(200).send(challenge);
-    }
-
-    // Fallback to environment variable for backward compatibility
-    const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
-    if (verifyToken && token === verifyToken) {
-      console.log('=========================================');
-      console.log('✅ META WEBHOOK VERIFIED (Global Token)');
-      console.log('=========================================');
-      return res.status(200).send(challenge);
-    }
-
-    console.log('=========================================');
-    console.warn('❌ WEBHOOK VERIFICATION FAILED');
-    console.log('Reason: No matching verify token found');
-    console.log('Make sure:');
-    console.log('  1. Verify token is saved in CRM settings');
-    console.log('  2. Verify token in Meta Developer Console matches exactly');
-    console.log('  3. Token is case-sensitive and has no extra spaces');
-    console.log('=========================================');
-    return res.status(403).send('Verification failed');
-  }
-
-  console.warn('Invalid mode:', mode);
-  res.status(400).send('Invalid mode');
-});
-
-app.post('/api/meta/webhook', async (req, res) => {
-  console.log('=========================================');
-  console.log('!!! META WEBHOOK POST RECEIVED !!!');
-  console.log('=========================================');
-  console.log('Method:', req.method);
-  console.log('URL:', req.originalUrl);
-  console.log('Headers:', JSON.stringify(req.headers, null, 2));
-  console.log('Body:', JSON.stringify(req.body, null, 2));
-
-  // Respond to Meta IMMEDIATELY to prevent timeout
-  res.status(200).send('EVENT_RECEIVED');
-
-  // Background Processing
-  try {
-    const metaService = (await import('./services/metaService.js')).default;
-    const Customer = (await import('./models/Customer.js')).default;
-    const User = (await import('./models/User.js')).default;
-    const mongoose = (await import('mongoose')).default;
-
-    const body = req.body;
-    if (body.object === 'page') {
-      for (const entry of body.entry) {
-        for (const change of entry.changes) {
-          if (change.field === 'leadgen') {
-            const leadId = change.value.leadgen_id;
-            const pageId = change.value.page_id;
-            console.log(`[Background] Processing lead: ${leadId} for page: ${pageId}`);
-
-            // Find user by page_id (exact match)
-            const user = await User.findOne({
-              'settings.metaPageId': pageId,
-              'settings.metaPageAccessToken': { $exists: true, $ne: '' }
-            });
-
-            if (!user) {
-              console.error(`[Background Error] No user found for page_id: ${pageId}`);
-              console.error('Make sure a user has configured metaPageId matching this page_id');
-              continue;
-            }
-
-            console.log(`[Background] Found user: ${user.username} for page: ${pageId}`);
-
-            try {
-              const leadDetails = await metaService.getLeadDetails(leadId, user.settings.metaPageAccessToken);
-
-              let spreadsheet = await mongoose.model('Spreadsheet').findOne({ user_id: user._id, name: 'Meta Ads Leads' });
-              if (!spreadsheet) {
-                spreadsheet = new (mongoose.model('Spreadsheet'))({ user_id: user._id, name: 'Meta Ads Leads', description: 'Leads from Meta Ads' });
-                await spreadsheet.save();
-              }
-
-              // Check for duplicate leads (by Meta Lead ID in remark or email/phone)
-              const existingCustomer = await Customer.findOne({
-                user_id: user._id,
-                spreadsheet_id: spreadsheet._id,
-                $or: [
-                  { remark: { $regex: `Meta ID: ${leadId}`, $options: 'i' } },
-                  { email: leadDetails.email || '' },
-                  { phone_number: leadDetails.phoneNumber || 'N/A' }
-                ]
-              });
-
-              if (existingCustomer) {
-                console.log(`[Background] Lead ${leadId} already exists as customer ${existingCustomer._id}`);
-                continue;
-              }
-
-              const customer = new Customer({
-                user_id: user._id,
-                spreadsheet_id: spreadsheet._id,
-                customer_name: leadDetails.customerName || 'Meta Lead',
-                company_name: leadDetails.companyName || 'Meta Ads',
-                phone_number: leadDetails.phoneNumber || 'N/A',
-                email: leadDetails.email || '',
-                remark: `Meta Lead ID: ${leadId}`,
-                status: 'new'
-              });
-              await customer.save();
-              console.log(`[Background] Successfully saved customer: ${customer._id} for lead: ${leadId}`);
-            } catch (leadError) {
-              console.error(`[Background Error] Failed to process lead ${leadId}:`, leadError.message);
-            }
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.error('[Background Error] Meta Processing:', err.message);
-  }
-});
-
-// Other Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/spreadsheets', spreadsheetRoutes);
@@ -231,7 +76,8 @@ app.use('/api', shareRoutes);
 app.use('/api', posterRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/googlesheets', googleSheetsRoutes);
-// app.use('/api/meta', metaRoutes); // Handled directly in index.js for maximum stability
+app.use('/api/meta', metaRoutes);
+
 
 // Test DELETE route
 app.delete('/api/test-delete', (req, res) => {
@@ -259,41 +105,13 @@ app.all('/api/meta-debug', (req, res) => {
   console.log('Method:', req.method);
   console.log('Query:', req.query);
   console.log('Body:', req.body);
-  res.status(200).json({ 
+  res.status(200).json({
     message: 'DEBUG_OK',
     method: req.method,
     query: req.query,
     body: req.body,
     headers: req.headers
   });
-});
-
-// Debug endpoint to check webhook configuration
-app.get('/api/meta/debug-config', async (req, res) => {
-  try {
-    const User = (await import('./models/User.js')).default;
-    const users = await User.find({ 
-      'settings.metaPageAccessToken': { $exists: true, $ne: '' } 
-    }).select('username settings.metaPageId settings.metaVerifyToken').lean();
-
-    const config = users.map(u => ({
-      username: u.username,
-      hasPageAccessToken: !!u.settings?.metaPageAccessToken,
-      pageId: u.settings?.metaPageId || 'NOT SET',
-      hasVerifyToken: !!u.settings?.metaVerifyToken,
-      verifyTokenPreview: u.settings?.metaVerifyToken ? 
-        `${u.settings.metaVerifyToken.substring(0, 10)}...` : 'NOT SET'
-    }));
-
-    res.json({
-      message: 'Webhook configuration status',
-      users: config,
-      globalToken: process.env.META_WEBHOOK_VERIFY_TOKEN ? 'SET' : 'NOT SET',
-      webhookUrl: `${req.protocol}://${req.get('host')}/api/meta/webhook`
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
 });
 
 // Database Connection - Updated for MongoDB Atlas

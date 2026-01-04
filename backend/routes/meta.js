@@ -7,32 +7,48 @@ import mongoose from 'mongoose';
 const router = express.Router();
 
 // Webhook Verification (required by Meta)
-router.get('/webhook', (req, res) => {
+router.get('/webhook', async (req, res) => {
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
 
-    const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
-
-    console.log('--- WEBHOOK VERIFICATION ATTEMPT ---');
-    console.log('Full URL with Query:', req.originalUrl);
+    console.log('--- [META-WEBHOOK] VERIFICATION ATTEMPT ---');
+    console.log('Full URL:', req.originalUrl);
     console.log('Query Params:', JSON.stringify(req.query, null, 2));
-    console.log('Token Received:', token);
-    console.log('Expected Token (from env):', verifyToken);
 
-    if (mode === 'subscribe' && token === verifyToken) {
-        console.log('WEBHOOK_VERIFIED_SUCCESSFULLY');
-        // Meta expects the challenge as a raw string
-        return res.status(200).set('Content-Type', 'text/plain').send(challenge);
-    } else {
-        console.warn('WEBHOOK_VERIFICATION_FAILED');
-        return res.status(mode && token ? 403 : 400).send('Verification failed. Check your tokens.');
+    if (mode === 'subscribe') {
+        // Log all users with verify tokens for debugging
+        const usersWithTokens = await User.find({
+            'settings.metaVerifyToken': { $exists: true, $ne: '' }
+        }).select('username settings.metaVerifyToken');
+
+        console.log(`[META-WEBHOOK] Found ${usersWithTokens.length} user(s) with local verify tokens.`);
+
+        const user = await User.findOne({ 'settings.metaVerifyToken': token });
+
+        if (user) {
+            console.log(`[META-WEBHOOK] Verification successful for user: ${user.username}`);
+            return res.status(200).set('Content-Type', 'text/plain').send(challenge);
+        }
+
+        // Fallback to environment variable
+        const globalToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
+        if (globalToken && token === globalToken) {
+            console.log('[META-WEBHOOK] Verification successful (Global Token)');
+            return res.status(200).set('Content-Type', 'text/plain').send(challenge);
+        }
+
+        console.warn('[META-WEBHOOK] Verification failed: No matching verify token found.');
+        return res.status(403).send('Verification failed');
     }
+
+    console.warn('[META-WEBHOOK] Invalid mode received:', mode);
+    return res.status(400).send('Invalid mode');
 });
 
 // Real-time Lead Reception
 router.post('/webhook', async (req, res) => {
-    console.log('--- NEW WEBHOOK POST RECEIVED ---');
+    console.log('--- [META-WEBHOOK] POST RECEIVED ---');
     console.log('Body:', JSON.stringify(req.body, null, 2));
 
     const body = req.body;
@@ -41,71 +57,112 @@ router.post('/webhook', async (req, res) => {
     res.status(200).send('EVENT_RECEIVED');
 
     if (body.object === 'page') {
-        for (const entry of body.entry) {
-            for (const change of entry.changes) {
-                if (change.field === 'leadgen') {
-                    const leadId = change.value.leadgen_id;
-                    const pageId = change.value.page_id;
+        try {
+            for (const entry of body.entry) {
+                for (const change of entry.changes) {
+                    if (change.field === 'leadgen') {
+                        const leadId = change.value.leadgen_id;
+                        const pageId = String(change.value.page_id);
 
-                    console.log(`New lead received: ${leadId} for Page: ${pageId}`);
+                        console.log(`[META-WEBHOOK] Processing lead: ${leadId} for Page: ${pageId}`);
 
-                    try {
-                        // Find user(s) associated with this Meta Page
-                        // For now, we'll assume there's a setting in the User model or a separate MetaConfig model
-                        // To keep it simple for now, we'll try to find any user who has a Meta Access Token set
-                        // In a real multi-tenant app, you'd map Page IDs to specific User IDs.
+                        // Find user by pageId
+                        const user = await User.findOne({
+                            'settings.metaPageId': pageId,
+                            'settings.metaPageAccessToken': { $exists: true, $ne: '' }
+                        });
 
-                        const users = await User.find({ 'settings.metaPageAccessToken': { $exists: true, $ne: '' } });
-                        console.log(`Found ${users.length} users with Meta tokens.`);
-
-                        if (users.length === 0) {
-                            console.warn('WEBHOOK_ERROR: No users found with Meta Access Token configured.');
+                        if (!user) {
+                            console.warn(`[META-WEBHOOK] ERROR: No user found for Meta Page ID: ${pageId}`);
                             continue;
                         }
 
-                        // For simplicity, we'll process for the first user found or a specific master user
-                        // Ideally, the metaService would fetch using the token of the user who owns that page.
-                        const user = users[0];
-                        const leadDetails = await metaService.getLeadDetails(leadId, user.settings.metaPageAccessToken);
+                        console.log(`[META-WEBHOOK] Found user: ${user.username}`);
 
-                        // Ensure there's a spreadsheet for Meta leads
-                        let spreadsheet = await mongoose.model('Spreadsheet').findOne({
-                            user_id: user._id,
-                            name: 'Meta Ads Leads'
-                        });
+                        try {
+                            const leadDetails = await metaService.getLeadDetails(leadId, user.settings.metaPageAccessToken);
 
-                        if (!spreadsheet) {
-                            spreadsheet = new (mongoose.model('Spreadsheet'))({
+                            // Find or create spreadsheet
+                            let spreadsheet = await mongoose.model('Spreadsheet').findOne({
                                 user_id: user._id,
-                                name: 'Meta Ads Leads',
-                                description: 'Leads automatically imported from Meta Ads'
+                                name: 'Meta Ads Leads'
                             });
-                            await spreadsheet.save();
+
+                            if (!spreadsheet) {
+                                spreadsheet = new (mongoose.model('Spreadsheet'))({
+                                    user_id: user._id,
+                                    name: 'Meta Ads Leads',
+                                    description: 'Leads automatically imported from Meta Ads'
+                                });
+                                await spreadsheet.save();
+                            }
+
+                            // Duplicate check
+                            const existing = await Customer.findOne({
+                                user_id: user._id,
+                                $or: [
+                                    { remark: { $regex: leadId, $options: 'i' } },
+                                    { email: leadDetails.email || 'NON_EXISTENT_EMAIL' }
+                                ]
+                            });
+
+                            if (existing) {
+                                console.log(`[META-WEBHOOK] Lead ${leadId} already exists as customer ${existing._id}`);
+                                continue;
+                            }
+
+                            // Create initial customer
+                            const customer = new Customer({
+                                user_id: user._id,
+                                spreadsheet_id: spreadsheet._id,
+                                customer_name: leadDetails.customerName || 'Meta Lead',
+                                company_name: leadDetails.companyName || 'Meta Ads',
+                                phone_number: leadDetails.phoneNumber || 'N/A',
+                                email: leadDetails.email || '',
+                                remark: `Meta Lead ID: ${leadId}`,
+                                status: 'new'
+                            });
+
+                            await customer.save();
+                            console.log(`[META-WEBHOOK] Successfully saved lead ${leadId} as customer ${customer._id}`);
+                        } catch (leadError) {
+                            console.error(`[META-WEBHOOK] Error processing lead ${leadId}:`, leadError.message);
                         }
-
-                        // Create new customer from lead
-                        const customer = new Customer({
-                            user_id: user._id,
-                            spreadsheet_id: spreadsheet._id, // Set the spreadsheet ID
-                            customer_name: leadDetails.customerName || 'Meta Lead',
-                            company_name: leadDetails.companyName || 'Meta Ads',
-                            phone_number: leadDetails.phoneNumber || 'N/A',
-                            email: leadDetails.email || '',
-                            remark: `Lead from Meta Ads Form. ID: ${leadId}`,
-                            status: 'new'
-                        });
-
-                        await customer.save();
-                        console.log(`Successfully saved lead ${leadId} as customer ${customer._id}`);
-                    } catch (error) {
-                        console.error('Error processing Meta lead:', error);
                     }
                 }
             }
+        } catch (error) {
+            console.error('[META-WEBHOOK] Global processing error:', error);
         }
     } else {
-        console.warn(`WEBHOOK_ERROR: Received object type ${body.object}, expected 'page'`);
+        console.warn(`[META-WEBHOOK] Received object type ${body.object}, expected 'page'`);
+    }
+});
+
+// Debug configuration status
+router.get('/debug-config', async (req, res) => {
+    try {
+        const users = await User.find({
+            'settings.metaPageAccessToken': { $exists: true, $ne: '' }
+        }).select('username settings.metaPageId settings.metaVerifyToken').lean();
+
+        const config = users.map(u => ({
+            username: u.username,
+            pageId: u.settings?.metaPageId || 'NOT SET',
+            hasPageAccessToken: !!u.settings?.metaPageAccessToken,
+            hasVerifyToken: !!u.settings?.metaVerifyToken
+        }));
+
+        res.json({
+            message: 'Meta Webhook Diagnostic',
+            users: config,
+            globalTokenSet: !!process.env.META_WEBHOOK_VERIFY_TOKEN,
+            serverTime: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
 export default router;
+
