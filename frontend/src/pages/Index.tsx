@@ -685,15 +685,25 @@ const Index = () => {
               >
                 {/* Row numbers header */}
               </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
-                Customer Name
-              </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
-                Company Name
-              </ResizableTableHead>
-              <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[120px] sticky top-0 bg-muted/50">
-                Phone No.
-              </ResizableTableHead>
+              {spreadsheet?.is_meta && spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0 ? (
+                spreadsheet.meta_headers.map((header) => (
+                  <ResizableTableHead key={header} className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
+                    {header.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                  </ResizableTableHead>
+                ))
+              ) : (
+                <>
+                  <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
+                    Customer Name
+                  </ResizableTableHead>
+                  <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
+                    Company Name
+                  </ResizableTableHead>
+                  <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[120px] sticky top-0 bg-muted/50">
+                    Phone No.
+                  </ResizableTableHead>
+                </>
+              )}
               <ResizableTableHead className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[130px] sticky top-0 bg-muted/50">
                 Last Call Date
               </ResizableTableHead>
@@ -953,6 +963,8 @@ const Index = () => {
                         setSelectedWhatsAppCustomer(c);
                         setIsWhatsAppDialogOpen(true);
                       }}
+                      is_meta={spreadsheet?.is_meta}
+                      meta_headers={spreadsheet?.meta_headers}
                     />
 
                     {/* Drop zone after last row */}
@@ -1034,7 +1046,9 @@ function SpreadsheetRow({
   setRowHeights,
   focusedCell,
   setFocusedCell,
-  onWhatsAppClick
+  onWhatsAppClick,
+  is_meta,
+  meta_headers
 }: {
   customer: Customer;
   index: number;
@@ -1057,6 +1071,8 @@ function SpreadsheetRow({
   focusedCell: string | null;
   setFocusedCell: React.Dispatch<React.SetStateAction<string | null>>;
   onWhatsAppClick: (customer: Customer) => void;
+  is_meta?: boolean;
+  meta_headers?: string[];
 }) {
   const [date, setDate] = useState<Date | undefined>(
     customer.next_call_date ? parseISO(customer.next_call_date) : undefined
@@ -1126,83 +1142,107 @@ function SpreadsheetRow({
           {index}
         </div>
       </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
-        <div className="flex items-center h-full">
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="ml-1 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
-                style={{ backgroundColor: localColor || 'white' }} />
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-2 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
-              <div className="grid grid-cols-4 gap-1">
-                {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
-                  <Button
-                    key={color || 'none'}
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 rounded-full hover:scale-110 transition-transform"
-                    onClick={() => handleColorChange(color as Customer['color'])}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`}
-                      style={{ backgroundColor: color || 'transparent' }}
-                    />
-                  </Button>
-                ))}
+      {is_meta && meta_headers && meta_headers.length > 0 ? (
+        meta_headers.map((header) => (
+          <ResizableTableCell key={header} className="border-b border-border/50 border-r border-border/50 p-0 h-6">
+            <div
+              className={cn(
+                "flex items-center h-full transition-all duration-200",
+                focusedCell === `${customer.id}-${header}` && "ring-2 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
+              )}
+              onClick={() => setFocusedCell(`${customer.id}-${header}`)}
+            >
+              <AutoResizeTextarea
+                defaultValue={customer.meta_data?.[header] || ""}
+                onBlur={(e) => onCellChange(customer.id, `meta_data.${header}`, e.target.value)}
+                onFocus={() => setFocusedCell(`${customer.id}-${header}`)}
+                className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-1 leading-tight h-full min-h-0"
+                style={{ height: '100%' }}
+              />
+            </div>
+          </ResizableTableCell>
+        ))
+      ) : (
+        <>
+          <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
+            <div className="flex items-center h-full">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="ml-1 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
+                    style={{ backgroundColor: localColor || 'white' }} />
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-2 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
+                  <div className="grid grid-cols-4 gap-1">
+                    {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
+                      <Button
+                        key={color || 'none'}
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 rounded-full hover:scale-110 transition-transform"
+                        onClick={() => handleColorChange(color as Customer['color'])}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`}
+                          style={{ backgroundColor: color || 'transparent' }}
+                        />
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <div
+                className={cn(
+                  "flex items-center h-full flex-1 transition-all duration-200",
+                  focusedCell === `${customer.id}-customer_name` && "ring-2 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
+                )}
+                onClick={() => setFocusedCell(`${customer.id}-customer_name`)}
+              >
+                <AutoResizeTextarea
+                  defaultValue={customer.customer_name}
+                  onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
+                  onFocus={() => setFocusedCell(`${customer.id}-customer_name`)}
+                  className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-1 leading-tight h-full min-h-0"
+                  style={{ height: '100%' }}
+                />
               </div>
-            </PopoverContent>
-          </Popover>
-          <div
-            className={cn(
-              "flex items-center h-full flex-1 transition-all duration-200",
-              focusedCell === `${customer.id}-customer_name` && "ring-2 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
-            )}
-            onClick={() => setFocusedCell(`${customer.id}-customer_name`)}
-          >
-            <AutoResizeTextarea
-              defaultValue={customer.customer_name}
-              onBlur={(e) => onCellChange(customer.id, "customer_name", e.target.value)}
-              onFocus={() => setFocusedCell(`${customer.id}-customer_name`)}
-              className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-1 leading-tight h-full min-h-0"
-              style={{ height: '100%' }}
-            />
-          </div>
-        </div>
-      </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
-        <div
-          className={cn(
-            "flex items-center h-full transition-all duration-200",
-            focusedCell === `${customer.id}-company_name` && "ring-2 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
-          )}
-          onClick={() => setFocusedCell(`${customer.id}-company_name`)}
-        >
-          <AutoResizeTextarea
-            defaultValue={customer.company_name}
-            onBlur={(e) => onCellChange(customer.id, "company_name", e.target.value)}
-            onFocus={() => setFocusedCell(`${customer.id}-company_name`)}
-            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-1 leading-tight h-full min-h-0"
-            style={{ height: '100%' }}
-          />
-        </div>
-      </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
-        <div
-          className={cn(
-            "flex items-center h-full transition-all duration-200",
-            focusedCell === `${customer.id}-phone_number` && "ring-2 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
-          )}
-          onClick={() => setFocusedCell(`${customer.id}-phone_number`)}
-        >
-          <AutoResizeTextarea
-            defaultValue={customer.phone_number}
-            onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
-            onFocus={() => setFocusedCell(`${customer.id}-phone_number`)}
-            className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-1 leading-tight h-full min-h-0"
-            style={{ height: '100%' }}
-          />
-        </div>
-      </ResizableTableCell>
+            </div>
+          </ResizableTableCell>
+          <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
+            <div
+              className={cn(
+                "flex items-center h-full transition-all duration-200",
+                focusedCell === `${customer.id}-company_name` && "ring-2 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
+              )}
+              onClick={() => setFocusedCell(`${customer.id}-company_name`)}
+            >
+              <AutoResizeTextarea
+                defaultValue={customer.company_name}
+                onBlur={(e) => onCellChange(customer.id, "company_name", e.target.value)}
+                onFocus={() => setFocusedCell(`${customer.id}-company_name`)}
+                className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-1 leading-tight h-full min-h-0"
+                style={{ height: '100%' }}
+              />
+            </div>
+          </ResizableTableCell>
+          <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
+            <div
+              className={cn(
+                "flex items-center h-full transition-all duration-200",
+                focusedCell === `${customer.id}-phone_number` && "ring-2 ring-primary ring-inset shadow-[0_0_20px_hsl(var(--primary)/0.4)] bg-primary/[0.05] z-20 border-[1px] border-primary"
+              )}
+              onClick={() => setFocusedCell(`${customer.id}-phone_number`)}
+            >
+              <AutoResizeTextarea
+                defaultValue={customer.phone_number}
+                onBlur={(e) => onCellChange(customer.id, "phone_number", e.target.value)}
+                onFocus={() => setFocusedCell(`${customer.id}-phone_number`)}
+                className="!border-0 !ring-0 !ring-offset-0 !shadow-none rounded-none text-sm focus-visible:ring-0 focus-visible:ring-inset w-full hover:bg-muted/30 transition-colors px-1.5 py-1 leading-tight h-full min-h-0"
+                style={{ height: '100%' }}
+              />
+            </div>
+          </ResizableTableCell>
+        </>
+      )}
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
         <Popover>
           <PopoverTrigger asChild>

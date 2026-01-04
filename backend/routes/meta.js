@@ -156,10 +156,25 @@ router.post('/webhook', async (req, res) => {
                                 phone_number: leadDetails.phoneNumber || 'N/A',
                                 email: leadDetails.email || '',
                                 remark: `Campaign: ${campaignName} | Page: ${pageName} | Lead ID: ${leadId}`,
+                                meta_data: leadDetails.fieldMap || {}, // Save all field data
                                 status: 'new'
                             });
 
                             await customer.save();
+
+                            // Update spreadsheet headers if new ones are found
+                            const leadHeaders = Object.keys(leadDetails.fieldMap || {});
+                            if (leadHeaders.length > 0) {
+                                const currentHeaders = spreadsheet.meta_headers || [];
+                                const newHeaders = [...new Set([...currentHeaders, ...leadHeaders])];
+
+                                if (newHeaders.length !== currentHeaders.length) {
+                                    spreadsheet.meta_headers = newHeaders;
+                                    await spreadsheet.save();
+                                    console.log(`[META-WEBHOOK] Updated headers for spreadsheet ${spreadsheet._id}: ${newHeaders.join(', ')}`);
+                                }
+                            }
+
                             console.log(`[META-WEBHOOK] Successfully saved lead ${leadId} as customer ${customer._id}`);
                         } catch (leadError) {
                             console.error(`[META-WEBHOOK] Error processing lead ${leadId}:`, leadError.message);

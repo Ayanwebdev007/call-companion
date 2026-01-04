@@ -15,6 +15,7 @@ export interface Customer {
   next_call_time?: string;
   last_call_date?: string;
   remark: string | null;
+  meta_data?: Record<string, string>;
   color?: 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple' | 'pink' | null;
   created_at?: string;
   updated_at?: string;
@@ -29,6 +30,7 @@ export interface Spreadsheet {
   page_name?: string;
   form_name?: string;
   campaign_name?: string;
+  meta_headers?: string[];
   is_meta?: boolean;
   created_at: string;
   updated_at: string;

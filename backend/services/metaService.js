@@ -64,10 +64,20 @@ class MetaService {
 
             // Lead data mapping
             const fieldData = response.data.field_data || [];
+
+            // Create a comprehensive map of all fields
+            const fieldMap = {};
+            fieldData.forEach(f => {
+                if (f.name && f.values && f.values.length > 0) {
+                    fieldMap[f.name] = f.values[0];
+                }
+            });
+
             const lead = {
                 metaLeadId: leadId,
                 createdTime: response.data.created_time,
                 rawData: response.data,
+                fieldMap: fieldMap,
                 customerName: this.extractFieldValue(fieldData, ['full_name', 'name', 'first_name']),
                 email: this.extractFieldValue(fieldData, ['email']),
                 phoneNumber: this.extractFieldValue(fieldData, ['phone_number', 'phone']),
