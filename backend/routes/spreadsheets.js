@@ -1,6 +1,7 @@
 import express from 'express';
 import Spreadsheet from '../models/Spreadsheet.js';
 import Customer from '../models/Customer.js';
+import Sharing from '../models/Sharing.js';
 import auth from '../middleware/auth.js';
 import ViewLog from '../models/ViewLog.js';
 
