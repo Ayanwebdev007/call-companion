@@ -504,28 +504,35 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     // Sync status/remark/etc across spreadsheets for Meta Leads
-    const leadId = updatedCustomer.meta_data instanceof Map
-      ? updatedCustomer.meta_data.get('meta_lead_id')
-      : updatedCustomer.meta_data?.meta_lead_id;
+    // Be robust: check if meta_data is a Map or a plain object
+    let leadId = null;
+    if (updatedCustomer.meta_data) {
+      if (updatedCustomer.meta_data instanceof Map) {
+        leadId = updatedCustomer.meta_data.get('meta_lead_id');
+      } else if (typeof updatedCustomer.meta_data === 'object') {
+        leadId = updatedCustomer.meta_data.meta_lead_id;
+      }
+    }
 
     if (leadId) {
+      console.log(`[SYNC] Syncing Meta Lead ${leadId} across spreadsheets...`);
       // Update all other documents for this user with same meta_lead_id
+      const syncUpdate = {
+        status: updatedCustomer.status,
+        remark: updatedCustomer.remark,
+        color: updatedCustomer.color,
+        next_call_date: updatedCustomer.next_call_date,
+        next_call_time: updatedCustomer.next_call_time,
+        last_call_date: updatedCustomer.last_call_date
+      };
+
       await Customer.updateMany(
         {
           user_id: req.user.id,
           'meta_data.meta_lead_id': leadId,
           _id: { $ne: updatedCustomer._id }
         },
-        {
-          $set: {
-            status: updatedCustomer.status,
-            remark: updatedCustomer.remark,
-            color: updatedCustomer.color,
-            next_call_date: updatedCustomer.next_call_date,
-            next_call_time: updatedCustomer.next_call_time,
-            last_call_date: updatedCustomer.last_call_date
-          }
-        }
+        { $set: syncUpdate }
       );
     }
 

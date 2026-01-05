@@ -139,6 +139,9 @@ router.post('/webhook', async (req, res) => {
                                 await adSpreadsheet.save();
                             }
 
+                            // Ensure leadId is a string for consistent querying
+                            const normalizedLeadId = String(leadId);
+
                             // Find or create MASTER spreadsheet (Page + Form only)
                             const masterSpreadsheetName = `[MASTER] ${pageName} - ${formName}`;
                             let masterSpreadsheet = await mongoose.model('Spreadsheet').findOne({
@@ -168,15 +171,11 @@ router.post('/webhook', async (req, res) => {
                                 const existing = await Customer.findOne({
                                     user_id: user._id,
                                     spreadsheet_id: targetSpreadsheet._id,
-                                    $or: [
-                                        { remark: { $regex: leadId, $options: 'i' } },
-                                        { email: leadDetails.email || 'NON_EXISTENT_EMAIL' }
-                                        // Phone number uniqueness is NOT enforced as per request
-                                    ]
+                                    'meta_data.meta_lead_id': normalizedLeadId
                                 });
 
                                 if (existing) {
-                                    console.log(`[META-WEBHOOK] Lead ${leadId} already exists in sheet ${targetSpreadsheet.name} (${targetSpreadsheet._id})`);
+                                    console.log(`[META-WEBHOOK] Lead ${normalizedLeadId} already exists in sheet ${targetSpreadsheet.name} (${targetSpreadsheet._id})`);
                                     return;
                                 }
 
@@ -194,7 +193,7 @@ router.post('/webhook', async (req, res) => {
                                         meta_campaign: campaignName,
                                         meta_ad_set: adSetName,
                                         meta_ad: adName,
-                                        meta_lead_id: leadId,
+                                        meta_lead_id: normalizedLeadId,
                                         meta_form: formName,
                                         meta_page: pageName
                                     },
@@ -324,7 +323,6 @@ router.get('/analytics', auth, async (req, res) => {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        // Core Aggregation: Deduplicate leads across all sheets first
         const uniqueLeads = await Customer.aggregate([
             { $match: leadGroupMatch },
             {
