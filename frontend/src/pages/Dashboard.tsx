@@ -245,11 +245,15 @@ const Dashboard = ({ filterType }: DashboardProps) => {
   }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className={`min-h-screen ${filterType ? 'bg-transparent' : 'bg-background relative overflow-hidden'}`}>
       {/* Background gradients */}
-      <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-primary/20 to-transparent pointer-events-none" />
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-soft-light pointer-events-none"></div>
+      {!filterType && (
+        <>
+          <div className="absolute top-0 left-0 w-full h-[500px] bg-gradient-to-b from-primary/20 to-transparent pointer-events-none" />
+          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-soft-light pointer-events-none"></div>
+        </>
+      )}
 
       {!filterType && (
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/60 dark:bg-black/20 backdrop-blur-xl px-4 py-3 shadow-lg transition-all duration-300">
@@ -303,147 +307,26 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                 <span className="text-sm font-medium text-foreground/90 dark:text-white/90">{user?.username}</span>
               </div>
 
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 border-0 text-white">
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Spreadsheet
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-card dark:bg-card border-border/50 dark:border-white/10 shadow-2xl backdrop-blur-3xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-xl text-foreground">Create New Spreadsheet</DialogTitle>
-                    <DialogDescription className="text-muted-foreground">
-                      Enter a name and optional description for your new spreadsheet.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div>
-                      <label htmlFor="name" className="block text-sm font-medium mb-1.5 text-foreground/80">
-                        Name *
-                      </label>
-                      <Input
-                        id="name"
-                        value={newSpreadsheetName}
-                        onChange={(e) => setNewSpreadsheetName(e.target.value)}
-                        placeholder="My Customers"
-                        className="bg-secondary/50 dark:bg-secondary/50 border-input dark:border-white/10 focus-visible:ring-primary/50 text-foreground"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="description" className="block text-sm font-medium mb-1.5 text-foreground/80">
-                        Description
-                      </label>
-                      <Input
-                        id="description"
-                        value={newSpreadsheetDescription}
-                        onChange={(e) => setNewSpreadsheetDescription(e.target.value)}
-                        placeholder="Description (optional)"
-                        className="bg-secondary/50 dark:bg-secondary/50 border-input dark:border-white/10 focus-visible:ring-primary/50 text-foreground"
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setIsCreateDialogOpen(false)}
-                      disabled={createMutation.isPending}
-                      className="hover:bg-accent/10 dark:hover:bg-white/5 text-foreground"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleCreateSpreadsheet}
-                      disabled={createMutation.isPending || !newSpreadsheetName.trim()}
-                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      {createMutation.isPending ? "Creating..." : "Create"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-              <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-                <DialogContent className="bg-card border-white/10 shadow-2xl backdrop-blur-3xl">
-                  <DialogHeader>
-                    <DialogTitle>Share Spreadsheet</DialogTitle>
-                    <DialogDescription>
-                      Share this spreadsheet with another user by entering their username.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div>
-                      <label htmlFor="username" className="block text-sm font-medium mb-1.5 text-foreground/80">
-                        Username *
-                      </label>
-                      <Input
-                        id="username"
-                        value={shareUsername}
-                        onChange={(e) => setShareUsername(e.target.value)}
-                        placeholder="Enter username"
-                        className="bg-secondary/50 border-white/10 focus-visible:ring-primary/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1.5 text-foreground/80">
-                        Permission
-                      </label>
-                      <div className="flex gap-4 p-1 bg-secondary/50 rounded-lg border border-white/5">
-                        <label className="flex items-center flex-1 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors">
-                          <input
-                            type="radio"
-                            name="permission"
-                            value="read-only"
-                            checked={sharePermission === "read-only"}
-                            onChange={() => setSharePermission("read-only")}
-                            className="mr-2 text-primary"
-                          />
-                          <span className="text-sm">Read Only</span>
-                        </label>
-                        <label className="flex items-center flex-1 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors">
-                          <input
-                            type="radio"
-                            name="permission"
-                            value="read-write"
-                            checked={sharePermission === "read-write"}
-                            onChange={() => setSharePermission("read-write")}
-                            className="mr-2 text-primary"
-                          />
-                          <span className="text-sm">Read & Write</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setIsShareDialogOpen(false)}
-                      disabled={shareMutation.isPending}
-                      className="hover:bg-white/5"
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={handleConfirmShare}
-                      disabled={shareMutation.isPending || !shareUsername.trim()}
-                      className="bg-primary hover:bg-primary/90"
-                    >
-                      {shareMutation.isPending ? "Sharing..." : "Share"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 border-0 text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Spreadsheet
+              </Button>
+
               <Button variant="ghost" size="icon" onClick={logout} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all">
                 <LogOut className="h-5 w-5" />
               </Button>
             </div>
           </div>
-        </header >
+        </header>
       )}
 
       {/* Meta Filter Sub-navigation */}
       {
         filterMode === "meta" && (
-          <div className="sticky top-[65px] z-40 w-full border-b border-border/40 bg-background/40 backdrop-blur-lg animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className={`sticky ${filterType ? 'top-0' : 'top-[65px]'} z-40 w-full border-b border-border/40 bg-background/40 backdrop-blur-lg animate-in fade-in slide-in-from-top-4 duration-300`}>
             <div className="container mx-auto px-4 py-2 flex flex-col md:flex-row items-center justify-between gap-4">
 
               {/* View Segment Tabs */}
@@ -605,7 +488,7 @@ const Dashboard = ({ filterType }: DashboardProps) => {
       }
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 relative z-10">
+      <div className={`${filterType ? 'p-0' : 'container mx-auto px-4 py-8 relative z-10'}`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 animate-fade-in">
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-foreground dark:text-white">
@@ -791,24 +674,135 @@ const Dashboard = ({ filterType }: DashboardProps) => {
           </div>
         )
         }
-      </main>
+        )
+        }
+      </div>
 
-      {/* Google Sheets Import Dialog */}
-      <GoogleSheetsDialog
-        open={isGoogleSheetsDialogOpen}
-        onOpenChange={setIsGoogleSheetsDialogOpen}
-        spreadsheetId={selectedSpreadsheetForImport}
-        onImportComplete={() => {
-          queryClient.invalidateQueries({ queryKey: ["spreadsheets"] });
-          toast({ title: "Data imported successfully!" });
-        }}
-      />
+      {/* Dialogs relocated to root for persistence across layouts */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="bg-card dark:bg-card border-border/50 dark:border-white/10 shadow-2xl backdrop-blur-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-foreground">Create New Spreadsheet</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Enter a name and optional description for your new spreadsheet.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium mb-1.5 text-foreground/80">
+                Name *
+              </label>
+              <Input
+                id="name"
+                value={newSpreadsheetName}
+                onChange={(e) => setNewSpreadsheetName(e.target.value)}
+                placeholder="My Customers"
+                className="bg-secondary/50 dark:bg-secondary/50 border-input dark:border-white/10 focus-visible:ring-primary/50 text-foreground"
+              />
+            </div>
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium mb-1.5 text-foreground/80">
+                Description
+              </label>
+              <Input
+                id="description"
+                value={newSpreadsheetDescription}
+                onChange={(e) => setNewSpreadsheetDescription(e.target.value)}
+                placeholder="Description (optional)"
+                className="bg-secondary/50 dark:bg-secondary/50 border-input dark:border-white/10 focus-visible:ring-primary/50 text-foreground"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setIsCreateDialogOpen(false)}
+              disabled={createMutation.isPending}
+              className="hover:bg-accent/10 dark:hover:bg-white/5 text-foreground"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateSpreadsheet}
+              disabled={createMutation.isPending || !newSpreadsheetName.trim()}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              {createMutation.isPending ? "Creating..." : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <MergeDialog
-        open={isMergeDialogOpen}
-        onOpenChange={setIsMergeDialogOpen}
-        spreadsheets={spreadsheets}
-      />
+      <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+        <DialogContent className="bg-card border-white/10 shadow-2xl backdrop-blur-3xl">
+          <DialogHeader>
+            <DialogTitle>Share Spreadsheet</DialogTitle>
+            <DialogDescription>
+              Share this spreadsheet with another user by entering their username.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium mb-1.5 text-foreground/80">
+                Username *
+              </label>
+              <Input
+                id="username"
+                value={shareUsername}
+                onChange={(e) => setShareUsername(e.target.value)}
+                placeholder="Enter username"
+                className="bg-secondary/50 border-white/10 focus-visible:ring-primary/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-foreground/80">
+                Permission
+              </label>
+              <div className="flex gap-4 p-1 bg-secondary/50 rounded-lg border border-white/5">
+                <label className="flex items-center flex-1 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors">
+                  <input
+                    type="radio"
+                    name="permission"
+                    value="read-only"
+                    checked={sharePermission === "read-only"}
+                    onChange={() => setSharePermission("read-only")}
+                    className="mr-2 text-primary"
+                  />
+                  <span className="text-sm">Read Only</span>
+                </label>
+                <label className="flex items-center flex-1 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors">
+                  <input
+                    type="radio"
+                    name="permission"
+                    value="read-write"
+                    checked={sharePermission === "read-write"}
+                    onChange={() => setSharePermission("read-write")}
+                    className="mr-2 text-primary"
+                  />
+                  <span className="text-sm">Read & Write</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setIsShareDialogOpen(false)}
+              disabled={shareMutation.isPending}
+              className="hover:bg-white/5"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmShare}
+              disabled={shareMutation.isPending || !shareUsername.trim()}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {shareMutation.isPending ? "Sharing..." : "Share"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
