@@ -3,6 +3,7 @@ import metaService from '../services/metaService.js';
 import Customer from '../models/Customer.js';
 import User from '../models/User.js';
 import mongoose from 'mongoose';
+import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
