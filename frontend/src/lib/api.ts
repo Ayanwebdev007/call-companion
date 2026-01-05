@@ -244,3 +244,17 @@ api.interceptors.request.use((config) => {
 });
 
 export default api;
+// Meta Analytics
+export interface MetaAnalyticsResponse {
+  recentLeads: (Customer & { spreadsheet_id: Spreadsheet })[];
+  stats: {
+    leadsToday: number;
+    leadsThisWeek: number;
+    totalLeads: number;
+  };
+}
+
+export const fetchMetaAnalytics = async (): Promise<MetaAnalyticsResponse> => {
+  const response = await api.get(`${API_BASE_URL}/api/meta/analytics`);
+  return response.data;
+};

@@ -19,6 +19,10 @@ import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 
+import CallingLayout from "./layouts/CallingLayout";
+import CallingOverview from "./pages/calling/CallingOverview";
+import MetaInsights from "./pages/calling/MetaInsights";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -38,9 +42,17 @@ const App = () => (
 
                 <Route element={<ProtectedRoute />}>
                   <Route path="/" element={<Home />} />
-                  <Route path="/calling" element={<Dashboard />} />
+
+                  {/* New Calling Dashboard Nested Routes */}
+                  <Route path="/calling" element={<CallingLayout />}>
+                    <Route index element={<CallingOverview />} />
+                    <Route path="manual" element={<Dashboard filterType="manual" />} />
+                    <Route path="meta" element={<Dashboard filterType="meta" />} />
+                    <Route path="webhook" element={<MetaSettings />} />
+                    <Route path="insights" element={<MetaInsights />} />
+                  </Route>
+
                   <Route path="/poster-generator" element={<PosterGenerator />} />
-                  <Route path="/meta-settings" element={<MetaSettings />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/spreadsheet/:id" element={<Index />} />
                 </Route>

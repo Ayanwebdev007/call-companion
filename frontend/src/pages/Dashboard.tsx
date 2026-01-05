@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MergeDialog } from "@/components/MergeDialog";
 
-const Dashboard = () => {
+interface DashboardProps {
+  filterType?: "manual" | "meta";
+}
+
+const Dashboard = ({ filterType }: DashboardProps) => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const initialPage = searchParams.get("page") || "all";
+  const initialForm = searchParams.get("form") || "all";
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [selectedSpreadsheetId, setSelectedSpreadsheetId] = useState("");
@@ -26,10 +35,19 @@ const Dashboard = () => {
   const [newSpreadsheetDescription, setNewSpreadsheetDescription] = useState("");
   const [isGoogleSheetsDialogOpen, setIsGoogleSheetsDialogOpen] = useState(false);
   const [selectedSpreadsheetForImport, setSelectedSpreadsheetForImport] = useState("");
-  const [filterMode, setFilterMode] = useState<"manual" | "meta">("manual");
+  const [filterMode, setFilterMode] = useState<"manual" | "meta">(initialPage !== "all" || initialForm !== "all" ? "meta" : (filterType || "manual"));
   const [metaViewMode, setMetaViewMode] = useState<"ad" | "form">("ad"); // Segment state
-  const [selectedMetaPage, setSelectedMetaPage] = useState<string>("all");
-  const [selectedMetaForm, setSelectedMetaForm] = useState<string>("all");
+  const [selectedMetaPage, setSelectedMetaPage] = useState<string>(initialPage);
+  const [selectedMetaForm, setSelectedMetaForm] = useState<string>(initialForm);
+
+  // Sync with URL params if they change
+  useEffect(() => {
+    const page = searchParams.get("page");
+    const form = searchParams.get("form");
+    if (page) setSelectedMetaPage(page);
+    if (form) setSelectedMetaForm(form);
+    if (page || form) setFilterMode("meta");
+  }, [location.search]);
   const [selectedMetaCampaign, setSelectedMetaCampaign] = useState<string>("all");
   const [selectedMetaAdSet, setSelectedMetaAdSet] = useState<string>("all");
   const [selectedMetaAd, setSelectedMetaAd] = useState<string>("all");
@@ -233,193 +251,194 @@ const Dashboard = () => {
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-soft-light pointer-events-none"></div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/60 dark:bg-black/20 backdrop-blur-xl px-4 py-3 shadow-lg transition-all duration-300">
-        <div className="container mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="hover:bg-accent/10 dark:hover:bg-white/10 text-foreground/80 hover:text-foreground dark:text-white/80 dark:hover:text-white">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="bg-gradient-to-br from-primary to-blue-600 p-2 rounded-xl shadow-lg shadow-primary/20">
-              <FileSpreadsheet className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight text-foreground dark:text-white">Calling CRM</h1>
-              <p className="text-xs text-muted-foreground">Manage your customer outreach</p>
-            </div>
-          </div>
-
-          <div className="hidden lg:flex items-center gap-1 bg-secondary/50 dark:bg-white/5 p-1 rounded-xl border border-border/50 dark:border-white/10 backdrop-blur-md">
-            <Button
-              variant={filterMode === "manual" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setFilterMode("manual")}
-              className={`h-8 gap-2 rounded-lg transition-all ${filterMode === "manual" ? "shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <User className="h-4 w-4" />
-              <span>Manual</span>
-            </Button>
-            <Button
-              variant={filterMode === "meta" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => {
-                setFilterMode("meta");
-                // Reset all filters
-                setSelectedMetaPage("all");
-                setSelectedMetaForm("all");
-                setSelectedMetaCampaign("all");
-                setSelectedMetaAdSet("all");
-                setSelectedMetaAd("all");
-              }}
-              className={`h-8 gap-2 rounded-lg transition-all ${filterMode === "meta" ? "shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <Webhook className="h-4 w-4 text-blue-500" />
-              <span>Meta Ads</span>
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <div className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 bg-secondary/50 dark:bg-white/5 rounded-full border border-border/50 dark:border-white/10 backdrop-blur-md">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground/90 dark:text-white/90">{user?.username}</span>
+      {!filterType && (
+        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/60 dark:bg-black/20 backdrop-blur-xl px-4 py-3 shadow-lg transition-all duration-300">
+          <div className="container mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="hover:bg-accent/10 dark:hover:bg-white/10 text-foreground/80 hover:text-foreground dark:text-white/80 dark:hover:text-white">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="bg-gradient-to-br from-primary to-blue-600 p-2 rounded-xl shadow-lg shadow-primary/20">
+                <FileSpreadsheet className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-foreground dark:text-white">Calling CRM</h1>
+                <p className="text-xs text-muted-foreground">Manage your customer outreach</p>
+              </div>
             </div>
 
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 border-0 text-white">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Spreadsheet
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-card dark:bg-card border-border/50 dark:border-white/10 shadow-2xl backdrop-blur-3xl">
-                <DialogHeader>
-                  <DialogTitle className="text-xl text-foreground">Create New Spreadsheet</DialogTitle>
-                  <DialogDescription className="text-muted-foreground">
-                    Enter a name and optional description for your new spreadsheet.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium mb-1.5 text-foreground/80">
-                      Name *
-                    </label>
-                    <Input
-                      id="name"
-                      value={newSpreadsheetName}
-                      onChange={(e) => setNewSpreadsheetName(e.target.value)}
-                      placeholder="My Customers"
-                      className="bg-secondary/50 dark:bg-secondary/50 border-input dark:border-white/10 focus-visible:ring-primary/50 text-foreground"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="description" className="block text-sm font-medium mb-1.5 text-foreground/80">
-                      Description
-                    </label>
-                    <Input
-                      id="description"
-                      value={newSpreadsheetDescription}
-                      onChange={(e) => setNewSpreadsheetDescription(e.target.value)}
-                      placeholder="Description (optional)"
-                      className="bg-secondary/50 dark:bg-secondary/50 border-input dark:border-white/10 focus-visible:ring-primary/50 text-foreground"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setIsCreateDialogOpen(false)}
-                    disabled={createMutation.isPending}
-                    className="hover:bg-accent/10 dark:hover:bg-white/5 text-foreground"
-                  >
-                    Cancel
+            <div className="hidden lg:flex items-center gap-1 bg-secondary/50 dark:bg-white/5 p-1 rounded-xl border border-border/50 dark:border-white/10 backdrop-blur-md">
+              <Button
+                variant={filterMode === "manual" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setFilterMode("manual")}
+                className={`h-8 gap-2 rounded-lg transition-all ${filterMode === "manual" ? "shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <User className="h-4 w-4" />
+                <span>Manual</span>
+              </Button>
+              <Button
+                variant={filterMode === "meta" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => {
+                  setFilterMode("meta");
+                  // Reset all filters
+                  setSelectedMetaPage("all");
+                  setSelectedMetaForm("all");
+                  setSelectedMetaCampaign("all");
+                  setSelectedMetaAdSet("all");
+                  setSelectedMetaAd("all");
+                }}
+                className={`h-8 gap-2 rounded-lg transition-all ${filterMode === "meta" ? "shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <Webhook className="h-4 w-4 text-blue-500" />
+                <span>Meta Ads</span>
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <ThemeToggle />
+              <div className="hidden md:flex items-center gap-2 mr-2 px-3 py-1.5 bg-secondary/50 dark:bg-white/5 rounded-full border border-border/50 dark:border-white/10 backdrop-blur-md">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground/90 dark:text-white/90">{user?.username}</span>
+              </div>
+
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 border-0 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Spreadsheet
                   </Button>
-                  <Button
-                    onClick={handleCreateSpreadsheet}
-                    disabled={createMutation.isPending || !newSpreadsheetName.trim()}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
-                  >
-                    {createMutation.isPending ? "Creating..." : "Create"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
-              <DialogContent className="bg-card border-white/10 shadow-2xl backdrop-blur-3xl">
-                <DialogHeader>
-                  <DialogTitle>Share Spreadsheet</DialogTitle>
-                  <DialogDescription>
-                    Share this spreadsheet with another user by entering their username.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div>
-                    <label htmlFor="username" className="block text-sm font-medium mb-1.5 text-foreground/80">
-                      Username *
-                    </label>
-                    <Input
-                      id="username"
-                      value={shareUsername}
-                      onChange={(e) => setShareUsername(e.target.value)}
-                      placeholder="Enter username"
-                      className="bg-secondary/50 border-white/10 focus-visible:ring-primary/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5 text-foreground/80">
-                      Permission
-                    </label>
-                    <div className="flex gap-4 p-1 bg-secondary/50 rounded-lg border border-white/5">
-                      <label className="flex items-center flex-1 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors">
-                        <input
-                          type="radio"
-                          name="permission"
-                          value="read-only"
-                          checked={sharePermission === "read-only"}
-                          onChange={() => setSharePermission("read-only")}
-                          className="mr-2 text-primary"
-                        />
-                        <span className="text-sm">Read Only</span>
+                </DialogTrigger>
+                <DialogContent className="bg-card dark:bg-card border-border/50 dark:border-white/10 shadow-2xl backdrop-blur-3xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-xl text-foreground">Create New Spreadsheet</DialogTitle>
+                    <DialogDescription className="text-muted-foreground">
+                      Enter a name and optional description for your new spreadsheet.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-medium mb-1.5 text-foreground/80">
+                        Name *
                       </label>
-                      <label className="flex items-center flex-1 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors">
-                        <input
-                          type="radio"
-                          name="permission"
-                          value="read-write"
-                          checked={sharePermission === "read-write"}
-                          onChange={() => setSharePermission("read-write")}
-                          className="mr-2 text-primary"
-                        />
-                        <span className="text-sm">Read & Write</span>
+                      <Input
+                        id="name"
+                        value={newSpreadsheetName}
+                        onChange={(e) => setNewSpreadsheetName(e.target.value)}
+                        placeholder="My Customers"
+                        className="bg-secondary/50 dark:bg-secondary/50 border-input dark:border-white/10 focus-visible:ring-primary/50 text-foreground"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="description" className="block text-sm font-medium mb-1.5 text-foreground/80">
+                        Description
                       </label>
+                      <Input
+                        id="description"
+                        value={newSpreadsheetDescription}
+                        onChange={(e) => setNewSpreadsheetDescription(e.target.value)}
+                        placeholder="Description (optional)"
+                        className="bg-secondary/50 dark:bg-secondary/50 border-input dark:border-white/10 focus-visible:ring-primary/50 text-foreground"
+                      />
                     </div>
                   </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="ghost"
-                    onClick={() => setIsShareDialogOpen(false)}
-                    disabled={shareMutation.isPending}
-                    className="hover:bg-white/5"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleConfirmShare}
-                    disabled={shareMutation.isPending || !shareUsername.trim()}
-                    className="bg-primary hover:bg-primary/90"
-                  >
-                    {shareMutation.isPending ? "Sharing..." : "Share"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            <Button variant="ghost" size="icon" onClick={logout} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all">
-              <LogOut className="h-5 w-5" />
-            </Button>
+                  <DialogFooter>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setIsCreateDialogOpen(false)}
+                      disabled={createMutation.isPending}
+                      className="hover:bg-accent/10 dark:hover:bg-white/5 text-foreground"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleCreateSpreadsheet}
+                      disabled={createMutation.isPending || !newSpreadsheetName.trim()}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      {createMutation.isPending ? "Creating..." : "Create"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Dialog open={isShareDialogOpen} onOpenChange={setIsShareDialogOpen}>
+                <DialogContent className="bg-card border-white/10 shadow-2xl backdrop-blur-3xl">
+                  <DialogHeader>
+                    <DialogTitle>Share Spreadsheet</DialogTitle>
+                    <DialogDescription>
+                      Share this spreadsheet with another user by entering their username.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div>
+                      <label htmlFor="username" className="block text-sm font-medium mb-1.5 text-foreground/80">
+                        Username *
+                      </label>
+                      <Input
+                        id="username"
+                        value={shareUsername}
+                        onChange={(e) => setShareUsername(e.target.value)}
+                        placeholder="Enter username"
+                        className="bg-secondary/50 border-white/10 focus-visible:ring-primary/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5 text-foreground/80">
+                        Permission
+                      </label>
+                      <div className="flex gap-4 p-1 bg-secondary/50 rounded-lg border border-white/5">
+                        <label className="flex items-center flex-1 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors">
+                          <input
+                            type="radio"
+                            name="permission"
+                            value="read-only"
+                            checked={sharePermission === "read-only"}
+                            onChange={() => setSharePermission("read-only")}
+                            className="mr-2 text-primary"
+                          />
+                          <span className="text-sm">Read Only</span>
+                        </label>
+                        <label className="flex items-center flex-1 p-2 rounded-md hover:bg-white/5 cursor-pointer transition-colors">
+                          <input
+                            type="radio"
+                            name="permission"
+                            value="read-write"
+                            checked={sharePermission === "read-write"}
+                            onChange={() => setSharePermission("read-write")}
+                            className="mr-2 text-primary"
+                          />
+                          <span className="text-sm">Read & Write</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setIsShareDialogOpen(false)}
+                      disabled={shareMutation.isPending}
+                      className="hover:bg-white/5"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleConfirmShare}
+                      disabled={shareMutation.isPending || !shareUsername.trim()}
+                      className="bg-primary hover:bg-primary/90"
+                    >
+                      {shareMutation.isPending ? "Sharing..." : "Share"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Button variant="ghost" size="icon" onClick={logout} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all">
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
-        </div>
-      </header >
+        </header >
+      )}
 
       {/* Meta Filter Sub-navigation */}
       {
@@ -589,12 +608,35 @@ const Dashboard = () => {
       <main className="container mx-auto px-4 py-8 relative z-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 animate-fade-in">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground dark:text-white">Dashboard</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground dark:text-white">
+              {filterType === "manual" ? "Manual Spreadsheets" : filterType === "meta" ? "Meta Spreadsheets" : "Dashboard"}
+            </h2>
             <p className="text-muted-foreground mt-1">
-              Showing {filteredSpreadsheets.length} {filteredSpreadsheets.length === 1 ? 'spreadsheet' : 'spreadsheets'} ({filterMode})
+              Showing {filteredSpreadsheets.length} {filteredSpreadsheets.length === 1 ? 'spreadsheet' : 'spreadsheets'}
             </p>
           </div>
 
+          {filterType && (
+            <div className="flex items-center gap-3">
+              {filterType === "manual" && (
+                <Button
+                  variant="outline"
+                  onClick={() => setIsGoogleSheetsDialogOpen(true)}
+                  className="bg-card dark:bg-card/40 border-border/50 hover:bg-accent/10"
+                >
+                  <Download className="h-4 w-4 mr-2 text-primary" />
+                  Import
+                </Button>
+              )}
+              <Button
+                onClick={() => setIsCreateDialogOpen(true)}
+                className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 border-0 text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New {filterType === "manual" ? "Manual" : "Meta"} Sheet
+              </Button>
+            </div>
+          )}
         </div>
 
         {metaViewMode === "form" && filterMode === "meta" && (

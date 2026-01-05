@@ -97,7 +97,7 @@ const Home = () => {
             {/* Quick Action: Meta Ads Integration */}
             <Card
               className="group relative overflow-hidden transition-all hover:shadow-2xl border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-blue-600/50"
-              onClick={() => navigate("/meta-settings")}
+              onClick={() => navigate("/calling/webhook")}
             >
               <CardContent className="p-6">
                 <div className="flex items-center gap-4">

@@ -274,5 +274,59 @@ router.get('/debug-config', async (req, res) => {
     }
 });
 
+// Fetch Detailed Meta Analytics & Global Lead Feed
+router.get('/analytics', auth, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const mongoose = await import('mongoose');
+
+        // 1. Fetch all Meta spreadsheets (owned or shared)
+        const Spreadsheet = mongoose.default.model('Spreadsheet');
+        const Sharing = mongoose.default.model('Sharing');
+
+        // Find sheets owned by user
+        const ownedSheets = await Spreadsheet.find({ user_id: userId, is_meta: true });
+
+        // Find sheets shared with user
+        const sharedRecords = await Sharing.find({ shared_with_user_id: userId });
+        const sharedSheetIds = sharedRecords.map(r => r.spreadsheet_id);
+        const sharedSheets = await Spreadsheet.find({ _id: { $in: sharedSheetIds }, is_meta: true });
+
+        const allMetaSheets = [...ownedSheets, ...sharedSheets];
+        const sheetIds = allMetaSheets.map(s => s._id);
+
+        // 2. Fetch Recent Leads across all these sheets
+        const recentLeads = await Customer.find({
+            spreadsheet_id: { $in: sheetIds }
+        })
+            .sort({ created_at: -1 })
+            .limit(20)
+            .populate('spreadsheet_id', 'name page_name form_name');
+
+        // 3. Stats: Velocity (Today, Week)
+        const now = new Date();
+        const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+
+        const [leadsToday, leadsThisWeek, totalLeads] = await Promise.all([
+            Customer.countDocuments({ spreadsheet_id: { $in: sheetIds }, created_at: { $gte: startOfDay } }),
+            Customer.countDocuments({ spreadsheet_id: { $in: sheetIds }, created_at: { $gte: startOfWeek } }),
+            Customer.countDocuments({ spreadsheet_id: { $in: sheetIds } })
+        ]);
+
+        res.json({
+            recentLeads,
+            stats: {
+                leadsToday,
+                leadsThisWeek,
+                totalLeads
+            }
+        });
+    } catch (error) {
+        console.error('[META-ANALYTICS] Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 export default router;
 
