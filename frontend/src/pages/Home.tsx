@@ -1,23 +1,16 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useQuery } from "@tanstack/react-query";
-import { fetchMetaAnalytics } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Phone, User, LayoutDashboard, LogOut, Home as HomeIcon, ArrowRight, Palette, Webhook, Facebook, Sparkles } from "lucide-react";
+import { Phone, User, LayoutDashboard, LogOut, Home as HomeIcon, ArrowRight, Palette, Webhook } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { data: analytics, isLoading: analyticsLoading } = useQuery({
-    queryKey: ["meta-analytics"],
-    queryFn: fetchMetaAnalytics,
-  });
 
   const getTimeGreeting = () => {
     const hour = new Date().getHours();
@@ -58,115 +51,6 @@ const Home = () => {
               <h2 className="text-3xl font-bold tracking-tight text-foreground">{getTimeGreeting()}, {user?.username}</h2>
               <p className="text-muted-foreground mt-1 text-base">Here's what's happening with your projects today.</p>
             </div>
-          </div>
-
-          <div className="space-y-6 mb-8">
-            <Card className="border-primary/20 bg-primary/5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Sparkles className="h-12 w-12 text-primary" />
-              </div>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <LayoutDashboard className="h-5 w-5 text-primary" />
-                    Detailed Lead Activity Log
-                  </CardTitle>
-                  <CardDescription className="flex items-center gap-2 mt-1">
-                    <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    Real-time Meta Lead Updates
-                  </CardDescription>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/calling/meta")}
-                  className="bg-background/50 hover:bg-background"
-                >
-                  View Full Insights
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-xl border border-border/50 overflow-hidden bg-card/50 backdrop-blur-sm">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-secondary/50 text-muted-foreground font-bold border-b border-border/50">
-                        <tr>
-                          <th className="px-4 py-3">Lead Name</th>
-                          <th className="px-4 py-3">Source (Page/Form)</th>
-                          <th className="px-4 py-3">Campaign & Ad</th>
-                          <th className="px-4 py-3">Status</th>
-                          <th className="px-4 py-3">Arrived At</th>
-                          <th className="px-4 py-3 text-right">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/30">
-                        {analyticsLoading ? (
-                          <tr>
-                            <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground animate-pulse">
-                              Fetching latest leads...
-                            </td>
-                          </tr>
-                        ) : analytics?.recentLeads.slice(0, 10).map((lead) => (
-                          <tr key={lead.id} className="hover:bg-accent/5 transition-colors group/row">
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col">
-                                <span className="font-bold text-foreground">{lead.customer_name}</span>
-                                <span className="text-[10px] text-muted-foreground opacity-70">{lead.phone_number}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col max-w-[150px]">
-                                <span className="truncate" title={lead.spreadsheet_id.page_name}>{lead.spreadsheet_id.page_name || 'N/A'}</span>
-                                <span className="text-[10px] text-muted-foreground truncate" title={lead.spreadsheet_id.form_name}>{lead.spreadsheet_id.form_name}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col max-w-[200px]">
-                                <span className="text-primary font-medium truncate" title={lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name}>
-                                  {lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name || 'N/A'}
-                                </span>
-                                <span className="text-[10px] text-muted-foreground truncate" title={lead.meta_data?.meta_ad || lead.spreadsheet_id.ad_name}>
-                                  {lead.meta_data?.meta_ad || lead.spreadsheet_id.ad_name || 'N/A'}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={cn(
-                                "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                                lead.status === 'new' ? "bg-red-500/10 text-red-600" : "bg-green-500/10 text-green-600"
-                              )}>
-                                {lead.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col">
-                                <span>{new Date(lead.created_at!).toLocaleDateString()}</span>
-                                <span className="text-[10px] text-muted-foreground">{new Date(lead.created_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary transition-all"
-                                onClick={() => navigate(`/spreadsheet/${(lead.spreadsheet_id as any)._id || lead.spreadsheet_id.id}`)}
-                              >
-                                <ArrowRight className="h-3 w-3" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                        {!analyticsLoading && (!analytics?.recentLeads || analytics.recentLeads.length === 0) && (
-                          <tr>
-                            <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground italic">No recent leads found.</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
