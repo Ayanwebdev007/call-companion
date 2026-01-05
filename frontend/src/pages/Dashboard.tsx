@@ -674,8 +674,6 @@ const Dashboard = ({ filterType }: DashboardProps) => {
           </div>
         )
         }
-        )
-        }
       </div>
 
       {/* Dialogs relocated to root for persistence across layouts */}
