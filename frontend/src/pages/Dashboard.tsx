@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchSpreadsheets, fetchSharedSpreadsheets, createSpreadsheet, deleteSpreadsheet, shareSpreadsheet, Spreadsheet } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft, Download, Webhook, LayoutDashboard, Filter, X } from "lucide-react";
+import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft, ArrowRight, Download, Webhook, LayoutDashboard, Filter, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import GoogleSheetsDialog from "@/components/GoogleSheetsDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -612,17 +612,19 @@ const Dashboard = () => {
         )}
 
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="h-48 bg-card/50 dark:bg-card/50 border-border/10 dark:border-white/5">
-                <CardHeader>
-                  <Skeleton className="h-6 w-3/4 mb-2 bg-muted dark:bg-white/10" />
-                  <Skeleton className="h-4 w-1/2 bg-muted dark:bg-white/5" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-20 w-full bg-muted dark:bg-white/5" />
-                </CardContent>
-              </Card>
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 p-4 rounded-xl border border-border/40 bg-card/40">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-5 w-48" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-8 w-24 rounded-full" />
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                </div>
+              </div>
             ))}
           </div>
         ) : spreadsheets.length === 0 ? (
@@ -640,124 +642,113 @@ const Dashboard = () => {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fade-in-up">
+          <div className="flex flex-col gap-3 animate-fade-in-up">
             {filteredSpreadsheets.map((spreadsheet: Spreadsheet) => (
-              <Card
+              <div
                 key={spreadsheet.id}
-                className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10 border-border/50 dark:border-white/5 bg-card/60 dark:bg-card/40 backdrop-blur-md cursor-pointer ring-1 ring-border/10 dark:ring-white/10 hover:ring-primary/30"
+                className="group flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-card/60 dark:bg-card/40 hover:bg-accent/5 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 cursor-pointer relative overflow-hidden"
                 onClick={() => handleOpenSpreadsheet(spreadsheet.id)}
               >
-                <div className={`absolute top-0 left-0 w-full h-1 ${spreadsheet.is_shared ? 'bg-blue-500' : 'bg-gradient-to-r from-primary to-blue-600'} opacity-80 group-hover:opacity-100 transition-opacity`} />
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                {/* Left Gradient Bar */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1 ${spreadsheet.is_shared ? 'bg-blue-500' : 'bg-gradient-to-b from-primary to-blue-600'} opacity-60 group-hover:opacity-100 transition-opacity`} />
 
-                <CardHeader className="pb-3 pt-5">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3 w-full">
-                      <div className={`p-2.5 rounded-xl transition-colors ${spreadsheet.is_shared ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-500/20' : 'bg-primary/10 text-primary group-hover:bg-primary/20'}`}>
-                        {spreadsheet.is_shared ? <Users className="h-5 w-5" /> : <FileSpreadsheet className="h-5 w-5" />}
-                      </div>
-                      <div className="space-y-1 flex-1 min-w-0">
-                        <CardTitle className="text-base font-semibold leading-none truncate text-foreground/90 dark:text-white/90 group-hover:text-foreground dark:group-hover:text-white transition-colors">{spreadsheet.name}</CardTitle>
-                        {spreadsheet.is_shared && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <span>by {spreadsheet.owner}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  {spreadsheet.description ? (
-                    <CardDescription className="line-clamp-2 text-xs h-8 text-muted-foreground/80">
-                      {spreadsheet.description}
-                    </CardDescription>
-                  ) : (
-                    <p className="text-xs text-muted-foreground/50 italic h-8 flex items-center">No description</p>
-                  )}
+                {/* Icon */}
+                <div className={`ml-2 p-3 rounded-full transition-all duration-300 shrink-0 ${spreadsheet.is_shared
+                  ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-500/20'
+                  : 'bg-primary/10 text-primary group-hover:bg-primary/20'}`}>
+                  {spreadsheet.is_shared ? <Users className="h-5 w-5" /> : <FileSpreadsheet className="h-5 w-5" />}
+                </div>
 
-                  <div className="mt-4 space-y-2">
-                    {spreadsheet.page_name && (
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground/70 bg-secondary/30 px-2 py-1 rounded-md border border-border/30">
-                        <span className="font-bold uppercase opacity-50">Page:</span>
-                        <span className="truncate">{spreadsheet.page_name}</span>
-                      </div>
-                    )}
-                    {spreadsheet.form_name && (
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground/70 bg-secondary/30 px-2 py-1 rounded-md border border-border/30">
-                        <span className="font-bold uppercase opacity-50">Form:</span>
-                        <span className="truncate">{spreadsheet.form_name}</span>
-                      </div>
-                    )}
-                    {(spreadsheet.ad_name || spreadsheet.campaign_name) && (
-                      <div className="flex items-center gap-2 text-[10px] text-primary/70 bg-primary/5 px-2 py-1 rounded-md border border-primary/20">
-                        <span className="font-bold uppercase opacity-50">{spreadsheet.ad_name ? 'Ad' : 'Campaign'}:</span>
-                        <span className="truncate font-semibold">{spreadsheet.ad_name || spreadsheet.campaign_name}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
+                {/* Main Info */}
+                <div className="flex-1 min-w-0 grid gap-1">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-semibold text-base text-foreground/90 group-hover:text-foreground transition-colors truncate">
+                      {spreadsheet.name}
+                    </h3>
                     {spreadsheet.is_shared && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-300 ring-1 ring-blue-500/20">
-                        {spreadsheet.permission_level === 'read-write' ? 'Can edit' : 'View only'}
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/20">
+                        Shared by {spreadsheet.owner} ({spreadsheet.permission_level === 'read-write' ? 'Edit' : 'View'})
                       </span>
                     )}
                   </div>
-                </CardContent>
-                <CardFooter className="pt-3 pb-3 border-t border-border/10 dark:border-white/5 bg-muted/40 dark:bg-black/20">
-                  <div className="w-full flex justify-between items-center text-xs text-muted-foreground">
-                    <span>{new Date(spreadsheet.created_at).toLocaleDateString()}</span>
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                      {!spreadsheet.is_shared && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 hover:bg-accent/10 dark:hover:bg-white/10 hover:text-foreground dark:hover:text-white rounded-full transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleShareSpreadsheet(spreadsheet.id);
-                            }}
-                          >
-                            <Share2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 hover:bg-green-100 dark:hover:bg-green-900 hover:text-green-600 dark:hover:text-green-400 rounded-full transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedSpreadsheetForImport(spreadsheet.id);
-                              setIsGoogleSheetsDialogOpen(true);
-                            }}
-                            title="Import from Google Sheets"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 hover:bg-destructive/20 hover:text-destructive rounded-full transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteSpreadsheet(spreadsheet.id, spreadsheet.name);
-                            }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </>
+
+                  <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
+                    {spreadsheet.description ? (
+                      <p className="text-xs text-muted-foreground truncate max-w-[300px]">{spreadsheet.description}</p>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/40 italic">No description</span>
+                    )}
+
+                    {/* Meta Chips */}
+                    <div className="flex items-center gap-2">
+                      {spreadsheet.page_name && (
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80 bg-secondary/50 px-2 py-0.5 rounded border border-border/30">
+                          <span className="opacity-50 uppercase tracking-wider">Page:</span> {spreadsheet.page_name}
+                        </div>
                       )}
-                      <span className="ml-2 group-hover:translate-x-1 transition-transform duration-300 text-primary group-hover:text-primary-foreground font-medium flex items-center gap-0.5">
-                        Open <ArrowLeft className="h-3 w-3 rotate-180" />
-                      </span>
+                      {spreadsheet.form_name && (
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80 bg-secondary/50 px-2 py-0.5 rounded border border-border/30">
+                          <span className="opacity-50 uppercase tracking-wider">Form:</span> {spreadsheet.form_name}
+                        </div>
+                      )}
+                      {(spreadsheet.ad_name || spreadsheet.campaign_name) && (
+                        <div className="flex items-center gap-1 text-[10px] text-primary/80 bg-primary/5 px-2 py-0.5 rounded border border-primary/20">
+                          <span className="opacity-50 uppercase tracking-wider">{spreadsheet.ad_name ? 'Ad' : 'Campaign'}:</span> {spreadsheet.ad_name || spreadsheet.campaign_name}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </CardFooter>
-              </Card>
+                </div>
+
+                {/* Right Actions */}
+                <div className="flex items-center gap-6 pl-4 border-l border-border/10">
+                  <span className="text-xs text-muted-foreground hidden lg:block whitespace-nowrap">
+                    {new Date(spreadsheet.created_at).toLocaleDateString()}
+                  </span>
+
+                  <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 sm:translate-x-2 sm:group-hover:translate-x-0" onClick={(e) => e.stopPropagation()}>
+                    {!spreadsheet.is_shared && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:bg-background hover:text-foreground hover:shadow-sm"
+                          onClick={(e) => { e.stopPropagation(); handleShareSpreadsheet(spreadsheet.id); }}
+                          title="Share"
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 dark:hover:text-green-400 hover:shadow-sm"
+                          onClick={(e) => { e.stopPropagation(); setSelectedSpreadsheetForImport(spreadsheet.id); setIsGoogleSheetsDialogOpen(true); }}
+                          title="Import from Google Sheets"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 hover:shadow-sm"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSpreadsheet(spreadsheet.id, spreadsheet.name); }}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-colors">
+                    <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
-        )}
+        )
+        }
       </main>
 
       {/* Google Sheets Import Dialog */}
@@ -776,7 +767,7 @@ const Dashboard = () => {
         onOpenChange={setIsMergeDialogOpen}
         spreadsheets={spreadsheets}
       />
-    </div >
+    </div>
   );
 };
 

@@ -30,8 +30,11 @@ export interface Spreadsheet {
   page_name?: string;
   form_name?: string;
   campaign_name?: string;
+  ad_set_name?: string;
+  ad_name?: string;
   meta_headers?: string[];
   is_meta?: boolean;
+  is_master?: boolean;
   created_at: string;
   updated_at: string;
   permission_level?: 'read-only' | 'read-write';
