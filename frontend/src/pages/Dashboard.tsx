@@ -328,12 +328,12 @@ const Dashboard = ({ filterType }: DashboardProps) => {
         </header>
       )}
 
-      {/* Meta Filter Sub-navigation */}
-      {
-        filterMode === "meta" && (
-          <div className={`sticky ${filterType ? 'top-0' : 'top-[65px]'} z-40 w-full border-b border-border/40 bg-background/40 backdrop-blur-lg animate-in fade-in slide-in-from-top-4 duration-300`}>
-            <div className="container mx-auto px-4 py-2 flex flex-col md:flex-row items-center justify-between gap-4">
-
+      {/* Sticky Header Group */}
+      <div className={`sticky ${filterType ? 'top-0' : 'top-[65px]'} z-40 w-full bg-background/80 backdrop-blur-xl border-b border-border/40 transition-all duration-300`}>
+        {/* Meta Filter Sub-navigation */}
+        {filterMode === "meta" && (
+          <div className="border-b border-border/10 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className={`container mx-auto ${filterType ? 'px-4 py-2' : 'px-4 py-2'} flex flex-col md:flex-row items-center justify-between gap-4`}>
               {/* View Segment Tabs */}
               <div className="flex bg-secondary/50 p-1 rounded-lg border border-border/50">
                 <button
@@ -489,43 +489,47 @@ const Dashboard = ({ filterType }: DashboardProps) => {
               </div>
             </div>
           </div>
-        )
-      }
+        )}
+
+        {/* Main Header Container */}
+        <div className={`${filterType ? 'px-4 py-4 md:px-6' : 'container mx-auto px-4 py-8'}`}>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight text-foreground dark:text-white">
+                {filterType === "manual" ? "Manual Spreadsheets" : filterType === "meta" ? "Meta Spreadsheets" : "Dashboard"}
+              </h2>
+              <p className="text-muted-foreground mt-1">
+                Showing {filteredSpreadsheets.length} {filteredSpreadsheets.length === 1 ? 'spreadsheet' : 'spreadsheets'}
+              </p>
+            </div>
+
+            {filterType && (
+              <div className="flex items-center gap-3">
+                {filterType === "manual" && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsGoogleSheetsDialogOpen(true)}
+                    className="bg-card dark:bg-card/40 border-border/50 hover:bg-accent/10"
+                  >
+                    <Download className="h-4 w-4 mr-2 text-primary" />
+                    Import
+                  </Button>
+                )}
+                <Button
+                  onClick={() => setIsCreateDialogOpen(true)}
+                  className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 border-0 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New {filterType === "manual" ? "Manual" : "Meta"} Sheet
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
-      <div className={`${filterType ? 'p-0' : 'container mx-auto px-4 py-8 relative z-10'}`}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 animate-fade-in">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground dark:text-white">
-              {filterType === "manual" ? "Manual Spreadsheets" : filterType === "meta" ? "Meta Spreadsheets" : "Dashboard"}
-            </h2>
-            <p className="text-muted-foreground mt-1">
-              Showing {filteredSpreadsheets.length} {filteredSpreadsheets.length === 1 ? 'spreadsheet' : 'spreadsheets'}
-            </p>
-          </div>
-
-          {filterType && (
-            <div className="flex items-center gap-3">
-              {filterType === "manual" && (
-                <Button
-                  variant="outline"
-                  onClick={() => setIsGoogleSheetsDialogOpen(true)}
-                  className="bg-card dark:bg-card/40 border-border/50 hover:bg-accent/10"
-                >
-                  <Download className="h-4 w-4 mr-2 text-primary" />
-                  Import
-                </Button>
-              )}
-              <Button
-                onClick={() => setIsCreateDialogOpen(true)}
-                className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 border-0 text-white"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New {filterType === "manual" ? "Manual" : "Meta"} Sheet
-              </Button>
-            </div>
-          )}
-        </div>
+      <div className={`${filterType ? 'p-4 md:p-6' : 'container mx-auto px-4 py-8 relative z-10'}`}>
 
         {metaViewMode === "form" && filterMode === "meta" && (
           <div className="mb-6 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl flex items-start gap-3">
@@ -806,6 +810,18 @@ const Dashboard = ({ filterType }: DashboardProps) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MergeDialog
+        open={isMergeDialogOpen}
+        onOpenChange={setIsMergeDialogOpen}
+        spreadsheets={spreadsheets}
+      />
+
+      <GoogleSheetsDialog
+        open={isGoogleSheetsDialogOpen}
+        onOpenChange={setIsGoogleSheetsDialogOpen}
+        spreadsheetId={selectedSpreadsheetForImport}
+      />
     </div>
   );
 };

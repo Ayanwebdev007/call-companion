@@ -33,7 +33,7 @@ export default function CallingLayout() {
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-auto p-4 md:p-6 relative z-10 animate-fade-in text-left">
+                <main className="flex-1 overflow-auto px-4 md:px-6 relative z-10 animate-fade-in text-left">
                     <Outlet />
                 </main>
             </SidebarInset>
