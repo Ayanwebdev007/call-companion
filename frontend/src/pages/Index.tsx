@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { AutoResizeTextarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search, FileSpreadsheet } from "lucide-react";
-import { format, isToday, parseISO, isPast, isValid } from "date-fns";
+import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search, FileSpreadsheet, Filter, X } from "lucide-react";
+import { format, isToday, parseISO, isPast, isValid, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet } from "@/lib/api";
@@ -22,15 +22,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
+
 
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, History, CalendarDays } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -103,7 +98,10 @@ const Index = () => {
 
   // Search query state
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [dateFilterMode, setDateFilterMode] = useState<"next_call" | "import_date">("next_call");
+  const [importDateRange, setImportDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined
+  });
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [searchClosing, setSearchClosing] = useState<boolean>(false);
   const searchRef = useRef<HTMLDivElement | null>(null);
@@ -279,21 +277,32 @@ const Index = () => {
       console.error("Customers is not an array:", customers);
       return [];
     }
-    if (viewMode === "all") return customers;
 
-    const targetDateStr = format(selectedDate, "yyyy-MM-dd");
+    let filtered = customers;
 
-    return customers.filter((c) => {
-      if (dateFilterMode === "next_call") {
-        return c.next_call_date === targetDateStr;
-      } else {
-        // Compare created_at date
+    // Apply import date range filter if set
+    if (importDateRange.from) {
+      const from = startOfDay(importDateRange.from);
+      const to = importDateRange.to ? endOfDay(importDateRange.to) : endOfDay(importDateRange.from);
+
+      filtered = filtered.filter((c) => {
         if (!c.created_at) return false;
-        const importDateStr = format(parseISO(c.created_at), "yyyy-MM-dd");
-        return importDateStr === targetDateStr;
-      }
-    });
-  }, [customers, viewMode, selectedDate, dateFilterMode]);
+        const date = parseISO(c.created_at);
+        return isWithinInterval(date, { start: from, end: to });
+      });
+
+      // If range filter is active, we don't apply the single-day "Next Call Date" filter
+      return filtered;
+    }
+
+    // Default: Filter by Next Call Date if in date mode
+    if (viewMode === "date") {
+      const targetDateStr = format(selectedDate, "yyyy-MM-dd");
+      filtered = filtered.filter((c) => c.next_call_date === targetDateStr);
+    }
+
+    return filtered;
+  }, [customers, viewMode, selectedDate, importDateRange]);
 
   // Toggle customer selection
   const toggleCustomerSelection = (customerId: string) => {
@@ -601,28 +610,58 @@ const Index = () => {
               </PopoverContent>
             </Popover>
 
-            <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-md border border-border/50 ml-2">
-              <Button
-                variant={dateFilterMode === "next_call" ? "secondary" : "ghost"}
-                size="sm"
-                className="h-7 text-[10px] px-2 gap-1.5 font-semibold"
-                onClick={() => setDateFilterMode("next_call")}
-                title="Filter by Next Call Date"
-              >
-                <CalendarDays className="h-3 w-3" />
-                Next Call
-              </Button>
-              <Button
-                variant={dateFilterMode === "import_date" ? "secondary" : "ghost"}
-                size="sm"
-                className="h-7 text-[10px] px-2 gap-1.5 font-semibold"
-                onClick={() => setDateFilterMode("import_date")}
-                title="Filter by Imported Date"
-              >
-                <History className="h-3 w-3" />
-                Import Date
-              </Button>
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={importDateRange.from ? "secondary" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "gap-2 ml-2",
+                    importDateRange.from && "bg-secondary"
+                  )}
+                  title="Filter by Import Date Range"
+                >
+                  <Filter className="h-4 w-4" />
+                  {importDateRange.from ? (
+                    importDateRange.to ? (
+                      `${format(importDateRange.from, "MMM d")} - ${format(importDateRange.to, "MMM d")}`
+                    ) : (
+                      format(importDateRange.from, "MMM d")
+                    )
+                  ) : (
+                    "Import Date"
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <div className="p-3 border-b border-border flex items-center justify-between">
+                  <span className="text-xs font-semibold">Filter by Import Date</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[10px]"
+                    onClick={() => setImportDateRange({ from: undefined, to: undefined })}
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Clear
+                  </Button>
+                </div>
+                <Calendar
+                  mode="range"
+                  selected={{
+                    from: importDateRange.from,
+                    to: importDateRange.to
+                  }}
+                  onSelect={(range: any) => {
+                    setImportDateRange({
+                      from: range?.from,
+                      to: range?.to
+                    });
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="h-6 w-px bg-border/50" />
@@ -1062,55 +1101,34 @@ const Index = () => {
                       }}
                     />
 
-                    <ContextMenu>
-                      <ContextMenuTrigger asChild>
-                        <MemoizedSpreadsheetRow
-                          customer={customer}
-                          index={index + 1}
-                          isSelected={selectedCustomers.has(customer.id)}
-                          isDragging={draggedItem === customer.id}
-                          dropTarget={dropTarget}
-                          selectedCustomers={selectedCustomers}
-                          onToggleSelect={toggleCustomerSelection}
-                          onCellChange={handleCellChange}
-                          onDelete={() => deleteMutation.mutate(customer.id)}
-                          onDragStart={handleDragStart}
-                          onDragOver={handleDragOver}
-                          onDragEnter={handleDragEnter}
-                          onDragLeave={handleDragLeave}
-                          onDrop={handleDrop}
-                          onDragEnd={handleDragEnd}
-                          showCheckboxes={showCheckboxes}
-                          rowHeights={rowHeights}
-                          setRowHeights={setRowHeights}
-                          focusedCell={focusedCell}
-                          setFocusedCell={setFocusedCell}
-                          onWhatsAppClick={(c) => {
-                            setSelectedWhatsAppCustomer(c);
-                            setIsWhatsAppDialogOpen(true);
-                          }}
-                          is_meta={spreadsheet?.is_meta}
-                          meta_headers={spreadsheet?.meta_headers}
-                        />
-                      </ContextMenuTrigger>
-                      <ContextMenuContent className="w-64 bg-background/95 backdrop-blur shadow-xl border-border">
-                        <div className="px-3 py-2 border-b border-border/50">
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Lead Metadata</p>
-                        </div>
-                        <ContextMenuItem className="flex flex-col items-start gap-1 py-2 focus:bg-primary/5">
-                          <span className="text-[10px] text-muted-foreground">Lead Imported On</span>
-                          <span className="text-sm font-semibold">
-                            {customer.created_at ? format(parseISO(customer.created_at), "PPP p") : "N/A"}
-                          </span>
-                        </ContextMenuItem>
-                        {customer.meta_data?.meta_lead_id && (
-                          <ContextMenuItem className="flex flex-col items-start gap-1 py-2 focus:bg-primary/5">
-                            <span className="text-[10px] text-muted-foreground">Meta Lead ID</span>
-                            <span className="text-[10px] font-mono bg-muted px-1 rounded">{customer.meta_data.meta_lead_id}</span>
-                          </ContextMenuItem>
-                        )}
-                      </ContextMenuContent>
-                    </ContextMenu>
+                    <MemoizedSpreadsheetRow
+                      customer={customer}
+                      index={index + 1}
+                      isSelected={selectedCustomers.has(customer.id)}
+                      isDragging={draggedItem === customer.id}
+                      dropTarget={dropTarget}
+                      selectedCustomers={selectedCustomers}
+                      onToggleSelect={toggleCustomerSelection}
+                      onCellChange={handleCellChange}
+                      onDelete={() => deleteMutation.mutate(customer.id)}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDragEnter={handleDragEnter}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
+                      showCheckboxes={showCheckboxes}
+                      rowHeights={rowHeights}
+                      setRowHeights={setRowHeights}
+                      focusedCell={focusedCell}
+                      setFocusedCell={setFocusedCell}
+                      onWhatsAppClick={(c) => {
+                        setSelectedWhatsAppCustomer(c);
+                        setIsWhatsAppDialogOpen(true);
+                      }}
+                      is_meta={spreadsheet?.is_meta}
+                      meta_headers={spreadsheet?.meta_headers}
+                    />
 
                     {/* Drop zone after last row */}
                     {index === displayedCustomers.length - 1 && (
