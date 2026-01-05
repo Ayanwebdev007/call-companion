@@ -298,94 +298,79 @@ router.get('/analytics', auth, async (req, res) => {
         const allMetaSheets = [...ownedSheets, ...sharedSheets];
         const sheetIds = allMetaSheets.map(s => s._id);
 
-        // 2. Fetch Recent Leads across all these sheets
-        const recentLeads = await Customer.find({
-            spreadsheet_id: { $in: sheetIds }
-        })
-            .sort({ created_at: -1 })
-            .limit(50)
-            .populate('spreadsheet_id', 'name page_name form_name is_master');
+        // 2. Fetch Recent Leads (Deduplicated by Lead ID)
+        const recentLeadsUnique = await Customer.aggregate([
+            { $match: { spreadsheet_id: { $in: sheetIds } } },
+            { $sort: { created_at: -1 } },
+            {
+                $group: {
+                    _id: { $ifNull: ["$meta_data.meta_lead_id", "$_id"] },
+                    doc: { $first: "$$ROOT" }
+                }
+            },
+            { $replaceRoot: { newRoot: "$doc" } },
+            { $sort: { created_at: -1 } },
+            { $limit: 40 }
+        ]);
 
-        // 3. Stats: Velocity (Today, Week)
+        const SpreadsheetModel = mongoose.model('Spreadsheet');
+        const recentLeads = await SpreadsheetModel.populate(recentLeadsUnique, { path: 'spreadsheet_id', select: 'name page_name form_name is_master' });
+
+        // 3. Stats & Aggregations (Deduplicated by Lead ID)
+        const leadGroupMatch = { spreadsheet_id: { $in: sheetIds } };
         const now = new Date();
         const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
         const startOfWeek = new Date(new Date().setDate(now.getDate() - now.getDay()));
-
-        const [leadsToday, leadsThisWeek, totalLeads] = await Promise.all([
-            Customer.countDocuments({ spreadsheet_id: { $in: sheetIds }, created_at: { $gte: startOfDay } }),
-            Customer.countDocuments({ spreadsheet_id: { $in: sheetIds }, created_at: { $gte: startOfWeek } }),
-            Customer.countDocuments({ spreadsheet_id: { $in: sheetIds } })
-        ]);
-
-        // 4. Aggregations for Charts (Leads per Page, Leads per Form, Status Distribution)
-        const leadsBySheet = await Customer.aggregate([
-            { $match: { spreadsheet_id: { $in: sheetIds } } },
-            { $group: { _id: "$spreadsheet_id", count: { $sum: 1 } } }
-        ]);
-
-        // 5. New Granular Aggregations (Campaign, AdSet, Ad)
-        // Note: These fields are in meta_data Map. MongoDB 4.4+ supports Map aggregation.
-        const granularData = await Customer.aggregate([
-            { $match: { spreadsheet_id: { $in: sheetIds } } },
-            {
-                $group: {
-                    _id: null,
-                    campaigns: { $push: "$meta_data.meta_campaign" },
-                    adSets: { $push: "$meta_data.meta_ad_set" },
-                    ads: { $push: "$meta_data.meta_ad" }
-                }
-            }
-        ]);
-
-        // Helper to count frequencies in an array
-        const getCounts = (arr) => arr.reduce((acc, val) => {
-            if (val) acc[val] = (acc[val] || 0) + 1;
-            return acc;
-        }, {});
-
-        const campaignLeads = granularData[0] ? getCounts(granularData[0].campaigns) : {};
-        const adSetLeads = granularData[0] ? getCounts(granularData[0].adSets) : {};
-        const adLeads = granularData[0] ? getCounts(granularData[0].ads) : {};
-
-        // 6. Leads by Date (Last 30 days)
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        const leadsByDateRaw = await Customer.aggregate([
-            { $match: { spreadsheet_id: { $in: sheetIds }, created_at: { $gte: thirtyDaysAgo } } },
+        // Core Aggregation: Deduplicate leads across all sheets first
+        const uniqueLeads = await Customer.aggregate([
+            { $match: leadGroupMatch },
             {
                 $group: {
-                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } },
-                    count: { $sum: 1 }
+                    _id: { $ifNull: ["$meta_data.meta_lead_id", "$_id"] },
+                    status: { $first: "$status" },
+                    created_at: { $first: "$created_at" },
+                    page: { $first: { $ifNull: ["$meta_data.meta_page", "Unknown"] } },
+                    form: { $first: { $ifNull: ["$meta_data.meta_form", "Unknown"] } },
+                    campaign: { $first: { $ifNull: ["$meta_data.meta_campaign", "Unknown"] } },
+                    adSet: { $first: { $ifNull: ["$meta_data.meta_ad_set", "Unknown"] } },
+                    ad: { $first: { $ifNull: ["$meta_data.meta_ad", "Unknown"] } }
                 }
-            },
-            { $sort: { _id: 1 } }
+            }
         ]);
 
-        const dateLeads = {};
-        leadsByDateRaw.forEach(item => { dateLeads[item._id] = item.count; });
-
-        // Map counts back to sheets for page/form grouping
+        let leadsToday = 0;
+        let leadsThisWeek = 0;
+        let totalLeads = uniqueLeads.length;
         const pageLeads = {};
         const formLeads = {};
+        const campaignLeads = {};
+        const adSetLeads = {};
+        const adLeads = {};
+        const dateLeads = {};
         const statusDistribution = {};
 
-        leadsBySheet.forEach(item => {
-            const sheet = allMetaSheets.find(s => s._id.toString() === item._id.toString());
-            if (sheet) {
-                const page = sheet.page_name || 'Unknown Page';
-                const form = sheet.form_name || 'Unknown Form';
-                pageLeads[page] = (pageLeads[page] || 0) + item.count;
-                formLeads[form] = (formLeads[form] || 0) + item.count;
-            }
-        });
+        uniqueLeads.forEach(lead => {
+            const createdAt = new Date(lead.created_at);
+            if (createdAt >= startOfDay) leadsToday++;
+            if (createdAt >= startOfWeek) leadsThisWeek++;
 
-        // Global Status Distribution
-        const statuses = await Customer.aggregate([
-            { $match: { spreadsheet_id: { $in: sheetIds } } },
-            { $group: { _id: "$status", count: { $sum: 1 } } }
-        ]);
-        statuses.forEach(s => { statusDistribution[s._id || 'New'] = s.count; });
+            if (lead.page) pageLeads[lead.page] = (pageLeads[lead.page] || 0) + 1;
+            if (lead.form) formLeads[lead.form] = (formLeads[lead.form] || 0) + 1;
+            if (lead.campaign) campaignLeads[lead.campaign] = (campaignLeads[lead.campaign] || 0) + 1;
+            if (lead.adSet) adSetLeads[lead.adSet] = (adSetLeads[lead.adSet] || 0) + 1;
+            if (lead.ad) adLeads[lead.ad] = (adLeads[lead.ad] || 0) + 1;
+
+            const dateStr = createdAt.toISOString().split('T')[0];
+            if (createdAt >= thirtyDaysAgo) {
+                dateLeads[dateStr] = (dateLeads[dateStr] || 0) + 1;
+            }
+
+            const status = (lead.status || 'new').toLowerCase();
+            statusDistribution[status] = (statusDistribution[status] || 0) + 1;
+        });
 
         res.json({
             recentLeads,

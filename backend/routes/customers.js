@@ -502,6 +502,33 @@ router.put('/:id', auth, async (req, res) => {
     if (!updatedCustomer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
+
+    // Sync status/remark/etc across spreadsheets for Meta Leads
+    const leadId = updatedCustomer.meta_data instanceof Map
+      ? updatedCustomer.meta_data.get('meta_lead_id')
+      : updatedCustomer.meta_data?.meta_lead_id;
+
+    if (leadId) {
+      // Update all other documents for this user with same meta_lead_id
+      await Customer.updateMany(
+        {
+          user_id: req.user.id,
+          'meta_data.meta_lead_id': leadId,
+          _id: { $ne: updatedCustomer._id }
+        },
+        {
+          $set: {
+            status: updatedCustomer.status,
+            remark: updatedCustomer.remark,
+            color: updatedCustomer.color,
+            next_call_date: updatedCustomer.next_call_date,
+            next_call_time: updatedCustomer.next_call_time,
+            last_call_date: updatedCustomer.last_call_date
+          }
+        }
+      );
+    }
+
     res.json(updatedCustomer);
   } catch (err) {
     res.status(400).json({ message: err.message });

@@ -12,6 +12,7 @@ const customerSchema = new mongoose.Schema({
   remark: { type: String, default: '' },
   meta_data: { type: Map, of: String, default: {} },
   color: { type: String, enum: ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', null], default: null },
+  status: { type: String, default: 'new' },
   position: { type: Number, default: 0 } // For drag and drop ordering
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
@@ -19,6 +20,9 @@ const customerSchema = new mongoose.Schema({
 customerSchema.index({ spreadsheet_id: 1, customer_name: 1 });
 customerSchema.index({ spreadsheet_id: 1, company_name: 1 });
 customerSchema.index({ spreadsheet_id: 1, phone_number: 1 });
+
+// Index for Meta deduplication and syncing
+customerSchema.index({ user_id: 1, 'meta_data.meta_lead_id': 1 });
 
 // Map _id to id
 customerSchema.set('toJSON', {
