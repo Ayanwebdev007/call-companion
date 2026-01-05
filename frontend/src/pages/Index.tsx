@@ -7,7 +7,7 @@ import { AutoResizeTextarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search, FileSpreadsheet } from "lucide-react";
-import { format, isToday, parseISO, isPast } from "date-fns";
+import { format, isToday, parseISO, isPast, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet } from "@/lib/api";
@@ -897,7 +897,7 @@ const Index = () => {
                   <PopoverTrigger asChild>
                     <button className="w-full h-full px-3 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
                       <CalendarIcon className="h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{newRow.last_call_date ? format(parseISO(newRow.last_call_date), "dd/MM/yyyy") : "Select"}</span>
+                      <span className="truncate">{newRow.last_call_date && isValid(parseISO(newRow.last_call_date)) ? format(parseISO(newRow.last_call_date), "dd/MM/yyyy") : "Select"}</span>
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -916,7 +916,7 @@ const Index = () => {
                   <PopoverTrigger asChild>
                     <button className="w-full h-full px-3 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
                       <CalendarIcon className="h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{newRow.next_call_date ? format(parseISO(newRow.next_call_date), "dd/MM/yyyy") : "Select"}</span>
+                      <span className="truncate">{newRow.next_call_date && isValid(parseISO(newRow.next_call_date)) ? format(parseISO(newRow.next_call_date), "dd/MM/yyyy") : "Select"}</span>
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -1157,17 +1157,31 @@ function SpreadsheetRow({
   is_meta?: boolean;
   meta_headers?: string[];
 }) {
-  const [date, setDate] = useState<Date | undefined>(
-    customer.next_call_date ? parseISO(customer.next_call_date) : undefined
-  );
+  const [date, setDate] = useState<Date | undefined>(() => {
+    if (!customer.next_call_date) return undefined;
+    const d = parseISO(customer.next_call_date);
+    return isValid(d) ? d : undefined;
+  });
+
+  // Sync date with customer.next_call_date
+  useEffect(() => {
+    if (!customer.next_call_date) {
+      setDate(undefined);
+      return;
+    }
+    const d = parseISO(customer.next_call_date);
+    setDate(isValid(d) ? d : undefined);
+  }, [customer.next_call_date]);
 
   // Set initial row height
   useEffect(() => {
     // This will be handled by the parent component setting the style directly
   }, []);
-  const [lastCallDate, setLastCallDate] = useState<Date | undefined>(
-    customer.last_call_date ? parseISO(customer.last_call_date) : undefined
-  );
+  const [lastCallDate, setLastCallDate] = useState<Date | undefined>(() => {
+    if (!customer.last_call_date) return undefined;
+    const d = parseISO(customer.last_call_date);
+    return isValid(d) ? d : undefined;
+  });
   const [localColor, setLocalColor] = useState(customer.color);
 
   // Sync localColor with customer.color when it changes from outside (e.g. after refetch)
@@ -1177,7 +1191,12 @@ function SpreadsheetRow({
 
   // Sync lastCallDate with customer.last_call_date when it changes from outside (e.g. after refetch)
   useEffect(() => {
-    setLastCallDate(customer.last_call_date ? parseISO(customer.last_call_date) : undefined);
+    if (!customer.last_call_date) {
+      setLastCallDate(undefined);
+      return;
+    }
+    const d = parseISO(customer.last_call_date);
+    setLastCallDate(isValid(d) ? d : undefined);
   }, [customer.last_call_date]);
 
   const handleDateChange = (newDate: Date | undefined) => {
@@ -1331,7 +1350,7 @@ function SpreadsheetRow({
           <PopoverTrigger asChild>
             <button className="w-full h-full px-2 text-left text-sm flex items-center gap-1 hover:bg-accent/10 transition-colors">
               <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-              <span className="truncate">{lastCallDate ? format(lastCallDate, "dd/MM/yyyy") : "Pick"}</span>
+              <span className="truncate">{lastCallDate && isValid(lastCallDate) ? format(lastCallDate, "dd/MM/yyyy") : "Pick"}</span>
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -1350,7 +1369,7 @@ function SpreadsheetRow({
           <PopoverTrigger asChild>
             <button className="w-full h-full px-2 text-left text-sm flex items-center gap-1 hover:bg-accent/10 transition-colors">
               <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-              <span className="truncate">{date ? format(date, "dd/MM/yyyy") : "Pick"}</span>
+              <span className="truncate">{date && isValid(date) ? format(date, "dd/MM/yyyy") : "Pick"}</span>
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
