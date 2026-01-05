@@ -46,8 +46,8 @@ const App = () => (
                   {/* New Calling Dashboard Nested Routes */}
                   <Route path="/calling" element={<CallingLayout />}>
                     <Route index element={<CallingOverview />} />
-                    <Route path="manual" element={<Dashboard filterType="manual" />} />
-                    <Route path="meta" element={<Dashboard filterType="meta" />} />
+                    <Route path="manual" element={<Dashboard key="manual" filterType="manual" />} />
+                    <Route path="meta" element={<Dashboard key="meta" filterType="meta" />} />
                     <Route path="webhook" element={<MetaSettings />} />
                     <Route path="insights" element={<MetaInsights />} />
                   </Route>

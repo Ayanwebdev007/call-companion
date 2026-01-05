@@ -40,14 +40,19 @@ const Dashboard = ({ filterType }: DashboardProps) => {
   const [selectedMetaPage, setSelectedMetaPage] = useState<string>(initialPage);
   const [selectedMetaForm, setSelectedMetaForm] = useState<string>(initialForm);
 
-  // Sync with URL params if they change
   useEffect(() => {
     const page = searchParams.get("page");
     const form = searchParams.get("form");
     if (page) setSelectedMetaPage(page);
     if (form) setSelectedMetaForm(form);
-    if (page || form) setFilterMode("meta");
-  }, [location.search]);
+
+    // Sync filterMode with prop or URL
+    if (page || form) {
+      setFilterMode("meta");
+    } else if (filterType) {
+      setFilterMode(filterType);
+    }
+  }, [location.search, filterType]);
   const [selectedMetaCampaign, setSelectedMetaCampaign] = useState<string>("all");
   const [selectedMetaAdSet, setSelectedMetaAdSet] = useState<string>("all");
   const [selectedMetaAd, setSelectedMetaAd] = useState<string>("all");
