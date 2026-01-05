@@ -276,17 +276,6 @@ const Dashboard = () => {
               <span className="text-sm font-medium text-foreground/90 dark:text-white/90">{user?.username}</span>
             </div>
 
-            {filterMode === "meta" && (
-              <Button
-                variant="outline"
-                onClick={() => setIsMergeDialogOpen(true)}
-                className="hidden md:flex shadow-sm gap-2 border-dashed border-primary/20 bg-background/50 hover:bg-background/80"
-              >
-                <Filter className="h-4 w-4 rotate-90 text-primary" />
-                Merge Duplicates
-              </Button>
-            )}
-
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-95 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 border-0 text-white">
