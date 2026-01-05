@@ -20,6 +20,7 @@ export interface Customer {
   created_at?: string;
   updated_at?: string;
   position?: number;
+  status?: string;
 }
 
 export interface Spreadsheet {
@@ -260,6 +261,10 @@ export interface MetaAnalyticsResponse {
   charts: {
     pageLeads: Record<string, number>;
     formLeads: Record<string, number>;
+    campaignLeads: Record<string, number>;
+    adSetLeads: Record<string, number>;
+    adLeads: Record<string, number>;
+    dateLeads: Record<string, number>;
     statusDistribution: Record<string, number>;
   };
 }

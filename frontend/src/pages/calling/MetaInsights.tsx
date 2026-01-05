@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchSpreadsheets, fetchMetaAnalytics, Spreadsheet } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -13,9 +14,11 @@ import {
     ResponsiveContainer,
     PieChart,
     Pie,
-    Cell
+    Cell,
+    AreaChart,
+    Area
 } from "recharts";
-import { Facebook, Info, AlertCircle, CheckCircle2, Clock, MapPin, Hash, ArrowRight } from "lucide-react";
+import { Facebook, Info, AlertCircle, CheckCircle2, Clock, MapPin, Hash, ArrowRight, LayoutDashboard, Target, Layers, PlayCircle, Calendar } from "lucide-react";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -63,6 +66,22 @@ export default function MetaInsights() {
 
     const statusData = analytics?.charts.statusDistribution
         ? Object.entries(analytics.charts.statusDistribution).map(([name, value]) => ({ name, value }))
+        : [];
+
+    const campaignData = analytics?.charts.campaignLeads
+        ? Object.entries(analytics.charts.campaignLeads).map(([name, value]) => ({ name, value }))
+        : [];
+
+    const adSetData = analytics?.charts.adSetLeads
+        ? Object.entries(analytics.charts.adSetLeads).map(([name, value]) => ({ name, value }))
+        : [];
+
+    const adData = analytics?.charts.adLeads
+        ? Object.entries(analytics.charts.adLeads).map(([name, value]) => ({ name, value }))
+        : [];
+
+    const trendData = analytics?.charts.dateLeads
+        ? Object.entries(analytics.charts.dateLeads).map(([date, value]) => ({ date, value }))
         : [];
 
     if (sheetsLoading || analyticsLoading) {
@@ -128,20 +147,205 @@ export default function MetaInsights() {
             <div className="grid gap-6 md:grid-cols-3">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-sm font-bold flex items-center justify-between">
-                            Leads per Page
-                            <span className="text-[10px] uppercase text-muted-foreground font-normal">Actionable</span>
+                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                            <Target className="h-4 w-4 text-orange-500" />
+                            Campaign Performance
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="h-[250px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={pageData}>
+                            <BarChart data={campaignData}>
                                 <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                                <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} hide />
+                                <XAxis dataKey="name" fontSize={10} hide />
                                 <YAxis fontSize={10} tickLine={false} axisLine={false} />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
-                                    itemStyle={{ color: 'hsl(var(--primary))' }}
+                                />
+                                <Bar dataKey="value" fill="#FFBB28" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                            <Layers className="h-4 w-4 text-purple-500" />
+                            Ad Set Performance
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={adSetData}>
+                                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                                <XAxis dataKey="name" fontSize={10} hide />
+                                <YAxis fontSize={10} tickLine={false} axisLine={false} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
+                                />
+                                <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-bold flex items-center gap-2">
+                            <PlayCircle className="h-4 w-4 text-blue-500" />
+                            Ad Performance
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={adData}>
+                                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                                <XAxis dataKey="name" fontSize={10} hide />
+                                <YAxis fontSize={10} tickLine={false} axisLine={false} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
+                                />
+                                <Bar dataKey="value" fill="#0088FE" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-green-500" />
+                        Lead Arrival Trends (Last 30 Days)
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={trendData}>
+                            <defs>
+                                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.1} vertical={false} />
+                            <XAxis
+                                dataKey="date"
+                                fontSize={10}
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={(val) => new Date(val).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                            />
+                            <YAxis fontSize={10} tickLine={false} axisLine={false} />
+                            <Tooltip
+                                contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
+                            />
+                            <Area
+                                type="monotone"
+                                dataKey="value"
+                                stroke="hsl(var(--primary))"
+                                fillOpacity={1}
+                                fill="url(#colorValue)"
+                                strokeWidth={2}
+                            />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle className="text-lg">Detailed Lead Activity Log</CardTitle>
+                        <p className="text-xs text-muted-foreground mt-1">Full breakdown of metadata from your latest 50 leads.</p>
+                    </div>
+                    <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="rounded-xl border border-border/50 overflow-hidden bg-card/30">
+                        <table className="w-full text-left text-xs">
+                            <thead className="bg-secondary/50 text-muted-foreground font-bold border-b border-border/50">
+                                <tr>
+                                    <th className="px-4 py-3">Lead Name</th>
+                                    <th className="px-4 py-3">Source (Page/Form)</th>
+                                    <th className="px-4 py-3">Campaign & Ad</th>
+                                    <th className="px-4 py-3">Status</th>
+                                    <th className="px-4 py-3">Arrived At</th>
+                                    <th className="px-4 py-3 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border/30">
+                                {analytics?.recentLeads.map((lead) => (
+                                    <tr key={lead.id} className="hover:bg-accent/5 transition-colors group">
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-foreground">{lead.customer_name}</span>
+                                                <span className="text-[10px] text-muted-foreground opacity-70">{lead.phone_number}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-col max-w-[150px]">
+                                                <span className="truncate" title={lead.spreadsheet_id.page_name}>{lead.spreadsheet_id.page_name || 'N/A'}</span>
+                                                <span className="text-[10px] text-muted-foreground truncate" title={lead.spreadsheet_id.form_name}>{lead.spreadsheet_id.form_name}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-col max-w-[200px]">
+                                                <span className="text-primary font-medium truncate" title={lead.meta_data?.meta_campaign}>{lead.meta_data?.meta_campaign || 'N/A'}</span>
+                                                <span className="text-[10px] text-muted-foreground truncate" title={lead.meta_data?.meta_ad}>{lead.meta_data?.meta_ad || 'N/A'}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={cn(
+                                                "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                                                lead.status === 'new' ? "bg-red-500/10 text-red-600" : "bg-green-500/10 text-green-600"
+                                            )}>
+                                                {lead.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex flex-col">
+                                                <span>{new Date(lead.created_at!).toLocaleDateString()}</span>
+                                                <span className="text-[10px] text-muted-foreground">{new Date(lead.created_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary transition-all"
+                                                onClick={() => navigate(`/spreadsheet/${(lead.spreadsheet_id as any)._id || lead.spreadsheet_id.id}`)}
+                                            >
+                                                <ArrowRight className="h-3 w-3" />
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {analytics?.recentLeads.length === 0 && (
+                                    <tr>
+                                        <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground italic">No leads found in this period.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle className="text-sm font-bold">Leads per Page</CardTitle>
+                        <Facebook className="h-4 w-4 text-[#1877F2]" />
+                    </CardHeader>
+                    <CardContent className="h-[200px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={pageData}>
+                                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                                <XAxis dataKey="name" fontSize={10} hide />
+                                <YAxis fontSize={10} tickLine={false} axisLine={false} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
                                 />
                                 <Bar
                                     dataKey="value"
@@ -156,13 +360,11 @@ export default function MetaInsights() {
                 </Card>
 
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-sm font-bold flex items-center justify-between">
-                            Leads per Form
-                            <span className="text-[10px] uppercase text-muted-foreground font-normal">Actionable</span>
-                        </CardTitle>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <CardTitle className="text-sm font-bold">Leads per Form</CardTitle>
+                        <Clock className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent className="h-[250px]">
+                    <CardContent className="h-[200px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
@@ -183,104 +385,6 @@ export default function MetaInsights() {
                                 <Tooltip />
                             </PieChart>
                         </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-sm font-bold">CRM Status Distrib.</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-[250px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={statusData} layout="vertical">
-                                <XAxis type="number" hide />
-                                <YAxis dataKey="name" type="category" fontSize={10} tickLine={false} axisLine={false} width={80} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
-                                />
-                                <Bar dataKey="value" fill="#8884d8" radius={[0, 4, 4, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="text-lg">Recent Lead Activity</CardTitle>
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {analytics?.recentLeads.length === 0 ? (
-                                <p className="text-center py-8 text-muted-foreground text-sm">No recent leads found.</p>
-                            ) : (
-                                analytics?.recentLeads.map((lead) => (
-                                    <div key={lead.id} className="group relative flex items-start gap-3 p-3 rounded-xl border border-border/40 hover:border-primary/30 transition-all bg-card/50">
-                                        <div className="mt-1 p-2 rounded-full bg-primary/5 text-primary">
-                                            <MapPin className="h-3 w-3" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <h4 className="font-bold text-sm truncate">{lead.customer_name}</h4>
-                                                <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                                                    {new Date(lead.created_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground font-medium truncate">
-                                                    {lead.spreadsheet_id.name}
-                                                </span>
-                                                <span className="text-[10px] text-muted-foreground truncate">
-                                                    {lead.spreadsheet_id.form_name}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            onClick={() => navigate(`/spreadsheet/${(lead.spreadsheet_id as any)._id || lead.spreadsheet_id.id}`)}
-                                        >
-                                            <ArrowRight className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Recent Sheets Created</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {metaSheets.slice(0, 5).map((sheet) => (
-                                <div key={sheet.id} className="flex items-center justify-between p-4 rounded-lg bg-secondary/30 border border-border/50">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-2 rounded-full bg-blue-500/10 text-blue-600">
-                                            <Facebook className="h-4 w-4" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-semibold text-sm">{sheet.name}</h4>
-                                            <p className="text-xs text-muted-foreground">{sheet.page_name} • {sheet.form_name}</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="flex items-center gap-1 text-xs text-green-600 font-medium">
-                                            <CheckCircle2 className="h-3 w-3" />
-                                            Active
-                                        </div>
-                                        <p className="text-[10px] text-muted-foreground">
-                                            {new Date(sheet.created_at).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
                     </CardContent>
                 </Card>
             </div>

@@ -301,8 +301,8 @@ router.get('/analytics', auth, async (req, res) => {
             spreadsheet_id: { $in: sheetIds }
         })
             .sort({ created_at: -1 })
-            .limit(20)
-            .populate('spreadsheet_id', 'name page_name form_name');
+            .limit(50)
+            .populate('spreadsheet_id', 'name page_name form_name is_master');
 
         // 3. Stats: Velocity (Today, Week)
         const now = new Date();
@@ -320,6 +320,48 @@ router.get('/analytics', auth, async (req, res) => {
             { $match: { spreadsheet_id: { $in: sheetIds } } },
             { $group: { _id: "$spreadsheet_id", count: { $sum: 1 } } }
         ]);
+
+        // 5. New Granular Aggregations (Campaign, AdSet, Ad)
+        // Note: These fields are in meta_data Map. MongoDB 4.4+ supports Map aggregation.
+        const granularData = await Customer.aggregate([
+            { $match: { spreadsheet_id: { $in: sheetIds } } },
+            {
+                $group: {
+                    _id: null,
+                    campaigns: { $push: "$meta_data.meta_campaign" },
+                    adSets: { $push: "$meta_data.meta_ad_set" },
+                    ads: { $push: "$meta_data.meta_ad" }
+                }
+            }
+        ]);
+
+        // Helper to count frequencies in an array
+        const getCounts = (arr) => arr.reduce((acc, val) => {
+            if (val) acc[val] = (acc[val] || 0) + 1;
+            return acc;
+        }, {});
+
+        const campaignLeads = granularData[0] ? getCounts(granularData[0].campaigns) : {};
+        const adSetLeads = granularData[0] ? getCounts(granularData[0].adSets) : {};
+        const adLeads = granularData[0] ? getCounts(granularData[0].ads) : {};
+
+        // 6. Leads by Date (Last 30 days)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const leadsByDateRaw = await Customer.aggregate([
+            { $match: { spreadsheet_id: { $in: sheetIds }, created_at: { $gte: thirtyDaysAgo } } },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$created_at" } },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        const dateLeads = {};
+        leadsByDateRaw.forEach(item => { dateLeads[item._id] = item.count; });
 
         // Map counts back to sheets for page/form grouping
         const pageLeads = {};
@@ -353,6 +395,10 @@ router.get('/analytics', auth, async (req, res) => {
             charts: {
                 pageLeads,
                 formLeads,
+                campaignLeads,
+                adSetLeads,
+                adLeads,
+                dateLeads,
                 statusDistribution
             }
         });
