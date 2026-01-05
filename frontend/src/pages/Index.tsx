@@ -1332,7 +1332,7 @@ function SpreadsheetRow({
         </div>
       </ResizableTableCell>
       {is_meta && meta_headers && meta_headers.length > 0 ? (
-        meta_headers.map((header) => (
+        meta_headers.map((header, hIndex) => (
           <ResizableTableCell key={header} className="border-b border-border/50 border-r border-border/50 p-0 h-6">
             <div
               className={cn(
@@ -1341,6 +1341,32 @@ function SpreadsheetRow({
               )}
               onClick={() => setFocusedCell(`${customer.id}-${header}`)}
             >
+              {hIndex === 0 && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="ml-1 w-4 h-4 rounded-full border border-muted-foreground/50 flex-shrink-0 shadow-sm hover:scale-110 transition-transform"
+                      style={{ backgroundColor: localColor || 'white' }} />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-2 bg-background/95 backdrop-blur shadow-xl border-border" align="start">
+                    <div className="grid grid-cols-4 gap-1">
+                      {[null, 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink'].map((color) => (
+                        <Button
+                          key={color || 'none'}
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 rounded-full hover:scale-110 transition-transform"
+                          onClick={() => handleColorChange(color as Customer['color'])}
+                        >
+                          <div
+                            className={`w-4 h-4 rounded-full border-2 ${color ? 'border-background shadow-sm' : 'border-dashed border-muted-foreground/50'}`}
+                            style={{ backgroundColor: color || 'transparent' }}
+                          />
+                        </Button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
               <AutoResizeTextarea
                 defaultValue={customer.meta_data?.[header] || ""}
                 onBlur={(e) => onCellChange(customer.id, `meta_data.${header}`, e.target.value)}
