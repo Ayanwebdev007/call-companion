@@ -11,6 +11,7 @@ const spreadsheetSchema = new mongoose.Schema({
   ad_name: { type: String, default: '' },
   meta_headers: { type: [String], default: [] },
   is_meta: { type: Boolean, default: false },
+  is_master: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });

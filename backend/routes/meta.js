@@ -114,23 +114,23 @@ router.post('/webhook', async (req, res) => {
                             const adName = adInfo?.name || 'Standard Ad';
 
                             // Create a descriptive spreadsheet name
-                            // Format: Page - Campaign - Ad Set - Ad (Form is usually implied by Ad, but we keep it for clarity or put it in description)
                             // User wants spreadsheet to appear based on Page, Form, Campaign, Ad Set, Ad.
                             const spreadsheetName = `${pageName} - ${campaignName} - ${adName}`;
 
-                            // Find or create spreadsheet
+                            // Find or create AD-SPECIFIC spreadsheet
                             // Must match ALL criteria to ensure separation
-                            let spreadsheet = await mongoose.model('Spreadsheet').findOne({
+                            let adSpreadsheet = await mongoose.model('Spreadsheet').findOne({
                                 user_id: user._id,
                                 page_name: pageName,
                                 form_name: formName,
                                 campaign_name: campaignName,
                                 ad_set_name: adSetName,
-                                ad_name: adName
+                                ad_name: adName,
+                                is_master: false
                             });
 
-                            if (!spreadsheet) {
-                                spreadsheet = new (mongoose.model('Spreadsheet'))({
+                            if (!adSpreadsheet) {
+                                adSpreadsheet = new (mongoose.model('Spreadsheet'))({
                                     user_id: user._id,
                                     name: spreadsheetName,
                                     description: `Leads from Page: ${pageName}, Form: ${formName}, Campaign: ${campaignName}, Ad Set: ${adSetName}, Ad: ${adName}`,
@@ -139,54 +139,87 @@ router.post('/webhook', async (req, res) => {
                                     campaign_name: campaignName,
                                     ad_set_name: adSetName,
                                     ad_name: adName,
-                                    is_meta: true
+                                    is_meta: true,
+                                    is_master: false
                                 });
-                                await spreadsheet.save();
+                                await adSpreadsheet.save();
                             }
 
-                            // Duplicate check
-                            const existing = await Customer.findOne({
+                            // Find or create MASTER spreadsheet (Page + Form only)
+                            const masterSpreadsheetName = `[MASTER] ${pageName} - ${formName}`;
+                            let masterSpreadsheet = await mongoose.model('Spreadsheet').findOne({
                                 user_id: user._id,
-                                $or: [
-                                    { remark: { $regex: leadId, $options: 'i' } },
-                                    { email: leadDetails.email || 'NON_EXISTENT_EMAIL' }
-                                ]
+                                page_name: pageName,
+                                form_name: formName,
+                                is_master: true
                             });
 
-                            if (existing) {
-                                console.log(`[META-WEBHOOK] Lead ${leadId} already exists as customer ${existing._id}`);
-                                continue;
+                            if (!masterSpreadsheet) {
+                                masterSpreadsheet = new (mongoose.model('Spreadsheet'))({
+                                    user_id: user._id,
+                                    name: masterSpreadsheetName,
+                                    description: `REAL-TIME MASTER: Aggregated leads for Page: ${pageName}, Form: ${formName}`,
+                                    page_name: pageName,
+                                    form_name: formName,
+                                    is_meta: true,
+                                    is_master: true
+                                });
+                                await masterSpreadsheet.save();
+                                console.log(`[META-WEBHOOK] Created MASTER spreadsheet: ${masterSpreadsheetName}`);
                             }
 
-                            // Create initial customer
-                            const customer = new Customer({
-                                user_id: user._id,
-                                spreadsheet_id: spreadsheet._id,
-                                customer_name: leadDetails.customerName || 'Meta Lead',
-                                company_name: leadDetails.companyName || 'Meta Ads',
-                                phone_number: leadDetails.phoneNumber || 'N/A',
-                                email: leadDetails.email || '',
-                                remark: `Campaign: ${campaignName} | Ad Set: ${adSetName} | Ad: ${adName}`,
-                                meta_data: leadDetails.fieldMap || {}, // Save all field data
-                                status: 'new'
-                            });
+                            // Define helper to save lead to a spreadsheet
+                            const saveLeadToSpreadsheet = async (targetSpreadsheet) => {
+                                // Duplicate check scoped to THIS spreadsheet
+                                const existing = await Customer.findOne({
+                                    user_id: user._id,
+                                    spreadsheet_id: targetSpreadsheet._id,
+                                    $or: [
+                                        { remark: { $regex: leadId, $options: 'i' } },
+                                        { email: leadDetails.email || 'NON_EXISTENT_EMAIL' }
+                                        // Phone number uniqueness is NOT enforced as per request
+                                    ]
+                                });
 
-                            await customer.save();
-
-                            // Update spreadsheet headers if new ones are found
-                            const leadHeaders = Object.keys(leadDetails.fieldMap || {});
-                            if (leadHeaders.length > 0) {
-                                const currentHeaders = spreadsheet.meta_headers || [];
-                                const newHeaders = [...new Set([...currentHeaders, ...leadHeaders])];
-
-                                if (newHeaders.length !== currentHeaders.length) {
-                                    spreadsheet.meta_headers = newHeaders;
-                                    await spreadsheet.save();
-                                    console.log(`[META-WEBHOOK] Updated headers for spreadsheet ${spreadsheet._id}: ${newHeaders.join(', ')}`);
+                                if (existing) {
+                                    console.log(`[META-WEBHOOK] Lead ${leadId} already exists in sheet ${targetSpreadsheet.name} (${targetSpreadsheet._id})`);
+                                    return;
                                 }
-                            }
 
-                            console.log(`[META-WEBHOOK] Successfully saved lead ${leadId} as customer ${customer._id}`);
+                                const customer = new Customer({
+                                    user_id: user._id,
+                                    spreadsheet_id: targetSpreadsheet._id,
+                                    customer_name: leadDetails.customerName || 'Meta Lead',
+                                    company_name: leadDetails.companyName || 'Meta Ads',
+                                    phone_number: leadDetails.phoneNumber || 'N/A',
+                                    email: leadDetails.email || '',
+                                    remark: `Campaign: ${campaignName} | Ad Set: ${adSetName} | Ad: ${adName} | Ref: ${leadId}`,
+                                    meta_data: leadDetails.fieldMap || {},
+                                    status: 'new'
+                                });
+
+                                await customer.save();
+
+                                // Update headers
+                                const leadHeaders = Object.keys(leadDetails.fieldMap || {});
+                                if (leadHeaders.length > 0) {
+                                    const currentHeaders = targetSpreadsheet.meta_headers || [];
+                                    const newHeaders = [...new Set([...currentHeaders, ...leadHeaders])];
+
+                                    if (newHeaders.length !== currentHeaders.length) {
+                                        targetSpreadsheet.meta_headers = newHeaders;
+                                        await targetSpreadsheet.save();
+                                        console.log(`[META-WEBHOOK] Updated headers for ${targetSpreadsheet.name}`);
+                                    }
+                                }
+                                console.log(`[META-WEBHOOK] Saved lead to ${targetSpreadsheet.name}`);
+                            };
+
+                            // Execution: Save to BOTH
+                            await Promise.all([
+                                saveLeadToSpreadsheet(adSpreadsheet),
+                                saveLeadToSpreadsheet(masterSpreadsheet)
+                            ]);
                         } catch (leadError) {
                             console.error(`[META-WEBHOOK] Error processing lead ${leadId}:`, leadError.message);
                         }
