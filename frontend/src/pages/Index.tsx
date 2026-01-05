@@ -10,7 +10,7 @@ import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, Check
 import { format, isToday, parseISO, isPast, isValid, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet, recordSpreadsheetView } from "@/lib/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -139,6 +139,13 @@ const Index = () => {
     }, 300);
     return () => clearTimeout(t);
   }, [searchQuery]);
+
+  // Mark spreadsheet as viewed on entry
+  useEffect(() => {
+    if (spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null") {
+      recordSpreadsheetView(spreadsheetId).catch(err => console.error("Failed to record view:", err));
+    }
+  }, [spreadsheetId]);
 
   // Fetch customers
   const { data: customers = [], isLoading, error } = useQuery({

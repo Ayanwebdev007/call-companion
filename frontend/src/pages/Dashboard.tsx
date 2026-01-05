@@ -587,10 +587,17 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${spreadsheet.is_shared ? 'bg-blue-500' : 'bg-gradient-to-b from-primary to-blue-600'} opacity-60 group-hover:opacity-100 transition-opacity`} />
 
                 {/* Icon */}
-                <div className={`ml-2 p-3 rounded-full transition-all duration-300 shrink-0 ${spreadsheet.is_shared
+                <div className={`ml-2 p-3 rounded-full transition-all duration-300 shrink-0 relative ${spreadsheet.is_shared
                   ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-500/20'
                   : 'bg-primary/10 text-primary group-hover:bg-primary/20'}`}>
                   {spreadsheet.is_shared ? <Users className="h-5 w-5" /> : <FileSpreadsheet className="h-5 w-5" />}
+
+                  {/* New Leads Notification Badge */}
+                  {spreadsheet.newLeadsCount !== undefined && spreadsheet.newLeadsCount > 0 && (
+                    <div className="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white shadow-lg ring-2 ring-background animate-pulse">
+                      {spreadsheet.newLeadsCount}
+                    </div>
+                  )}
                 </div>
 
                 {/* Main Info */}

@@ -1,8 +1,8 @@
 import express from 'express';
 import Spreadsheet from '../models/Spreadsheet.js';
 import Customer from '../models/Customer.js';
-import Sharing from '../models/Sharing.js';
 import auth from '../middleware/auth.js';
+import ViewLog from '../models/ViewLog.js';
 
 const router = express.Router();
 
@@ -41,7 +41,32 @@ router.get('/', auth, async (req, res) => {
     // Sort by created_at descending
     uniqueSpreadsheets.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    res.json(uniqueSpreadsheets);
+    // Calculate new leads count for each unique spreadsheet
+    const spreadsheetsWithCounts = await Promise.all(uniqueSpreadsheets.map(async (s) => {
+      const spreadsheetId = s.id || s._id;
+
+      // Get last view log for this user and spreadsheet
+      const log = await ViewLog.findOne({ user_id: req.user.id, spreadsheet_id: spreadsheetId });
+
+      const query = {
+        spreadsheet_id: spreadsheetId,
+        user_id: s.user_id // Filter by owner of spreadsheet to be safe, though id is usually enough
+      };
+
+      if (log) {
+        query.created_at = { $gt: log.last_viewed_at };
+      }
+
+      const newLeadsCount = await Customer.countDocuments(query);
+
+      return {
+        ...s.toObject ? s.toObject() : s,
+        id: spreadsheetId,
+        newLeadsCount
+      };
+    }));
+
+    res.json(spreadsheetsWithCounts);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -203,6 +228,20 @@ router.post('/merge', auth, async (req, res) => {
   } catch (err) {
     console.error('Merge error:', err);
     res.status(500).json({ message: 'Failed to merge spreadsheets. ' + err.message });
+  }
+});
+
+// POST mark spreadsheet as viewed
+router.post('/:id/view', auth, async (req, res) => {
+  try {
+    await ViewLog.findOneAndUpdate(
+      { user_id: req.user.id, spreadsheet_id: req.params.id },
+      { last_viewed_at: new Date() },
+      { upsert: true, new: true }
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

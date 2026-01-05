@@ -40,6 +40,7 @@ export interface Spreadsheet {
   permission_level?: 'read-only' | 'read-write';
   owner?: string;
   is_shared?: boolean;
+  newLeadsCount?: number;
 }
 
 export const fetchCustomers = async (spreadsheetId?: string, q?: string): Promise<Customer[]> => {
@@ -186,6 +187,10 @@ export const deleteSpreadsheet = async (id: string): Promise<void> => {
 export const mergeSpreadsheets = async (spreadsheetIds: string[], name?: string): Promise<Spreadsheet> => {
   const response = await api.post(`${SPREADSHEETS_API_URL}/merge`, { spreadsheetIds, name });
   return response.data;
+};
+
+export const recordSpreadsheetView = async (id: string): Promise<void> => {
+  await api.post(`${SPREADSHEETS_API_URL}/${id}/view`);
 };
 export const forgotPassword = async (email: string): Promise<{ message: string, devMode?: boolean }> => {
   const response = await api.post(`${API_BASE_URL}/api/auth/forgot-password`, { email });
