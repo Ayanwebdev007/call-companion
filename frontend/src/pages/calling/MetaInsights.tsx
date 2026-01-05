@@ -38,22 +38,32 @@ export default function MetaInsights() {
     const adSpecificSheets = metaSheets.filter(s => !s.is_master);
 
     // Group by page
+    // Group by page for local stats fallback
     const pageGroups = metaSheets.reduce((acc, sheet) => {
         const page = sheet.page_name || 'Unknown Page';
         acc[page] = (acc[page] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
 
-    const pageData = Object.entries(pageGroups).map(([name, value]) => ({ name, value }));
-
-    // Group by form
+    // Group by form for local stats fallback
     const formGroups = metaSheets.reduce((acc, sheet) => {
         const form = sheet.form_name || 'Unknown Form';
         acc[form] = (acc[form] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
 
-    const formData = Object.entries(formGroups).map(([name, value]) => ({ name, value }));
+    // Use real lead-level chart data if available, otherwise fallback to sheet counts
+    const pageData = analytics?.charts.pageLeads
+        ? Object.entries(analytics.charts.pageLeads).map(([name, value]) => ({ name, value }))
+        : Object.entries(pageGroups).map(([name, value]) => ({ name, value }));
+
+    const formData = analytics?.charts.formLeads
+        ? Object.entries(analytics.charts.formLeads).map(([name, value]) => ({ name, value }))
+        : Object.entries(formGroups).map(([name, value]) => ({ name, value }));
+
+    const statusData = analytics?.charts.statusDistribution
+        ? Object.entries(analytics.charts.statusDistribution).map(([name, value]) => ({ name, value }))
+        : [];
 
     if (sheetsLoading || analyticsLoading) {
         return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading insights...</div>;
@@ -102,33 +112,33 @@ export default function MetaInsights() {
                         <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Capture Forms</CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 pt-0">
-                        <div className="text-3xl font-black">{Object.keys(formGroups).length}</div>
+                        <div className="text-3xl font-black">{Object.keys(analytics?.charts.formLeads || {}).length}</div>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="pb-2 p-4">
-                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Sheets</CardTitle>
+                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Leads</CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 pt-0">
-                        <div className="text-3xl font-black">{metaSheets.length}</div>
+                        <div className="text-3xl font-black">{analytics?.stats.totalLeads || 0}</div>
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-3">
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-lg flex items-center justify-between">
-                            Sheets per Page
-                            <span className="text-[10px] uppercase text-muted-foreground font-normal">Click to filter</span>
+                        <CardTitle className="text-sm font-bold flex items-center justify-between">
+                            Leads per Page
+                            <span className="text-[10px] uppercase text-muted-foreground font-normal">Actionable</span>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className="h-[250px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={pageData}>
                                 <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                                <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                                <XAxis dataKey="name" fontSize={10} tickLine={false} axisLine={false} hide />
+                                <YAxis fontSize={10} tickLine={false} axisLine={false} />
                                 <Tooltip
                                     contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
                                     itemStyle={{ color: 'hsl(var(--primary))' }}
@@ -147,20 +157,20 @@ export default function MetaInsights() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-lg flex items-center justify-between">
-                            Form Distribution
-                            <span className="text-[10px] uppercase text-muted-foreground font-normal">Click to filter</span>
+                        <CardTitle className="text-sm font-bold flex items-center justify-between">
+                            Leads per Form
+                            <span className="text-[10px] uppercase text-muted-foreground font-normal">Actionable</span>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className="h-[250px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
                                     data={formData}
                                     cx="50%"
                                     cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={80}
+                                    innerRadius={50}
+                                    outerRadius={70}
                                     paddingAngle={5}
                                     dataKey="value"
                                     onClick={(data) => handleChartClick('form', data.name)}
@@ -172,6 +182,24 @@ export default function MetaInsights() {
                                 </Pie>
                                 <Tooltip />
                             </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-bold">CRM Status Distrib.</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={statusData} layout="vertical">
+                                <XAxis type="number" hide />
+                                <YAxis dataKey="name" type="category" fontSize={10} tickLine={false} axisLine={false} width={80} />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
+                                />
+                                <Bar dataKey="value" fill="#8884d8" radius={[0, 4, 4, 0]} />
+                            </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>

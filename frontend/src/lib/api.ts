@@ -252,6 +252,11 @@ export interface MetaAnalyticsResponse {
     leadsThisWeek: number;
     totalLeads: number;
   };
+  charts: {
+    pageLeads: Record<string, number>;
+    formLeads: Record<string, number>;
+    statusDistribution: Record<string, number>;
+  };
 }
 
 export const fetchMetaAnalytics = async (): Promise<MetaAnalyticsResponse> => {

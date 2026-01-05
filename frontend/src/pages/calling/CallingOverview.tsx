@@ -1,9 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { fetchSpreadsheets } from "@/lib/api";
-import { FileSpreadsheet, Users, Activity, PhoneCall } from "lucide-react";
+import { FileSpreadsheet, Users, Activity, PhoneCall, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function CallingOverview() {
+    const navigate = useNavigate();
     const { data: spreadsheets = [] } = useQuery({
         queryKey: ["spreadsheets"],
         queryFn: fetchSpreadsheets,
@@ -64,49 +66,63 @@ export default function CallingOverview() {
                 </Card>
             </div>
 
-            {/* Placeholder for future charts or detailed stats */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="col-span-4">
-                    <CardHeader>
-                        <CardTitle>Recent Activity</CardTitle>
+            <div className="grid gap-6 md:grid-cols-2">
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer group" onClick={() => navigate("/calling/manual")}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-xl font-bold">Manual Sheet Dashboard</CardTitle>
+                        <PhoneCall className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
                     </CardHeader>
-                    <CardContent className="pl-2">
-                        <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-                            Activity chart coming soon...
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">Manage your manually created lead lists, import from Google Sheets, and start calling.</p>
+                        <div className="flex items-center text-sm font-semibold text-primary">
+                            Open Dashboard <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="col-span-3">
-                    <CardHeader>
-                        <CardTitle>Recent Sheets</CardTitle>
+                <Card className="hover:border-blue-500/50 transition-colors cursor-pointer group" onClick={() => navigate("/calling/meta")}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-xl font-bold">Meta Ads Dashboard</CardTitle>
+                        <Activity className="h-6 w-6 text-blue-500 group-hover:scale-110 transition-transform" />
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-4">
-                            {spreadsheets.slice(0, 5).map((sheet) => (
-                                <div key={sheet.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
-                                    <div className="flex items-center gap-3 overflow-hidden">
-                                        <div className={`p-2 rounded-lg ${sheet.is_meta ? 'bg-blue-500/10 text-blue-600' : 'bg-primary/10 text-primary'}`}>
-                                            <FileSpreadsheet className="h-4 w-4" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <h4 className="font-semibold text-sm truncate">{sheet.name}</h4>
-                                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                                                {sheet.is_meta ? 'Meta Ads' : 'Manual'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <p className="text-[10px] text-muted-foreground whitespace-nowrap">
-                                        {new Date(sheet.created_at).toLocaleDateString()}
-                                    </p>
-                                </div>
-                            ))}
-                            {spreadsheets.length === 0 && (
-                                <p className="text-center py-8 text-muted-foreground text-sm">No spreadsheets yet.</p>
-                            )}
+                        <p className="text-sm text-muted-foreground mb-4">Monitor leads flowing in from Facebook & Instagram in real-time. View master and ad-specific sheets.</p>
+                        <div className="flex items-center text-sm font-semibold text-blue-500">
+                            Open Dashboard <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
                         </div>
                     </CardContent>
                 </Card>
             </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Recent Sheets</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        {spreadsheets.slice(0, 5).map((sheet) => (
+                            <div key={sheet.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50">
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                    <div className={`p-2 rounded-lg ${sheet.is_meta ? 'bg-blue-500/10 text-blue-600' : 'bg-primary/10 text-primary'}`}>
+                                        <FileSpreadsheet className="h-4 w-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h4 className="font-semibold text-sm truncate">{sheet.name}</h4>
+                                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                                            {sheet.is_meta ? 'Meta Ads' : 'Manual'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                    {new Date(sheet.created_at).toLocaleDateString()}
+                                </p>
+                            </div>
+                        ))}
+                        {spreadsheets.length === 0 && (
+                            <p className="text-center py-8 text-muted-foreground text-sm">No spreadsheets yet.</p>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }

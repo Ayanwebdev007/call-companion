@@ -305,8 +305,8 @@ router.get('/analytics', auth, async (req, res) => {
 
         // 3. Stats: Velocity (Today, Week)
         const now = new Date();
-        const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+        const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
+        const startOfWeek = new Date(new Date().setDate(now.getDate() - now.getDay()));
 
         const [leadsToday, leadsThisWeek, totalLeads] = await Promise.all([
             Customer.countDocuments({ spreadsheet_id: { $in: sheetIds }, created_at: { $gte: startOfDay } }),
@@ -314,12 +314,45 @@ router.get('/analytics', auth, async (req, res) => {
             Customer.countDocuments({ spreadsheet_id: { $in: sheetIds } })
         ]);
 
+        // 4. Aggregations for Charts (Leads per Page, Leads per Form, Status Distribution)
+        const leadsBySheet = await Customer.aggregate([
+            { $match: { spreadsheet_id: { $in: sheetIds } } },
+            { $group: { _id: "$spreadsheet_id", count: { $sum: 1 } } }
+        ]);
+
+        // Map counts back to sheets for page/form grouping
+        const pageLeads = {};
+        const formLeads = {};
+        const statusDistribution = {};
+
+        leadsBySheet.forEach(item => {
+            const sheet = allMetaSheets.find(s => s._id.toString() === item._id.toString());
+            if (sheet) {
+                const page = sheet.page_name || 'Unknown Page';
+                const form = sheet.form_name || 'Unknown Form';
+                pageLeads[page] = (pageLeads[page] || 0) + item.count;
+                formLeads[form] = (formLeads[form] || 0) + item.count;
+            }
+        });
+
+        // Global Status Distribution
+        const statuses = await Customer.aggregate([
+            { $match: { spreadsheet_id: { $in: sheetIds } } },
+            { $group: { _id: "$status", count: { $sum: 1 } } }
+        ]);
+        statuses.forEach(s => { statusDistribution[s._id || 'New'] = s.count; });
+
         res.json({
             recentLeads,
             stats: {
                 leadsToday,
                 leadsThisWeek,
                 totalLeads
+            },
+            charts: {
+                pageLeads,
+                formLeads,
+                statusDistribution
             }
         });
     } catch (error) {
