@@ -291,8 +291,12 @@ export default function MetaInsights() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col max-w-[200px]">
-                                                <span className="text-primary font-medium truncate" title={lead.meta_data?.meta_campaign}>{lead.meta_data?.meta_campaign || 'N/A'}</span>
-                                                <span className="text-[10px] text-muted-foreground truncate" title={lead.meta_data?.meta_ad}>{lead.meta_data?.meta_ad || 'N/A'}</span>
+                                                <span className="text-primary font-medium truncate" title={lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name}>
+                                                    {lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name || 'N/A'}
+                                                </span>
+                                                <span className="text-[10px] text-muted-foreground truncate" title={lead.meta_data?.meta_ad || lead.spreadsheet_id.ad_name}>
+                                                    {lead.meta_data?.meta_ad || lead.spreadsheet_id.ad_name || 'N/A'}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3">

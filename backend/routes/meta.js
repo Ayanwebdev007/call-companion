@@ -91,8 +91,10 @@ router.post('/webhook', async (req, res) => {
                             // Fetch granular details
                             const [pageInfo, formInfo, adInfo] = await Promise.all([
                                 metaService.getPageDetails(pageId, pageAccessToken),
-                                metaService.getFormDetails(change.value.form_id, pageAccessToken),
-                                metaService.getAdDetails(change.value.ad_id, pageAccessToken)
+                                metaService.getFormDetails(change.value.form_id || leadDetails.rawData.form_id, pageAccessToken),
+                                (change.value.ad_id || leadDetails.adId)
+                                    ? metaService.getAdDetails(change.value.ad_id || leadDetails.adId, pageAccessToken)
+                                    : Promise.resolve(null)
                             ]);
 
 
@@ -101,9 +103,9 @@ router.post('/webhook', async (req, res) => {
                             const formName = formInfo?.name || 'Meta Form';
 
                             // Use metadata directly from the Lead object if available (more reliable with Page Token)
-                            const campaignName = leadDetails.campaignName || adInfo?.campaign?.name || 'Standard Campaign';
-                            const adSetName = leadDetails.adSetName || adInfo?.adset?.name || 'Standard Ad Set';
-                            const adName = leadDetails.adName || adInfo?.name || 'Standard Ad';
+                            const campaignName = leadDetails.campaignName || adInfo?.campaign?.name || adInfo?.name || 'Search Campaign';
+                            const adSetName = leadDetails.adSetName || adInfo?.adset?.name || 'Search Ad Set';
+                            const adName = leadDetails.adName || adInfo?.name || 'Search Ad';
 
                             // Create a descriptive spreadsheet name
                             // User wants spreadsheet to appear based on Page, Form, Campaign, Ad Set, Ad.
