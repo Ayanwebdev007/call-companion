@@ -108,11 +108,20 @@ router.post('/webhook', async (req, res) => {
                                 metaService.getAdDetails(change.value.ad_id, pageAccessToken)
                             ]);
 
+                            console.log('[META-WEBHOOK] Fetched Metadata:', {
+                                page: pageInfo?.name,
+                                form: formInfo?.name,
+                                ad: adInfo?.name,
+                                campaign: adInfo?.campaign?.name
+                            });
+
                             const pageName = pageInfo?.name || pageId;
                             const formName = formInfo?.name || 'Meta Form';
-                            const campaignName = adInfo?.campaign?.name || 'Standard Campaign';
-                            const adSetName = adInfo?.adset?.name || 'Standard Ad Set';
-                            const adName = adInfo?.name || 'Standard Ad';
+
+                            // Use metadata directly from the Lead object if available (more reliable with Page Token)
+                            const campaignName = leadDetails.campaignName || adInfo?.campaign?.name || 'Standard Campaign';
+                            const adSetName = leadDetails.adSetName || adInfo?.adset?.name || 'Standard Ad Set';
+                            const adName = leadDetails.adName || adInfo?.name || 'Standard Ad';
 
                             // Create a descriptive spreadsheet name
                             // User wants spreadsheet to appear based on Page, Form, Campaign, Ad Set, Ad.
@@ -194,8 +203,17 @@ router.post('/webhook', async (req, res) => {
                                     company_name: leadDetails.companyName || 'Meta Ads',
                                     phone_number: leadDetails.phoneNumber || 'N/A',
                                     email: leadDetails.email || '',
-                                    remark: `Campaign: ${campaignName} | Ad Set: ${adSetName} | Ad: ${adName} | Ref: ${leadId}`,
-                                    meta_data: leadDetails.fieldMap || {},
+                                    remark: '', // CLEAN: Remarks are left empty for user notes
+                                    meta_data: {
+                                        ...(leadDetails.fieldMap || {}),
+                                        // Store system metadata in meta_data instead of remark
+                                        meta_campaign: campaignName,
+                                        meta_ad_set: adSetName,
+                                        meta_ad: adName,
+                                        meta_lead_id: leadId,
+                                        meta_form: formName,
+                                        meta_page: pageName
+                                    },
                                     status: 'new'
                                 });
 

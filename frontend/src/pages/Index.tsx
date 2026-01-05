@@ -22,9 +22,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 import { useAuth } from "@/context/AuthContext";
-import { LogOut } from "lucide-react";
+import { LogOut, History, CalendarDays } from "lucide-react";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -97,6 +103,7 @@ const Index = () => {
 
   // Search query state
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [dateFilterMode, setDateFilterMode] = useState<"next_call" | "import_date">("next_call");
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [searchClosing, setSearchClosing] = useState<boolean>(false);
   const searchRef = useRef<HTMLDivElement | null>(null);
@@ -273,9 +280,20 @@ const Index = () => {
       return [];
     }
     if (viewMode === "all") return customers;
+
     const targetDateStr = format(selectedDate, "yyyy-MM-dd");
-    return customers.filter((c) => c.next_call_date === targetDateStr);
-  }, [customers, viewMode, selectedDate]);
+
+    return customers.filter((c) => {
+      if (dateFilterMode === "next_call") {
+        return c.next_call_date === targetDateStr;
+      } else {
+        // Compare created_at date
+        if (!c.created_at) return false;
+        const importDateStr = format(parseISO(c.created_at), "yyyy-MM-dd");
+        return importDateStr === targetDateStr;
+      }
+    });
+  }, [customers, viewMode, selectedDate, dateFilterMode]);
 
   // Toggle customer selection
   const toggleCustomerSelection = (customerId: string) => {
@@ -582,6 +600,29 @@ const Index = () => {
                 />
               </PopoverContent>
             </Popover>
+
+            <div className="flex items-center gap-1 bg-muted/30 p-1 rounded-md border border-border/50 ml-2">
+              <Button
+                variant={dateFilterMode === "next_call" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 text-[10px] px-2 gap-1.5 font-semibold"
+                onClick={() => setDateFilterMode("next_call")}
+                title="Filter by Next Call Date"
+              >
+                <CalendarDays className="h-3 w-3" />
+                Next Call
+              </Button>
+              <Button
+                variant={dateFilterMode === "import_date" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-7 text-[10px] px-2 gap-1.5 font-semibold"
+                onClick={() => setDateFilterMode("import_date")}
+                title="Filter by Imported Date"
+              >
+                <History className="h-3 w-3" />
+                Import Date
+              </Button>
+            </div>
           </div>
 
           <div className="h-6 w-px bg-border/50" />
@@ -1021,34 +1062,55 @@ const Index = () => {
                       }}
                     />
 
-                    <MemoizedSpreadsheetRow
-                      customer={customer}
-                      index={index + 1}
-                      isSelected={selectedCustomers.has(customer.id)}
-                      isDragging={draggedItem === customer.id}
-                      dropTarget={dropTarget}
-                      selectedCustomers={selectedCustomers}
-                      onToggleSelect={toggleCustomerSelection}
-                      onCellChange={handleCellChange}
-                      onDelete={() => deleteMutation.mutate(customer.id)}
-                      onDragStart={handleDragStart}
-                      onDragOver={handleDragOver}
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      onDragEnd={handleDragEnd}
-                      showCheckboxes={showCheckboxes}
-                      rowHeights={rowHeights}
-                      setRowHeights={setRowHeights}
-                      focusedCell={focusedCell}
-                      setFocusedCell={setFocusedCell}
-                      onWhatsAppClick={(c) => {
-                        setSelectedWhatsAppCustomer(c);
-                        setIsWhatsAppDialogOpen(true);
-                      }}
-                      is_meta={spreadsheet?.is_meta}
-                      meta_headers={spreadsheet?.meta_headers}
-                    />
+                    <ContextMenu>
+                      <ContextMenuTrigger asChild>
+                        <MemoizedSpreadsheetRow
+                          customer={customer}
+                          index={index + 1}
+                          isSelected={selectedCustomers.has(customer.id)}
+                          isDragging={draggedItem === customer.id}
+                          dropTarget={dropTarget}
+                          selectedCustomers={selectedCustomers}
+                          onToggleSelect={toggleCustomerSelection}
+                          onCellChange={handleCellChange}
+                          onDelete={() => deleteMutation.mutate(customer.id)}
+                          onDragStart={handleDragStart}
+                          onDragOver={handleDragOver}
+                          onDragEnter={handleDragEnter}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          onDragEnd={handleDragEnd}
+                          showCheckboxes={showCheckboxes}
+                          rowHeights={rowHeights}
+                          setRowHeights={setRowHeights}
+                          focusedCell={focusedCell}
+                          setFocusedCell={setFocusedCell}
+                          onWhatsAppClick={(c) => {
+                            setSelectedWhatsAppCustomer(c);
+                            setIsWhatsAppDialogOpen(true);
+                          }}
+                          is_meta={spreadsheet?.is_meta}
+                          meta_headers={spreadsheet?.meta_headers}
+                        />
+                      </ContextMenuTrigger>
+                      <ContextMenuContent className="w-64 bg-background/95 backdrop-blur shadow-xl border-border">
+                        <div className="px-3 py-2 border-b border-border/50">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Lead Metadata</p>
+                        </div>
+                        <ContextMenuItem className="flex flex-col items-start gap-1 py-2 focus:bg-primary/5">
+                          <span className="text-[10px] text-muted-foreground">Lead Imported On</span>
+                          <span className="text-sm font-semibold">
+                            {customer.created_at ? format(parseISO(customer.created_at), "PPP p") : "N/A"}
+                          </span>
+                        </ContextMenuItem>
+                        {customer.meta_data?.meta_lead_id && (
+                          <ContextMenuItem className="flex flex-col items-start gap-1 py-2 focus:bg-primary/5">
+                            <span className="text-[10px] text-muted-foreground">Meta Lead ID</span>
+                            <span className="text-[10px] font-mono bg-muted px-1 rounded">{customer.meta_data.meta_lead_id}</span>
+                          </ContextMenuItem>
+                        )}
+                      </ContextMenuContent>
+                    </ContextMenu>
 
                     {/* Drop zone after last row */}
                     {index === displayedCustomers.length - 1 && (

@@ -22,6 +22,7 @@ class MetaService {
 
     async getAdDetails(adId, pageAccessToken) {
         try {
+            console.log(`[META-SERVICE] Fetching details for Ad: ${adId}`);
             const response = await axios.get(`${this.baseUrl}/${adId}`, {
                 params: {
                     access_token: pageAccessToken,
@@ -30,7 +31,23 @@ class MetaService {
             });
             return response.data;
         } catch (error) {
-            console.error('Error fetching Meta ad details:', error.response?.data || error.message);
+            console.error(`[META-SERVICE] ERROR fetching Ad ${adId}:`, error.response?.data || error.message);
+
+            // If the nested object fetch fails (permissions), try fetching just the Ad Name
+            if (error.response?.data?.error?.code === 100 || error.response?.data?.error?.code === 200) {
+                try {
+                    console.log(`[META-SERVICE] Attempting fallback fetch for Ad Name only: ${adId}`);
+                    const fallback = await axios.get(`${this.baseUrl}/${adId}`, {
+                        params: {
+                            access_token: pageAccessToken,
+                            fields: 'name'
+                        }
+                    });
+                    return fallback.data;
+                } catch (fallbackError) {
+                    console.error('[META-SERVICE] Fallback fetch also failed:', fallbackError.message);
+                }
+            }
             return null;
         }
     }
@@ -58,7 +75,8 @@ class MetaService {
 
             const response = await axios.get(`${this.baseUrl}/${leadId}`, {
                 params: {
-                    access_token: pageAccessToken
+                    access_token: pageAccessToken,
+                    fields: 'created_time,field_data,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id,page_id'
                 }
             });
 
@@ -81,7 +99,11 @@ class MetaService {
                 customerName: this.extractFieldValue(fieldData, ['full_name', 'name', 'first_name']),
                 email: this.extractFieldValue(fieldData, ['email']),
                 phoneNumber: this.extractFieldValue(fieldData, ['phone_number', 'phone']),
-                companyName: this.extractFieldValue(fieldData, ['company_name', 'company', 'organization'])
+                companyName: this.extractFieldValue(fieldData, ['company_name', 'company', 'organization']),
+                // Direct metadata from Lead object
+                campaignName: response.data.campaign_name || '',
+                adSetName: response.data.adset_name || '',
+                adName: response.data.ad_name || ''
             };
 
             return lead;
