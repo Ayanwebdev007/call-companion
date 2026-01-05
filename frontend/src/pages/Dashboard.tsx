@@ -28,7 +28,10 @@ const Dashboard = () => {
   const [selectedSpreadsheetForImport, setSelectedSpreadsheetForImport] = useState("");
   const [filterMode, setFilterMode] = useState<"manual" | "meta">("manual");
   const [selectedMetaPage, setSelectedMetaPage] = useState<string>("all");
+  const [selectedMetaForm, setSelectedMetaForm] = useState<string>("all");
   const [selectedMetaCampaign, setSelectedMetaCampaign] = useState<string>("all");
+  const [selectedMetaAdSet, setSelectedMetaAdSet] = useState<string>("all");
+  const [selectedMetaAd, setSelectedMetaAd] = useState<string>("all");
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -44,20 +47,29 @@ const Dashboard = () => {
 
 
 
-  // Get unique page names from meta spreadsheets for the filter
   const metaPages = useMemo(() => {
-    const pages = spreadsheets
-      .filter((s: Spreadsheet) => s.is_meta && s.page_name)
-      .map((s: Spreadsheet) => s.page_name as string);
-    return Array.from(new Set(pages)).sort();
+    const items = spreadsheets.filter((s: Spreadsheet) => s.is_meta && s.page_name).map((s: Spreadsheet) => s.page_name as string);
+    return Array.from(new Set(items)).sort();
   }, [spreadsheets]);
 
-  // Get unique campaign names
+  const metaForms = useMemo(() => {
+    const items = spreadsheets.filter((s: Spreadsheet) => s.is_meta && s.form_name).map((s: Spreadsheet) => s.form_name as string);
+    return Array.from(new Set(items)).sort();
+  }, [spreadsheets]);
+
   const metaCampaigns = useMemo(() => {
-    const campaigns = spreadsheets
-      .filter((s: Spreadsheet) => s.is_meta && s.campaign_name)
-      .map((s: Spreadsheet) => s.campaign_name as string);
-    return Array.from(new Set(campaigns)).sort();
+    const items = spreadsheets.filter((s: Spreadsheet) => s.is_meta && s.campaign_name).map((s: Spreadsheet) => s.campaign_name as string);
+    return Array.from(new Set(items)).sort();
+  }, [spreadsheets]);
+
+  const metaAdSets = useMemo(() => {
+    const items = spreadsheets.filter((s: Spreadsheet) => s.is_meta && s.ad_set_name).map((s: Spreadsheet) => s.ad_set_name as string);
+    return Array.from(new Set(items)).sort();
+  }, [spreadsheets]);
+
+  const metaAds = useMemo(() => {
+    const items = spreadsheets.filter((s: Spreadsheet) => s.is_meta && s.ad_name).map((s: Spreadsheet) => s.ad_name as string);
+    return Array.from(new Set(items)).sort();
   }, [spreadsheets]);
 
   // Filter spreadsheets based on filterMode and selectedMetaPage
@@ -68,17 +80,29 @@ const Dashboard = () => {
 
     if (filterMode === "meta") {
       let metaSheets = spreadsheets.filter((s: Spreadsheet) => s.is_meta);
+
+      // Apply filters independently
       if (selectedMetaPage !== "all") {
         metaSheets = metaSheets.filter((s: Spreadsheet) => s.page_name === selectedMetaPage);
+      }
+      if (selectedMetaForm !== "all") {
+        metaSheets = metaSheets.filter((s: Spreadsheet) => s.form_name === selectedMetaForm);
       }
       if (selectedMetaCampaign !== "all") {
         metaSheets = metaSheets.filter((s: Spreadsheet) => s.campaign_name === selectedMetaCampaign);
       }
+      if (selectedMetaAdSet !== "all") {
+        metaSheets = metaSheets.filter((s: Spreadsheet) => s.ad_set_name === selectedMetaAdSet);
+      }
+      if (selectedMetaAd !== "all") {
+        metaSheets = metaSheets.filter((s: Spreadsheet) => s.ad_name === selectedMetaAd);
+      }
+
       return metaSheets;
     }
 
     return spreadsheets;
-  }, [spreadsheets, filterMode, selectedMetaPage]);
+  }, [spreadsheets, filterMode, selectedMetaPage, selectedMetaForm, selectedMetaCampaign, selectedMetaAdSet, selectedMetaAd]);
 
   // Create spreadsheet mutation
   const createMutation = useMutation({
@@ -231,8 +255,12 @@ const Dashboard = () => {
               size="sm"
               onClick={() => {
                 setFilterMode("meta");
-                setSelectedMetaPage("all"); // Reset page filter when switching to Meta
-                setSelectedMetaCampaign("all"); // Reset campaign filter
+                // Reset all filters
+                setSelectedMetaPage("all");
+                setSelectedMetaForm("all");
+                setSelectedMetaCampaign("all");
+                setSelectedMetaAdSet("all");
+                setSelectedMetaAd("all");
               }}
               className={`h-8 gap-2 rounded-lg transition-all ${filterMode === "meta" ? "shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             >
@@ -393,96 +421,152 @@ const Dashboard = () => {
             </Button>
           </div>
         </div>
-      </header>
+      </header >
 
       {/* Meta Filter Sub-navigation */}
-      {filterMode === "meta" && (
-        <div className="sticky top-[65px] z-40 w-full border-b border-border/40 bg-background/40 backdrop-blur-lg animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="container mx-auto px-4 py-2 flex items-center gap-4">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 gap-2 border-dashed bg-background/50 hover:bg-background/80">
-                  <Filter className="h-4 w-4" />
-                  Filter Sheets
-                  {(selectedMetaPage !== "all" || selectedMetaCampaign !== "all") && (
-                    <span className="ml-1 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                      {Number(selectedMetaPage !== "all") + Number(selectedMetaCampaign !== "all")}
-                    </span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 p-4" align="start">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <h4 className="font-medium leading-none text-sm">Filter Meta Sheets</h4>
-                    <p className="text-xs text-muted-foreground">Narrow down by Page or Campaign</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium">Page</label>
-                    <Select value={selectedMetaPage} onValueChange={setSelectedMetaPage}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Pages" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Pages</SelectItem>
-                        {metaPages.map(page => (
-                          <SelectItem key={page} value={page}>{page}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-medium">Campaign</label>
-                    <Select value={selectedMetaCampaign} onValueChange={setSelectedMetaCampaign}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="All Campaigns" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Campaigns</SelectItem>
-                        {metaCampaigns.map(campaign => (
-                          <SelectItem key={campaign} value={campaign}>{campaign}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {(selectedMetaPage !== "all" || selectedMetaCampaign !== "all") && (
+      {
+        filterMode === "meta" && (
+          <div className="sticky top-[65px] z-40 w-full border-b border-border/40 bg-background/40 backdrop-blur-lg animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="container mx-auto px-4 py-2 flex items-center gap-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-2 border-dashed bg-background/50 hover:bg-background/80">
+                    <Filter className="h-4 w-4" />
+                    Filter Sheets
+                    {(selectedMetaPage !== "all" || selectedMetaForm !== "all" || selectedMetaCampaign !== "all" || selectedMetaAdSet !== "all" || selectedMetaAd !== "all") && (
+                      <span className="ml-1 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                        {Number(selectedMetaPage !== "all") + Number(selectedMetaForm !== "all") + Number(selectedMetaCampaign !== "all") + Number(selectedMetaAdSet !== "all") + Number(selectedMetaAd !== "all")}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-4 max-h-[80vh] overflow-y-auto" align="start">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <h4 className="font-medium leading-none text-sm">Filter Meta Sheets</h4>
+                      <p className="text-xs text-muted-foreground">Filter by any combination of fields</p>
+                    </div>
+
+                    {/* Page Filter */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Page</label>
+                      <Select value={selectedMetaPage} onValueChange={setSelectedMetaPage}>
+                        <SelectTrigger className="h-8">
+                          <SelectValue placeholder="All Pages" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Pages</SelectItem>
+                          {metaPages.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Form Filter */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Form</label>
+                      <Select value={selectedMetaForm} onValueChange={setSelectedMetaForm}>
+                        <SelectTrigger className="h-8">
+                          <SelectValue placeholder="All Forms" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Forms</SelectItem>
+                          {metaForms.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Campaign Filter */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Campaign</label>
+                      <Select value={selectedMetaCampaign} onValueChange={setSelectedMetaCampaign}>
+                        <SelectTrigger className="h-8">
+                          <SelectValue placeholder="All Campaigns" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Campaigns</SelectItem>
+                          {metaCampaigns.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Ad Set Filter */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Ad Set</label>
+                      <Select value={selectedMetaAdSet} onValueChange={setSelectedMetaAdSet}>
+                        <SelectTrigger className="h-8">
+                          <SelectValue placeholder="All Ad Sets" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Ad Sets</SelectItem>
+                          {metaAdSets.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Ad Filter */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium">Ad Name</label>
+                      <Select value={selectedMetaAd} onValueChange={setSelectedMetaAd}>
+                        <SelectTrigger className="h-8">
+                          <SelectValue placeholder="All Ads" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Ads</SelectItem>
+                          {metaAds.map(item => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <Button
                       variant="ghost"
                       size="sm"
                       className="w-full justify-start text-muted-foreground h-8 px-2 hover:text-foreground"
                       onClick={() => {
                         setSelectedMetaPage("all");
+                        setSelectedMetaForm("all");
                         setSelectedMetaCampaign("all");
+                        setSelectedMetaAdSet("all");
+                        setSelectedMetaAd("all");
                       }}
                     >
                       <X className="mr-2 h-4 w-4" />
                       Clear Filters
                     </Button>
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-              {/* Active Filter Chips */}
-              {selectedMetaPage !== "all" && (
-                <div className="flex items-center gap-1 text-xs bg-secondary/50 px-2.5 py-1 rounded-full border border-border/50 animate-in fade-in zoom-in-95">
-                  <span className="opacity-60 font-medium">Page:</span>
-                  <span className="font-semibold">{selectedMetaPage}</span>
-                  <button onClick={() => setSelectedMetaPage("all")} className="ml-1 hover:text-destructive transition-colors p-0.5"><X className="h-3 w-3" /></button>
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                {/* Active Filter Chips */}
+                {selectedMetaPage !== "all" && (
+                  <div className="flex items-center gap-1 text-xs bg-secondary/50 px-2.5 py-1 rounded-full border border-border/50 animate-in fade-in zoom-in-95">
+                    <span className="opacity-60 font-medium">Page:</span>
+                    <span className="font-semibold">{selectedMetaPage}</span>
+                    <button onClick={() => setSelectedMetaPage("all")} className="ml-1 hover:text-destructive transition-colors p-0.5"><X className="h-3 w-3" /></button>
+                  </div>
+                )}
+                {selectedMetaCampaign !== "all" && (
+                  <div className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full border border-primary/20 animate-in fade-in zoom-in-95">
+                    <span className="opacity-60 font-medium">Campaign:</span>
+                    <span className="font-semibold">{selectedMetaCampaign}</span>
+                    <button onClick={() => setSelectedMetaCampaign("all")} className="ml-1 hover:text-destructive transition-colors p-0.5"><X className="h-3 w-3" /></button>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsMergeDialogOpen(true)}
+                    className="h-8 gap-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary"
+                  >
+                    <Filter className="h-4 w-4 rotate-90" />
+                    Merge Duplicates
+                  </Button>
                 </div>
-              )}
-              {selectedMetaCampaign !== "all" && (
-                <div className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full border border-primary/20 animate-in fade-in zoom-in-95">
-                  <span className="opacity-60 font-medium">Campaign:</span>
-                  <span className="font-semibold">{selectedMetaCampaign}</span>
-                  <button onClick={() => setSelectedMetaCampaign("all")} className="ml-1 hover:text-destructive transition-colors p-0.5"><X className="h-3 w-3" /></button>
-                </div>
-              )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 relative z-10">
@@ -577,10 +661,10 @@ const Dashboard = () => {
                         <span className="truncate">{spreadsheet.form_name}</span>
                       </div>
                     )}
-                    {spreadsheet.campaign_name && (
+                    {(spreadsheet.ad_name || spreadsheet.campaign_name) && (
                       <div className="flex items-center gap-2 text-[10px] text-primary/70 bg-primary/5 px-2 py-1 rounded-md border border-primary/20">
-                        <span className="font-bold uppercase opacity-50">Campaign:</span>
-                        <span className="truncate font-semibold">{spreadsheet.campaign_name}</span>
+                        <span className="font-bold uppercase opacity-50">{spreadsheet.ad_name ? 'Ad' : 'Campaign'}:</span>
+                        <span className="truncate font-semibold">{spreadsheet.ad_name || spreadsheet.campaign_name}</span>
                       </div>
                     )}
                   </div>
@@ -664,7 +748,7 @@ const Dashboard = () => {
         onOpenChange={setIsMergeDialogOpen}
         spreadsheets={spreadsheets}
       />
-    </div>
+    </div >
   );
 };
 
