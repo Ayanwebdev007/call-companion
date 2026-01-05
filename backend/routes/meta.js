@@ -13,21 +13,9 @@ router.get('/webhook', async (req, res) => {
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
 
-    console.log('--- [META-WEBHOOK] VERIFICATION ATTEMPT ---');
-    console.log('Full URL:', req.originalUrl);
-    console.log('Query Params:', JSON.stringify(req.query, null, 2));
+    console.log(`[META-WEBHOOK] Verification attempt: ${mode}`);
 
     if (mode === 'subscribe') {
-        // Log all users with verify tokens for debugging
-        const usersWithTokens = await User.find({
-            'settings.metaVerifyToken': { $exists: true, $ne: '' }
-        }).select('username settings.metaVerifyToken');
-
-        console.log(`[META-WEBHOOK] Found ${usersWithTokens.length} user(s) with local verify tokens.`);
-
-        // Log the search
-        console.log(`[META-WEBHOOK] Searching for token: "${token}"`);
-
         const user = await User.findOne({ 'settings.metaVerifyToken': token });
 
         if (user) {
@@ -52,8 +40,7 @@ router.get('/webhook', async (req, res) => {
 
 // Real-time Lead Reception
 router.post('/webhook', async (req, res) => {
-    console.log('--- [META-WEBHOOK] POST RECEIVED ---');
-    console.log('Body:', JSON.stringify(req.body, null, 2));
+    console.log('[META-WEBHOOK] Lead event received');
 
     const body = req.body;
 
@@ -68,7 +55,7 @@ router.post('/webhook', async (req, res) => {
                         const leadId = change.value.leadgen_id;
                         const pageId = String(change.value.page_id);
 
-                        console.log(`[META-WEBHOOK] Processing lead: ${leadId} for Page: ${pageId}`);
+
 
                         // Find user by pageId (either legacy field or in metaPages array)
                         const user = await User.findOne({
@@ -96,7 +83,7 @@ router.post('/webhook', async (req, res) => {
                             continue;
                         }
 
-                        console.log(`[META-WEBHOOK] Using token for user: ${user.username} (Page: ${pageId})`);
+
 
                         try {
                             const leadDetails = await metaService.getLeadDetails(leadId, pageAccessToken);
@@ -108,12 +95,7 @@ router.post('/webhook', async (req, res) => {
                                 metaService.getAdDetails(change.value.ad_id, pageAccessToken)
                             ]);
 
-                            console.log('[META-WEBHOOK] Fetched Metadata:', {
-                                page: pageInfo?.name,
-                                form: formInfo?.name,
-                                ad: adInfo?.name,
-                                campaign: adInfo?.campaign?.name
-                            });
+
 
                             const pageName = pageInfo?.name || pageId;
                             const formName = formInfo?.name || 'Meta Form';
@@ -175,7 +157,7 @@ router.post('/webhook', async (req, res) => {
                                     is_master: true
                                 });
                                 await masterSpreadsheet.save();
-                                console.log(`[META-WEBHOOK] Created MASTER spreadsheet: ${masterSpreadsheetName}`);
+
                             }
 
                             // Define helper to save lead to a spreadsheet
@@ -231,7 +213,7 @@ router.post('/webhook', async (req, res) => {
                                         console.log(`[META-WEBHOOK] Updated headers for ${targetSpreadsheet.name}`);
                                     }
                                 }
-                                console.log(`[META-WEBHOOK] Saved lead to ${targetSpreadsheet.name}`);
+                                console.log(`[META-WEBHOOK] Lead ${leadId} -> ${targetSpreadsheet.name}`);
                             };
 
                             // Execution: Save to BOTH

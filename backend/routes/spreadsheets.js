@@ -9,33 +9,18 @@ const router = express.Router();
 // GET all spreadsheets for logged in user (owned and shared)
 router.get('/', auth, async (req, res) => {
   try {
-    console.log('Fetching spreadsheets for user:', req.user.id);
     // Get owned spreadsheets
     const ownedSpreadsheets = await Spreadsheet.find({ user_id: req.user.id }).sort({ created_at: -1 });
-    console.log('Owned spreadsheets:', ownedSpreadsheets.length);
 
     // Get shared spreadsheets
     const sharedRecords = await Sharing.find({ shared_with_user_id: req.user.id })
       .populate('spreadsheet_id')
-      .populate('owner_user_id', 'username')
-      .catch(err => {
-        console.error('Population error:', err);
-        throw err;
-      });
-
-    console.log('Shared records found:', sharedRecords.length);
-
-    // Debug logging for shared records
-    console.log('Shared records before processing:', sharedRecords.map(record => ({
-      spreadsheet_id: record.spreadsheet_id ? record.spreadsheet_id._id : 'null',
-      spreadsheet_obj: record.spreadsheet_id ? record.spreadsheet_id.toObject() : 'null'
-    })));
+      .populate('owner_user_id', 'username');
 
     const sharedSpreadsheets = sharedRecords
       .filter(record => record.spreadsheet_id && record.owner_user_id) // Filter out records with null references
       .map(record => {
         const spreadsheetObj = record.spreadsheet_id.toObject();
-        console.log('Spreadsheet object:', spreadsheetObj);
         return {
           ...spreadsheetObj,
           id: spreadsheetObj.id || record.spreadsheet_id._id.toString(), // Ensure we have an ID
@@ -44,10 +29,6 @@ router.get('/', auth, async (req, res) => {
           is_shared: true
         };
       });
-
-    // Debug logging
-    console.log('Owned spreadsheets:', ownedSpreadsheets.map(s => ({ id: s.id, name: s.name })));
-    console.log('Shared spreadsheets:', sharedSpreadsheets.map(s => ({ id: s.id, name: s.name })));
 
     // Combine owned and shared spreadsheets
     const allSpreadsheets = [...ownedSpreadsheets, ...sharedSpreadsheets];
@@ -60,7 +41,6 @@ router.get('/', auth, async (req, res) => {
     // Sort by created_at descending
     uniqueSpreadsheets.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    console.log('Final spreadsheets count:', uniqueSpreadsheets.length);
     res.json(uniqueSpreadsheets);
   } catch (err) {
     res.status(500).json({ message: err.message });
