@@ -643,9 +643,10 @@ const Dashboard = ({ filterType }: DashboardProps) => {
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-6 pl-4 border-l border-border/10">
-                  <span className="text-xs text-muted-foreground hidden lg:block whitespace-nowrap">
-                    {new Date(spreadsheet.created_at).toLocaleDateString()}
-                  </span>
+                  <div className="flex flex-col items-end gap-0 hidden lg:flex whitespace-nowrap">
+                    <span className="text-[10px] font-bold text-foreground/80">{new Date(spreadsheet.created_at).toLocaleDateString()}</span>
+                    <span className="text-[10px] text-muted-foreground">{new Date(spreadsheet.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
 
                   <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 sm:translate-x-2 sm:group-hover:translate-x-0" onClick={(e) => e.stopPropagation()}>
                     {!spreadsheet.is_shared && (
