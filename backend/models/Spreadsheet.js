@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 
 const spreadsheetSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  business_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Business', required: true },
+  assigned_users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   name: { type: String, required: true },
   description: { type: String, default: '' },
   page_name: { type: String, default: '' },

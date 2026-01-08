@@ -8,18 +8,33 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let sock;
-let qrCodeData = null;
-let connectionStatus = 'disconnected'; // disconnected, connecting, connected
-const authPath = path.join(__dirname, '../auth_info_baileys');
+const sessions = new Map(); // userId -> { sock, qr, status }
+const authBaseDir = path.join(__dirname, '../auth_info_baileys');
 
-async function connectToWhatsApp() {
+// Ensure base auth directory exists
+if (!fs.existsSync(authBaseDir)) {
+    fs.mkdirSync(authBaseDir, { recursive: true });
+}
+
+async function connectToWhatsApp(userId) {
+    if (!userId) return;
+
+    const authPath = path.join(authBaseDir, `user_${userId}`);
     const { state, saveCreds } = await useMultiFileAuthState(authPath);
 
-    sock = makeWASocket({
+    let session = sessions.get(userId) || { sock: null, qr: null, status: 'disconnected' };
+
+    // If already connecting or connected, don't start another one unless requested
+    if (session.status === 'connected' && session.sock) return;
+
+    const sock = makeWASocket({
         auth: state,
-        logger: pino({ level: 'silent' }), // Hide noisy logs
+        logger: pino({ level: 'silent' }),
     });
+
+    session.sock = sock;
+    session.status = 'connecting';
+    sessions.set(userId, session);
 
     sock.ev.on('creds.update', saveCreds);
 
@@ -27,42 +42,51 @@ async function connectToWhatsApp() {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-            // Generate QR code as Data URL
-            qrCodeData = await QRCode.toDataURL(qr);
-            connectionStatus = 'connecting';
+            session.qr = await QRCode.toDataURL(qr);
+            session.status = 'connecting';
         }
 
         if (connection === 'close') {
             const shouldReconnect = (lastDisconnect.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-            connectionStatus = 'disconnected';
-            qrCodeData = null;
+            session.status = 'disconnected';
+            session.qr = null;
+
             if (shouldReconnect) {
-                // Throttle reconnection to avoid log flooding
-                setTimeout(connectToWhatsApp, 10000);
+                setTimeout(() => connectToWhatsApp(userId), 10000);
             } else {
-                // Clean up auth folder if logged out
                 if (fs.existsSync(authPath)) {
                     fs.rmSync(authPath, { recursive: true, force: true });
                 }
+                sessions.delete(userId);
             }
         } else if (connection === 'open') {
-            console.log('[WhatsApp] Connection opened');
-            connectionStatus = 'connected';
-            qrCodeData = null;
+            console.log(`[WhatsApp] Connection opened for user ${userId}`);
+            session.status = 'connected';
+            session.qr = null;
         }
     });
+
+    return sock;
 }
 
-// Initial connection attempt
-connectToWhatsApp();
+// Note: We don't auto-connect all users on start here. 
+// They will connect when they hit the status/connect endpoints or try to send.
 
 export default {
-    getStatus: () => ({ status: connectionStatus, qr: qrCodeData }),
+    getStatus: (userId) => {
+        const session = sessions.get(userId);
+        return session ? { status: session.status, qr: session.qr } : { status: 'disconnected', qr: null };
+    },
     connect: connectToWhatsApp,
-    sendMessage: async (phone, text, imageBase64) => {
-        if (!sock || connectionStatus !== 'connected') {
-            throw new Error('WhatsApp not connected');
+    sendMessage: async (userId, phone, text, imageBase64) => {
+        const session = sessions.get(userId);
+        if (!session || !session.sock || session.status !== 'connected') {
+            // Try to connect if session exists but disconnected? 
+            // Better to throw so UI knows to ask for connection
+            throw new Error('WhatsApp not connected for this user');
         }
+
+        const { sock } = session;
 
         // Ensure phone is formatted (remove +, spaces, ensure suffix)
         let id = phone.replace(/[^0-9]/g, '');
@@ -71,7 +95,6 @@ export default {
         }
 
         if (imageBase64) {
-            // Convert base64 to buffer (remove prefix if present)
             const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
             const buffer = Buffer.from(base64Data, 'base64');
 
@@ -82,23 +105,24 @@ export default {
         } else {
             await sock.sendMessage(id, { text });
         }
-        console.log(`[WhatsApp] Sent to ${phone}`);
+        console.log(`[WhatsApp] Sent from user ${userId} to ${phone}`);
     },
-    logout: async () => {
+    logout: async (userId) => {
+        const session = sessions.get(userId);
+        if (!session) return;
+
         try {
-            if (sock) {
-                await sock.logout();
+            if (session.sock) {
+                await session.sock.logout();
             }
         } catch (err) {
-            console.error("Logout failed or already logged out", err);
+            console.error(`Logout failed for user ${userId}`, err);
         } finally {
-            // Force cleanup
+            const authPath = path.join(authBaseDir, `user_${userId}`);
             if (fs.existsSync(authPath)) {
                 fs.rmSync(authPath, { recursive: true, force: true });
             }
-            connectionStatus = 'disconnected';
-            qrCodeData = null;
-            connectToWhatsApp(); // Restart to allow new login
+            sessions.delete(userId);
         }
     }
 };

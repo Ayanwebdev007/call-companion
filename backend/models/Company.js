@@ -6,6 +6,11 @@ const CompanySchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    business_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Business',
+        required: true
+    },
     name: {
         type: String,
         required: true

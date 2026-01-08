@@ -1,9 +1,10 @@
 import express from 'express';
 import metaService from '../services/metaService.js';
 import Customer from '../models/Customer.js';
+import Business from '../models/Business.js';
 import User from '../models/User.js';
-import mongoose from 'mongoose';
 import auth from '../middleware/auth.js';
+import checkPermission from '../middleware/permissions.js';
 
 const router = express.Router();
 
@@ -16,10 +17,10 @@ router.get('/webhook', async (req, res) => {
     console.log(`[META-WEBHOOK] Verification attempt: ${mode}`);
 
     if (mode === 'subscribe') {
-        const user = await User.findOne({ 'settings.metaVerifyToken': token });
+        const business = await Business.findOne({ 'settings.metaVerifyToken': token });
 
-        if (user) {
-            console.log(`[META-WEBHOOK] Verification successful for user: ${user.username}`);
+        if (business) {
+            console.log(`[META-WEBHOOK] Verification successful for business: ${business.name}`);
             return res.status(200).set('Content-Type', 'text/plain').send(challenge);
         }
 
@@ -57,23 +58,26 @@ router.post('/webhook', async (req, res) => {
 
 
 
-                        // Find user by pageId (either legacy field or in metaPages array)
-                        const user = await User.findOne({
+                        // Find business by pageId (either legacy field or in metaPages array)
+                        const business = await Business.findOne({
                             $or: [
                                 { 'settings.metaPageId': pageId },
                                 { 'settings.metaPages.pageId': pageId }
                             ]
                         });
 
-                        if (!user) {
-                            console.warn(`[META-WEBHOOK] ERROR: No user found for Meta Page ID: ${pageId}`);
+                        if (!business) {
+                            console.warn(`[META-WEBHOOK] ERROR: No business found for Meta Page ID: ${pageId}`);
                             continue;
                         }
 
-                        // Determine the correct access token for this specific page
-                        let pageAccessToken = user.settings.metaPageAccessToken; // Default to legacy token
+                        // Get the admin of the business to act as the primary "owner" for legacy fields
+                        const adminUser = await User.findById(business.admin_id);
 
-                        const specificPage = user.settings.metaPages?.find(p => p.pageId === pageId);
+                        // Determine the correct access token for this specific page
+                        let pageAccessToken = business.settings.metaPageAccessToken; // Default to legacy token
+
+                        const specificPage = business.settings.metaPages?.find(p => p.pageId === pageId);
                         if (specificPage?.pageAccessToken) {
                             pageAccessToken = specificPage.pageAccessToken;
                         }
@@ -114,7 +118,7 @@ router.post('/webhook', async (req, res) => {
                             // Find or create AD-SPECIFIC spreadsheet
                             // Must match ALL criteria to ensure separation
                             let adSpreadsheet = await mongoose.model('Spreadsheet').findOne({
-                                user_id: user._id,
+                                business_id: business._id,
                                 page_name: pageName,
                                 form_name: formName,
                                 campaign_name: campaignName,
@@ -125,7 +129,8 @@ router.post('/webhook', async (req, res) => {
 
                             if (!adSpreadsheet) {
                                 adSpreadsheet = new (mongoose.model('Spreadsheet'))({
-                                    user_id: user._id,
+                                    user_id: business.admin_id,
+                                    business_id: business._id,
                                     name: spreadsheetName,
                                     description: `Leads from Page: ${pageName}, Form: ${formName}, Campaign: ${campaignName}, Ad Set: ${adSetName}, Ad: ${adName}`,
                                     page_name: pageName,
@@ -134,7 +139,8 @@ router.post('/webhook', async (req, res) => {
                                     ad_set_name: adSetName,
                                     ad_name: adName,
                                     is_meta: true,
-                                    is_master: false
+                                    is_master: false,
+                                    assigned_users: [] // Initially unassigned
                                 });
                                 await adSpreadsheet.save();
                             }
@@ -145,7 +151,7 @@ router.post('/webhook', async (req, res) => {
                             // Find or create MASTER spreadsheet (Page + Form only)
                             const masterSpreadsheetName = `[MASTER] ${pageName} - ${formName}`;
                             let masterSpreadsheet = await mongoose.model('Spreadsheet').findOne({
-                                user_id: user._id,
+                                business_id: business._id,
                                 page_name: pageName,
                                 form_name: formName,
                                 is_master: true
@@ -153,13 +159,15 @@ router.post('/webhook', async (req, res) => {
 
                             if (!masterSpreadsheet) {
                                 masterSpreadsheet = new (mongoose.model('Spreadsheet'))({
-                                    user_id: user._id,
+                                    user_id: business.admin_id,
+                                    business_id: business._id,
                                     name: masterSpreadsheetName,
                                     description: `REAL-TIME MASTER: Aggregated leads for Page: ${pageName}, Form: ${formName}`,
                                     page_name: pageName,
                                     form_name: formName,
                                     is_meta: true,
-                                    is_master: true
+                                    is_master: true,
+                                    assigned_users: []
                                 });
                                 await masterSpreadsheet.save();
 
@@ -180,7 +188,8 @@ router.post('/webhook', async (req, res) => {
                                 }
 
                                 const customer = new Customer({
-                                    user_id: user._id,
+                                    user_id: business.admin_id,
+                                    business_id: business._id,
                                     spreadsheet_id: targetSpreadsheet._id,
                                     customer_name: leadDetails.customerName || 'Meta Lead',
                                     company_name: leadDetails.companyName || 'Meta Ads',
@@ -277,7 +286,7 @@ router.get('/debug-config', async (req, res) => {
 });
 
 // Fetch Detailed Meta Analytics & Global Lead Feed
-router.get('/analytics', auth, async (req, res) => {
+router.get('/analytics', auth, checkPermission('dashboard'), async (req, res) => {
     try {
         const userId = req.user.id;
         const mongoose = await import('mongoose');
@@ -286,15 +295,18 @@ router.get('/analytics', auth, async (req, res) => {
         const Spreadsheet = mongoose.default.model('Spreadsheet');
         const Sharing = mongoose.default.model('Sharing');
 
-        // Find sheets owned by user
-        const ownedSheets = await Spreadsheet.find({ user_id: userId, is_meta: true });
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // Find sheets shared with user
-        const sharedRecords = await Sharing.find({ shared_with_user_id: userId });
-        const sharedSheetIds = sharedRecords.map(r => r.spreadsheet_id);
-        const sharedSheets = await Spreadsheet.find({ _id: { $in: sharedSheetIds }, is_meta: true });
+        // Find sheets in the business
+        let query = { business_id: user.business_id, is_meta: true };
 
-        const allMetaSheets = [...ownedSheets, ...sharedSheets];
+        // If not admin, only show assigned
+        if (user.role !== 'admin') {
+            query.assigned_users = user.id;
+        }
+
+        const allMetaSheets = await Spreadsheet.find(query);
         const sheetIds = allMetaSheets.map(s => s._id);
 
         // 2. Fetch Recent Leads (Deduplicated by Lead ID)

@@ -4,18 +4,14 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  business_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Business' },
+  role: { type: String, enum: ['admin', 'user'], default: 'admin' },
+  permissions: {
+    type: [String],
+    default: ['dashboard', 'poster', 'webhooks'] // Default permissions for admin
+  },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
-  settings: {
-    metaPageAccessToken: { type: String, default: '' },
-    metaVerifyToken: { type: String, default: '' },
-    metaPageId: { type: String, default: '' },
-    metaPages: [{
-      pageId: { type: String, required: true },
-      pageAccessToken: { type: String, required: true },
-      pageName: { type: String, default: '' }
-    }]
-  }
 }, { timestamps: true });
 
 // Map _id to id

@@ -203,8 +203,23 @@ export const resetPassword = async (token: string, password: string): Promise<{ 
   return response.data;
 };
 
-export const updateProfile = async (username: string, email: string): Promise<{ message: string, user: { id: string, username: string, email: string } }> => {
+export const updateProfile = async (username: string, email: string): Promise<{ message: string, user: { id: string, username: string, email: string, role: string, permissions: string[], business_id: string } }> => {
   const response = await api.put(`${API_BASE_URL}/api/auth/update-profile`, { username, email });
+  return response.data;
+};
+
+export const fetchBusiness = async (): Promise<any> => {
+  const response = await api.get(`${API_BASE_URL}/api/auth/business`);
+  return response.data;
+};
+
+export const updateBusiness = async (settings: any): Promise<{ message: string, settings: any }> => {
+  const response = await api.put(`${API_BASE_URL}/api/auth/settings`, { settings });
+  return response.data;
+};
+
+export const resetUserPassword = async (userId: string, password: string): Promise<{ message: string }> => {
+  const response = await api.post(`${API_BASE_URL}/api/auth/business/users/${userId}/reset-password`, { password });
   return response.data;
 };
 
@@ -268,6 +283,21 @@ export interface MetaAnalyticsResponse {
     statusDistribution: Record<string, number>;
   };
 }
+
+export const fetchWhatsAppStatus = async (): Promise<{ status: 'disconnected' | 'connecting' | 'connected', qr?: string }> => {
+  const response = await api.get(`${API_BASE_URL}/api/whatsapp/status`);
+  return response.data;
+};
+
+export const connectWhatsApp = async (): Promise<{ message: string }> => {
+  const response = await api.post(`${API_BASE_URL}/api/whatsapp/connect`);
+  return response.data;
+};
+
+export const logoutWhatsApp = async (): Promise<{ message: string }> => {
+  const response = await api.post(`${API_BASE_URL}/api/whatsapp/logout`);
+  return response.data;
+};
 
 export const fetchMetaAnalytics = async (): Promise<MetaAnalyticsResponse> => {
   const response = await api.get(`${API_BASE_URL}/api/meta/analytics`);

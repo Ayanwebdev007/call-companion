@@ -5,7 +5,9 @@ import crypto from 'crypto';
 import { Resend } from 'resend';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
+import Business from '../models/Business.js';
 import auth from '../middleware/auth.js';
+import checkPermission from '../middleware/permissions.js';
 
 const router = express.Router();
 
@@ -25,15 +27,31 @@ router.post('/register', async (req, res) => {
     user = new User({
       username,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      role: 'admin',
+      permissions: ['dashboard', 'poster', 'webhooks']
     });
 
+    await user.save();
+
+    // Create Business for the new admin
+    const business = new Business({
+      name: `${username}'s Business`,
+      admin_id: user.id
+    });
+
+    await business.save();
+
+    user.business_id = business.id;
     await user.save();
 
     const payload = {
       id: user.id,
       username: user.username,
-      email: user.email
+      email: user.email,
+      role: user.role,
+      permissions: user.permissions,
+      business_id: user.business_id
     };
 
     jwt.sign(
@@ -69,7 +87,10 @@ router.post('/login', async (req, res) => {
     const payload = {
       id: user.id,
       username: user.username,
-      email: user.email
+      email: user.email,
+      role: user.role,
+      permissions: user.permissions,
+      business_id: user.business_id
     };
 
     jwt.sign(
@@ -165,7 +186,7 @@ router.post('/reset-password/:token', async (req, res) => {
   }
 });
 
-// Change password (authenticated)
+// Change password (authenticated - Admin Only as per new requirements)
 router.post('/change-password', auth, async (req, res) => {
   const { current_password, new_password } = req.body;
   if (!current_password || !new_password) {
@@ -176,6 +197,11 @@ router.post('/change-password', auth, async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied: Only admins can change passwords manually.' });
+    }
+
     const isMatch = await bcrypt.compare(current_password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Current password is incorrect' });
@@ -212,7 +238,14 @@ router.put('/update-profile', auth, async (req, res) => {
 
     res.json({
       message: 'Profile updated successfully',
-      user: { id: user.id, username: user.username, email: user.email }
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        permissions: user.permissions,
+        business_id: user.business_id
+      }
     });
   } catch (err) {
     if (err.code === 11000) {
@@ -235,7 +268,7 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
-// Update user settings
+// Update business settings (Controlled by Admin)
 router.put('/settings', auth, async (req, res) => {
   try {
     const { settings } = req.body;
@@ -244,13 +277,141 @@ router.put('/settings', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    user.settings = {
-      ...user.settings,
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can update business settings' });
+    }
+
+    const business = await Business.findById(user.business_id);
+    if (!business) {
+      return res.status(404).json({ message: 'Business not found' });
+    }
+
+    business.settings = {
+      ...business.settings,
       ...settings
     };
 
+    await business.save();
+    res.json({ message: 'Settings updated successfully', settings: business.settings });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// Admin: Get all users in business
+router.get('/business/users', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+
+    const users = await User.find({ business_id: user.business_id }).select('-password');
+    res.json(users);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// Admin: Create user in business
+router.post('/business/users', auth, async (req, res) => {
+  const { username, email, password, permissions } = req.body;
+  try {
+    const adminUser = await User.findById(req.user.id);
+    if (adminUser.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+
+    let user = await User.findOne({ $or: [{ username }, { email }] });
+    if (user) return res.status(400).json({ message: 'User already exists' });
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    user = new User({
+      username,
+      email,
+      password: hashedPassword,
+      business_id: adminUser.business_id,
+      role: 'user',
+      permissions: permissions || []
+    });
+
     await user.save();
-    res.json({ message: 'Settings updated successfully', settings: user.settings });
+    res.json({ message: 'User created successfully', user: { id: user.id, username, email, role: 'user', permissions: user.permissions } });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// Admin: Update user permissions
+router.put('/business/users/:id/permissions', auth, async (req, res) => {
+  const { permissions } = req.body;
+  try {
+    const adminUser = await User.findById(req.user.id);
+    if (adminUser.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+
+    const user = await User.findOne({ _id: req.params.id, business_id: adminUser.business_id });
+    if (!user) return res.status(404).json({ message: 'User not found in your business' });
+
+    user.permissions = permissions;
+    await user.save();
+    res.json({ message: 'Permissions updated successfully', permissions: user.permissions });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// Admin: Delete user
+router.delete('/business/users/:id', auth, async (req, res) => {
+  try {
+    const adminUser = await User.findById(req.user.id);
+    if (adminUser.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+
+    const user = await User.findOne({ _id: req.params.id, business_id: adminUser.business_id });
+    if (!user) return res.status(404).json({ message: 'User not found in your business' });
+
+    await User.deleteOne({ _id: req.params.id });
+    res.json({ message: 'User deleted successfully' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// Admin: Reset user password
+router.post('/business/users/:id/reset-password', auth, async (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ message: 'New password is required' });
+
+  try {
+    const adminUser = await User.findById(req.user.id);
+    if (adminUser.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
+
+    const user = await User.findOne({ _id: req.params.id, business_id: adminUser.business_id });
+    if (!user) return res.status(404).json({ message: 'User not found in your business' });
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+    await user.save();
+
+    res.json({ message: 'User password reset successfully' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// Get Business Details
+router.get('/business', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const business = await Business.findById(user.business_id);
+    if (!business) return res.status(404).json({ message: 'Business not found' });
+
+    res.json(business);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');

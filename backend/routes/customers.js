@@ -1,15 +1,17 @@
 import express from 'express';
 import Customer from '../models/Customer.js';
 import Spreadsheet from '../models/Spreadsheet.js';
+import User from '../models/User.js';
 import Sharing from '../models/Sharing.js';
 import auth from '../middleware/auth.js';
+import checkPermission from '../middleware/permissions.js';
 import XLSX from 'xlsx';
 import fs from 'fs';
 
 const router = express.Router();
 
 // GET all customers for logged in user (supports search)
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, checkPermission('dashboard'), async (req, res) => {
   try {
     const { spreadsheetId, q } = req.query;
 
@@ -25,17 +27,20 @@ router.get('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid spreadsheet ID' });
     }
 
-    // Check if user has access to this spreadsheet (owner or shared)
-    const spreadsheet = await Spreadsheet.findOne({ _id: spreadsheetId });
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Check if user has access to this spreadsheet (business match + admin OR assignment)
+    const spreadsheet = await Spreadsheet.findOne({ _id: spreadsheetId, business_id: user.business_id });
     if (!spreadsheet) {
-      return res.status(404).json({ message: 'Spreadsheet not found' });
+      return res.status(404).json({ message: 'Spreadsheet not found or access denied' });
     }
 
-    // Check ownership or sharing
-    let hasAccess = spreadsheet.user_id.toString() === req.user.id;
+    // Check role or assignment
+    let hasAccess = user.role === 'admin' || (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
 
     if (!hasAccess) {
-      // Check if shared with this user
+      // Check if shared with this user (legacy/external sharing support)
       const sharing = await Sharing.findOne({
         spreadsheet_id: spreadsheetId,
         shared_with_user_id: req.user.id
@@ -73,7 +78,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // POST new customer
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
   const { spreadsheet_id, customer_name, company_name, phone_number, next_call_date, next_call_time, last_call_date, remark, color, status } = req.body;
 
   if (!spreadsheet_id) {
@@ -86,14 +91,18 @@ router.post('/', auth, async (req, res) => {
     return res.status(400).json({ message: 'Invalid spreadsheet ID' });
   }
 
+  const user = await User.findById(req.user.id);
+  if (!user) return res.status(404).json({ message: 'User not found' });
+
   // Check if user has write access to this spreadsheet
-  const spreadsheet = await Spreadsheet.findOne({ _id: spreadsheet_id });
+  const spreadsheet = await Spreadsheet.findOne({ _id: spreadsheet_id, business_id: user.business_id });
   if (!spreadsheet) {
-    return res.status(404).json({ message: 'Spreadsheet not found' });
+    return res.status(404).json({ message: 'Spreadsheet not found or access denied' });
   }
 
-  // Check ownership or sharing with write permission
-  let hasWriteAccess = spreadsheet.user_id.toString() === req.user.id;
+  // Check role or assignment (Admin or Assigned User)
+  // Note: If assigned, we allow write access for now by default if they have the form.
+  let hasWriteAccess = user.role === 'admin' || (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
 
   if (!hasWriteAccess) {
     // Check if shared with this user with write permission
@@ -116,6 +125,7 @@ router.post('/', auth, async (req, res) => {
 
   const customer = new Customer({
     user_id: req.user.id,
+    business_id: user.business_id,
     spreadsheet_id: spreadsheet_id,
     customer_name,
     company_name,

@@ -14,6 +14,9 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import UserManagement from "./pages/UserManagement";
+import FormAssignment from "./pages/FormAssignment";
+import WhatsAppSettings from "./pages/WhatsAppSettings";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -53,6 +56,11 @@ const App = () => (
                   </Route>
 
                   <Route path="/poster-generator" element={<PosterGenerator />} />
+                  {/* Admin Only Routes */}
+                  <Route path="/admin/users" element={<UserManagement />} />
+                  <Route path="/admin/assignments" element={<FormAssignment />} />
+
+                  <Route path="/whatsapp" element={<WhatsAppSettings />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/spreadsheet/:id" element={<Index />} />
                 </Route>

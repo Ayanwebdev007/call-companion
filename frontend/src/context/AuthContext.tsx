@@ -4,7 +4,10 @@ import axios from 'axios';
 interface User {
   id: string;
   username: string;
-  email?: string; // Optional for compatibility, but should be populated
+  email?: string;
+  role: 'admin' | 'user';
+  permissions: string[];
+  business_id: string;
 }
 
 interface AuthContextType {

@@ -1,17 +1,27 @@
 import express from 'express';
 import Spreadsheet from '../models/Spreadsheet.js';
+import User from '../models/User.js';
 import Customer from '../models/Customer.js';
-import Sharing from '../models/Sharing.js';
-import auth from '../middleware/auth.js';
-import ViewLog from '../models/ViewLog.js';
+
+import checkPermission from '../middleware/permissions.js';
 
 const router = express.Router();
 
 // GET all spreadsheets for logged in user (owned and shared)
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, checkPermission('dashboard'), async (req, res) => {
   try {
-    // Get owned spreadsheets
-    const ownedSpreadsheets = await Spreadsheet.find({ user_id: req.user.id }).sort({ created_at: -1 });
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    let query = { business_id: user.business_id };
+
+    // If not admin, only show assigned spreadsheets
+    if (user.role !== 'admin') {
+      query.assigned_users = req.user.id;
+    }
+
+    // Get business spreadsheets
+    const businessSpreadsheets = await Spreadsheet.find(query).sort({ created_at: -1 });
 
     // Get shared spreadsheets
     const sharedRecords = await Sharing.find({ shared_with_user_id: req.user.id })
@@ -31,8 +41,8 @@ router.get('/', auth, async (req, res) => {
         };
       });
 
-    // Combine owned and shared spreadsheets
-    const allSpreadsheets = [...ownedSpreadsheets, ...sharedSpreadsheets];
+    // Combine business and shared spreadsheets
+    const allSpreadsheets = [...businessSpreadsheets, ...sharedSpreadsheets];
 
     // Remove duplicates by ID
     const uniqueSpreadsheets = allSpreadsheets.filter((spreadsheet, index, self) =>
@@ -74,14 +84,16 @@ router.get('/', auth, async (req, res) => {
 });
 
 // POST new spreadsheet
-router.post('/', auth, async (req, res) => {
-  const spreadsheet = new Spreadsheet({
-    user_id: req.user.id,
-    name: req.body.name,
-    description: req.body.description || ''
-  });
-
+router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
   try {
+    const user = await User.findById(req.user.id);
+    const spreadsheet = new Spreadsheet({
+      user_id: req.user.id,
+      business_id: user.business_id,
+      name: req.body.name,
+      description: req.body.description || ''
+    });
+
     const newSpreadsheet = await spreadsheet.save();
     res.status(201).json(newSpreadsheet);
   } catch (err) {
@@ -92,8 +104,14 @@ router.post('/', auth, async (req, res) => {
 // GET specific spreadsheet
 router.get('/:id', auth, async (req, res) => {
   try {
-    // First check if user owns the spreadsheet
-    let spreadsheet = await Spreadsheet.findOne({ _id: req.params.id, user_id: req.user.id });
+    const user = await User.findById(req.user.id);
+    // First check if user is in the business and has access
+    let query = { _id: req.params.id, business_id: user.business_id };
+    if (user.role !== 'admin') {
+      query.assigned_users = req.user.id;
+    }
+
+    let spreadsheet = await Spreadsheet.findOne(query);
 
     // If not owned, check if it's shared with the user
     if (!spreadsheet) {
@@ -137,7 +155,10 @@ router.put('/:id', auth, async (req, res) => {
 // DELETE spreadsheet and all associated customers
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const spreadsheet = await Spreadsheet.findOne({ _id: req.params.id, user_id: req.user.id });
+    const user = await User.findById(req.user.id);
+    if (user.role !== 'admin') return res.status(403).json({ message: 'Only admins can delete spreadsheets' });
+
+    const spreadsheet = await Spreadsheet.findOne({ _id: req.params.id, business_id: user.business_id });
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
@@ -188,8 +209,10 @@ router.post('/merge', auth, async (req, res) => {
     }
 
     // 3. Create new Merged Spreadsheet
+    const user = await User.findById(req.user.id);
     const newSpreadsheet = new Spreadsheet({
       user_id: req.user.id,
+      business_id: user.business_id,
       name: name || `Merged: ${firstSheet.page_name} - ${firstSheet.form_name}`,
       description: `Merged from ${spreadsheets.length} spreadsheets. Source Page: ${firstSheet.page_name}, Form: ${firstSheet.form_name}`,
       is_meta: firstSheet.is_meta,

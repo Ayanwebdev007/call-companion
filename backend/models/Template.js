@@ -6,6 +6,11 @@ const TemplateSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
+    business_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Business',
+        required: true
+    },
     name: { type: String, required: true },
     poster: String, // Base64 string
     placeholders: {
