@@ -24,7 +24,13 @@ import {
 export function CallingSidebar() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { logout } = useAuth();
+    const { user, logout } = useAuth(); // Destructuring user here
+
+    const hasPermission = (permission: string) => {
+        if (!user) return false;
+        if (user.role === 'admin') return true;
+        return user.permissions?.includes(permission);
+    };
 
     return (
         <Sidebar collapsible="icon" className="border-r border-border/40 bg-card/50 backdrop-blur-xl">
@@ -83,16 +89,18 @@ export function CallingSidebar() {
                             </SidebarMenuButton>
                         </SidebarMenuItem>
 
-                        <SidebarMenuItem>
-                            <SidebarMenuButton
-                                onClick={() => navigate("/calling/webhook")}
-                                isActive={location.pathname === "/calling/webhook"}
-                                tooltip="Meta Webhook"
-                            >
-                                <Webhook />
-                                <span>Meta Webhook</span>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        {hasPermission('webhooks') && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton
+                                    onClick={() => navigate("/calling/webhook")}
+                                    isActive={location.pathname === "/calling/webhook"}
+                                    tooltip="Meta Webhook"
+                                >
+                                    <Webhook />
+                                    <span>Meta Webhook</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
 
                         <SidebarMenuItem>
                             <SidebarMenuButton
