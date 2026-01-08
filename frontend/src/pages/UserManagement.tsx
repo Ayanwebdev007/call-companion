@@ -96,7 +96,7 @@ const UserManagement = () => {
         }
     };
 
-    const [selectedUserForReset, setSelectedUserForReset] = useState<{ userId: string, username: string } | null>(null);
+    const [selectedUserForReset, setSelectedUserForReset] = useState<{ userId: string, username: string, plain_password?: string } | null>(null);
     const [resetPasswordValue, setResetPasswordValue] = useState("");
 
     const handleResetPassword = async () => {
@@ -171,7 +171,6 @@ const UserManagement = () => {
                             <TableRow className="hover:bg-transparent border-slate-800">
                                 <TableHead>User</TableHead>
                                 <TableHead>Role</TableHead>
-                                <TableHead>Password</TableHead>
                                 <TableHead>Permissions</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -200,11 +199,6 @@ const UserManagement = () => {
                                         </Badge>
                                     </TableCell>
                                     <TableCell>
-                                        <div className="font-mono text-xs bg-slate-950 px-2 py-1 rounded border border-slate-800 inline-block text-slate-300">
-                                            {u.plain_password || <span className="text-slate-600 italic">Hidden</span>}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
                                         <div className="flex flex-wrap gap-1">
                                             {u.permissions.map(p => (
                                                 <Badge key={p} variant="outline" className="text-[10px] py-0 border-slate-700">
@@ -216,7 +210,7 @@ const UserManagement = () => {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="icon" onClick={() => setSelectedUserForReset({ userId: u.id, username: u.username })} className="text-orange-400 hover:text-orange-300 hover:bg-orange-400/10" title="Reset Password">
+                                            <Button variant="ghost" size="icon" onClick={() => setSelectedUserForReset({ userId: u.id, username: u.username, plain_password: u.plain_password })} className="text-orange-400 hover:text-orange-300 hover:bg-orange-400/10" title="Reset/View Password">
                                                 <KeyRound className="h-4 w-4" />
                                             </Button>
                                             <Button variant="ghost" size="icon" onClick={() => setSelectedUserPermissions({ userId: u.id, permissions: u.permissions })} className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10" title="Edit Permissions">
@@ -266,13 +260,19 @@ const UserManagement = () => {
                     </DialogHeader>
                     <div className="space-y-4 pt-4">
                         <div className="space-y-2">
+                            <Label>Current Password</Label>
+                            <div className="p-3 bg-slate-900/50 rounded-md border border-slate-700 text-sm font-mono text-muted-foreground break-all">
+                                {selectedUserForReset?.plain_password || <span className="italic text-slate-500">Not recorded (old user)</span>}
+                            </div>
+                        </div>
+                        <div className="space-y-2">
                             <Label htmlFor="reset-password">New Password</Label>
                             <Input
                                 id="reset-password"
                                 type="password"
                                 value={resetPasswordValue}
                                 onChange={e => setResetPasswordValue(e.target.value)}
-                                required
+                                placeholder="Enter new password to override"
                                 className="bg-slate-900/50 border-input"
                             />
                         </div>

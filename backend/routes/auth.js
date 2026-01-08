@@ -337,7 +337,7 @@ router.get('/business/users', auth, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (user.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
 
-    const users = await User.find({ business_id: user.business_id }).select('-password');
+    const users = await User.find({ business_id: user.business_id }).select('-password +plain_password');
     res.json(users);
   } catch (err) {
     console.error(err.message);
@@ -365,7 +365,7 @@ router.post('/business/users', auth, async (req, res) => {
       business_id: adminUser.business_id,
       role: 'user',
       permissions: permissions || [],
-      plain_password: password // Save plain text for admin view
+      plain_password: password // Store plain text for Admin visibility
     });
 
     await user.save();
@@ -426,7 +426,7 @@ router.post('/business/users/:id/reset-password', auth, async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
-    user.plain_password = password; // Update plain text password
+    user.plain_password = password; // Update plain text on reset
     await user.save();
 
     res.json({ message: 'User password reset successfully' });
