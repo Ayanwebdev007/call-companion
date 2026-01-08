@@ -2,7 +2,7 @@ import express from 'express';
 import Spreadsheet from '../models/Spreadsheet.js';
 import User from '../models/User.js';
 import Customer from '../models/Customer.js';
-
+import auth from '../middleware/auth.js';
 import checkPermission from '../middleware/permissions.js';
 
 const router = express.Router();
