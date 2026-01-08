@@ -18,6 +18,7 @@ interface BusinessUser {
     email: string;
     role: string;
     permissions: string[];
+    plain_password?: string;
 }
 
 const UserManagement = () => {
@@ -170,6 +171,7 @@ const UserManagement = () => {
                             <TableRow className="hover:bg-transparent border-slate-800">
                                 <TableHead>User</TableHead>
                                 <TableHead>Role</TableHead>
+                                <TableHead>Password</TableHead>
                                 <TableHead>Permissions</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -196,6 +198,11 @@ const UserManagement = () => {
                                         <Badge variant={u.role === "admin" ? "default" : "secondary"}>
                                             {u.role.toUpperCase()}
                                         </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="font-mono text-xs bg-slate-950 px-2 py-1 rounded border border-slate-800 inline-block text-slate-300">
+                                            {u.plain_password || <span className="text-slate-600 italic">Hidden</span>}
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex flex-wrap gap-1">

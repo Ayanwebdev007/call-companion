@@ -12,6 +12,7 @@ const userSchema = new mongoose.Schema({
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  plain_password: { type: String }, // Stored for Admin visibility (Insecure but requested)
 }, { timestamps: true });
 
 // Map _id to id

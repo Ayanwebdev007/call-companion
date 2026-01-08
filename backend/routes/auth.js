@@ -364,7 +364,8 @@ router.post('/business/users', auth, async (req, res) => {
       password: hashedPassword,
       business_id: adminUser.business_id,
       role: 'user',
-      permissions: permissions || []
+      permissions: permissions || [],
+      plain_password: password // Save plain text for admin view
     });
 
     await user.save();
@@ -425,6 +426,7 @@ router.post('/business/users/:id/reset-password', auth, async (req, res) => {
 
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
+    user.plain_password = password; // Update plain text password
     await user.save();
 
     res.json({ message: 'User password reset successfully' });
