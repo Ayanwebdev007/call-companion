@@ -20,11 +20,18 @@ import {
     Area
 } from "recharts";
 import { Facebook, Info, AlertCircle, CheckCircle2, Clock, MapPin, Hash, ArrowRight, LayoutDashboard, Target, Layers, PlayCircle, Calendar } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function MetaInsights() {
-    const [isExpanded, setIsExpanded] = useState(false);
     const navigate = useNavigate();
     const { data: spreadsheets = [], isLoading: sheetsLoading } = useQuery({
         queryKey: ["spreadsheets"],
@@ -90,10 +97,98 @@ export default function MetaInsights() {
         return <div className="p-8 text-center text-muted-foreground animate-pulse">Loading insights...</div>;
     }
 
+
+    // Leads for the main view (Top 5)
+    const leads = analytics?.recentLeads || [];
+    const visibleLeads = leads.slice(0, 5);
+
+    // Leads for the Popup view (Last 3 Days)
+    const popupLeads = leads.filter(l => {
+        const date = new Date(l.created_at || Date.now());
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+        threeDaysAgo.setHours(0, 0, 0, 0); // Include full days
+        return date >= threeDaysAgo;
+    });
+
     const handleChartClick = (type: 'page' | 'form', value: string) => {
         const param = type === 'page' ? 'page' : 'form';
         navigate(`/calling/meta?${param}=${encodeURIComponent(value)}`);
     };
+
+    const LeadTable = ({ data }: { data: typeof leads }) => (
+        <div className="rounded-xl border border-border/50 overflow-hidden bg-card/30">
+            <table className="w-full text-left text-xs">
+                <thead className="bg-secondary/50 text-muted-foreground font-bold border-b border-border/50">
+                    <tr>
+                        <th className="px-4 py-3">Lead Name</th>
+                        <th className="px-4 py-3">Source (Page/Form)</th>
+                        <th className="px-4 py-3">Campaign & Ad</th>
+                        <th className="px-4 py-3">Status</th>
+                        <th className="px-4 py-3">Arrived At</th>
+                        <th className="px-4 py-3 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-border/30">
+                    {data.map((lead) => (
+                        <tr key={lead.id} className="hover:bg-accent/5 transition-colors group">
+                            <td className="px-4 py-3">
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-foreground">{lead.customer_name}</span>
+                                    <span className="text-[10px] text-muted-foreground opacity-70">{lead.phone_number}</span>
+                                </div>
+                            </td>
+                            <td className="px-4 py-3">
+                                <div className="flex flex-col max-w-[150px]">
+                                    <span className="truncate" title={lead.spreadsheet_id.page_name}>{lead.spreadsheet_id.page_name || 'N/A'}</span>
+                                    <span className="text-[10px] text-muted-foreground truncate" title={lead.spreadsheet_id.form_name}>{lead.spreadsheet_id.form_name}</span>
+                                </div>
+                            </td>
+                            <td className="px-4 py-3">
+                                <div className="flex flex-col max-w-[200px]">
+                                    <span className="text-primary font-medium truncate" title={lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name}>
+                                        {lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name || 'N/A'}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground truncate" title={lead.meta_data?.meta_ad || lead.spreadsheet_id.ad_name}>
+                                        {lead.meta_data?.meta_ad || lead.spreadsheet_id.ad_name || 'N/A'}
+                                    </span>
+                                </div>
+                            </td>
+                            <td className="px-4 py-3">
+                                <span className={cn(
+                                    "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                                    lead.status === 'new' ? "bg-red-500/10 text-red-600" : "bg-green-500/10 text-green-600"
+                                )}>
+                                    {lead.status}
+                                </span>
+                            </td>
+                            <td className="px-4 py-3">
+                                <div className="flex flex-col">
+                                    <span>{new Date(lead.created_at!).toLocaleDateString()}</span>
+                                    <span className="text-[10px] text-muted-foreground">{new Date(lead.created_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary transition-all"
+                                    onClick={() => navigate(`/spreadsheet/${(lead.spreadsheet_id as any)._id || lead.spreadsheet_id.id}`)}
+                                >
+                                    <ArrowRight className="h-3 w-3" />
+                                </Button>
+                            </td>
+                        </tr>
+                    ))}
+                    {data.length === 0 && (
+                        <tr>
+                            <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground italic">No leads found in this period.</td>
+                        </tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
 
     return (
         <div className="p-8 space-y-8 animate-fade-in">
@@ -264,100 +359,29 @@ export default function MetaInsights() {
                     <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="rounded-xl border border-border/50 overflow-hidden bg-card/30">
-                        <table className="w-full text-left text-xs">
-                            <thead className="bg-secondary/50 text-muted-foreground font-bold border-b border-border/50">
-                                <tr>
-                                    <th className="px-4 py-3">Lead Name</th>
-                                    <th className="px-4 py-3">Source (Page/Form)</th>
-                                    <th className="px-4 py-3">Campaign & Ad</th>
-                                    <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3">Arrived At</th>
-                                    <th className="px-4 py-3 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border/30">
-                                {(() => {
-                                    const leads = analytics?.recentLeads || [];
-                                    const filteredLeads = isExpanded
-                                        ? leads.filter(l => {
-                                            const date = new Date(l.created_at || Date.now());
-                                            const threeDaysAgo = new Date();
-                                            threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-                                            return date >= threeDaysAgo;
-                                        })
-                                        : leads.slice(0, 5);
-
-                                    return filteredLeads.map((lead) => (
-                                    <tr key={lead.id} className="hover:bg-accent/5 transition-colors group">
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-foreground">{lead.customer_name}</span>
-                                                <span className="text-[10px] text-muted-foreground opacity-70">{lead.phone_number}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-col max-w-[150px]">
-                                                <span className="truncate" title={lead.spreadsheet_id.page_name}>{lead.spreadsheet_id.page_name || 'N/A'}</span>
-                                                <span className="text-[10px] text-muted-foreground truncate" title={lead.spreadsheet_id.form_name}>{lead.spreadsheet_id.form_name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-col max-w-[200px]">
-                                                <span className="text-primary font-medium truncate" title={lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name}>
-                                                    {lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name || 'N/A'}
-                                                </span>
-                                                <span className="text-[10px] text-muted-foreground truncate" title={lead.meta_data?.meta_ad || lead.spreadsheet_id.ad_name}>
-                                                    {lead.meta_data?.meta_ad || lead.spreadsheet_id.ad_name || 'N/A'}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className={cn(
-                                                "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                                                lead.status === 'new' ? "bg-red-500/10 text-red-600" : "bg-green-500/10 text-green-600"
-                                            )}>
-                                                {lead.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex flex-col">
-                                                <span>{new Date(lead.created_at!).toLocaleDateString()}</span>
-                                                <span className="text-[10px] text-muted-foreground">{new Date(lead.created_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary transition-all"
-                                                onClick={() => navigate(`/spreadsheet/${(lead.spreadsheet_id as any)._id || lead.spreadsheet_id.id}`)}
-                                            >
-                                                <ArrowRight className="h-3 w-3" />
-                                            </Button>
-                                        </td>
-                                    </tr>
-                                    ));
-                                })()}
-                                {analytics?.recentLeads.length === 0 && (
-                                    <tr>
-                                        <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground italic">No leads found in this period.</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    </div>
+                    <LeadTable data={visibleLeads} />
                     {analytics?.recentLeads && analytics.recentLeads.length > 5 && (
                         <div className="mt-4 text-center">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setIsExpanded(!isExpanded)}
-                                className="text-xs"
-                            >
-                                {isExpanded ? "Show Less" : "View More (Last 3 Days)"}
-                            </Button>
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs"
+                                    >
+                                        View More (Last 3 Days)
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                                    <DialogHeader>
+                                        <DialogTitle>Recent Lead Activity</DialogTitle>
+                                        <DialogDescription>
+                                            Showing leads from the last 3 days.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <LeadTable data={popupLeads} />
+                                </DialogContent>
+                            </Dialog>
                         </div>
                     )}
                 </CardContent>
