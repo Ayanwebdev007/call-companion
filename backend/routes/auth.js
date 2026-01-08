@@ -257,10 +257,18 @@ router.put('/update-profile', auth, async (req, res) => {
   }
 });
 
-// Get current user
+// Get current user (with Business Settings)
 router.get('/me', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    const user = await User.findById(req.user.id).select('-password').lean();
+
+    if (user.business_id) {
+      const business = await Business.findById(user.business_id).select('settings');
+      if (business && business.settings) {
+        user.settings = business.settings;
+      }
+    }
+
     res.json(user);
   } catch (err) {
     console.error(err.message);
