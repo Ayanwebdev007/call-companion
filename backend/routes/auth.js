@@ -8,8 +8,18 @@ import User from '../models/User.js';
 import Business from '../models/Business.js';
 import auth from '../middleware/auth.js';
 import checkPermission from '../middleware/permissions.js';
+import { OAuth2Client } from 'google-auth-library';
 
 const router = express.Router();
+
+// Helper to get Google Client
+const getGoogleClient = () => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    throw new Error('GOOGLE_CLIENT_ID is not defined in .env');
+  }
+  return new OAuth2Client(clientId);
+};
 
 // @route   POST /api/auth/register
 // @desc    Register a new business and admin user
@@ -126,6 +136,67 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/auth/google-login
+// @desc    Authenticate with Google ID Token
+// @access  Public
+router.post('/google-login', async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) {
+    return res.status(400).json({ message: 'Google credential is required' });
+  }
+
+  try {
+    const client = getGoogleClient();
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+    const payload = ticket.getPayload();
+    const email = payload.email;
+
+    if (!payload.email_verified) {
+      return res.status(400).json({ message: 'Google email not verified' });
+    }
+
+    // Find the user by their Google email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        message: 'No account found with this Google email. Please register your business first.'
+      });
+    }
+
+    // Verify user is attached to a business (multi-tenant requirement)
+    if (!user.business_id) {
+      return res.status(403).json({
+        message: 'Account exists but is not associated with any business. Please contact support.'
+      });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role, business_id: user.business_id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        username: user.name || user.username,
+        email: user.email,
+        role: user.role,
+        permissions: user.permissions,
+        business_id: user.business_id
+      }
+    });
+
+  } catch (err) {
+    console.error('[Google Login Error]:', err);
+    res.status(500).json({ message: 'Google authentication failed. Please try again or use email/password.' });
   }
 });
 

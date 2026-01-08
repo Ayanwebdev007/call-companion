@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Phone } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import axios from 'axios';
+import { GoogleLoginButton } from '@/components/GoogleLoginButton';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -130,6 +131,7 @@ const Login = () => {
                   <span className="bg-card dark:bg-transparent px-2 text-muted-foreground">Or continue with</span>
                 </div>
               </div>
+              <GoogleLoginButton />
               <p className="text-center text-xs text-muted-foreground">
                 Don't have an account?{" "}
                 <Link to="/register" className="font-semibold text-primary hover:text-primary/80 hover:underline transition-all">

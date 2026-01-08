@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Phone } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import axios from 'axios';
+import { GoogleLoginButton } from '@/components/GoogleLoginButton';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -151,6 +152,15 @@ const Register = () => {
               </form>
             </CardContent>
             <CardFooter className="flex flex-col gap-3 pb-6 pt-2">
+              <div className="relative w-full">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border/50 dark:border-white/10"></span>
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase tracking-wider">
+                  <span className="bg-card dark:bg-transparent px-2 text-muted-foreground">Or already have an account?</span>
+                </div>
+              </div>
+              <GoogleLoginButton />
               <p className="text-center text-xs text-muted-foreground">
                 Already have an account?{" "}
                 <Link to="/login" className="font-semibold text-primary hover:text-primary/80 hover:underline transition-all">
