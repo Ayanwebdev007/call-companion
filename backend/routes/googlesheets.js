@@ -123,14 +123,23 @@ router.post('/import', auth, async (req, res) => {
         position: customers.length // Maintain order from sheet
       };
 
-      // Ensure required fields for the Customer model have at least some value
-      // Even if mapped, the row might have empty values in these columns
       if (customer.customer_name || customer.phone_number) {
         // Fallback for company_name which is required but might be missing in some rows
         if (!customer.company_name) customer.company_name = 'N/A';
         // Fallback for name/phone if one is present but other is missing
         if (!customer.customer_name) customer.customer_name = 'Unknown';
         if (!customer.phone_number) customer.phone_number = 'N/A';
+
+        // Handle dynamic meta_data for Meta spreadsheets
+        if (spreadsheet.is_meta && spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
+          customer.meta_data = {};
+          spreadsheet.meta_headers.forEach(header => {
+            const val = getMappedValue(row, headers, header);
+            if (val) {
+              customer.meta_data[header] = val;
+            }
+          });
+        }
 
         customers.push(customer);
       }
@@ -139,7 +148,31 @@ router.post('/import', auth, async (req, res) => {
     // Bulk insert customers
     if (customers.length > 0) {
       try {
-        await Customer.insertMany(customers);
+        const insertedCustomers = await Customer.insertMany(customers);
+
+        // SYNC TO MASTER SHEET (BULK)
+        if (spreadsheet.is_meta && !spreadsheet.is_master) {
+          const masterSheet = await Spreadsheet.findOne({
+            business_id: spreadsheet.business_id,
+            page_name: spreadsheet.page_name,
+            form_name: spreadsheet.form_name,
+            is_master: true
+          });
+
+          if (masterSheet) {
+            console.log(`[SYNC] Mirroring Google Sheet import to Master Sheet: ${masterSheet.name}`);
+            const startPos = await Customer.countDocuments({ spreadsheet_id: masterSheet._id });
+            const masterCustomers = insertedCustomers.map((c, idx) => {
+              const { id, _id, spreadsheet_id, ...rest } = c.toObject();
+              return {
+                ...rest,
+                spreadsheet_id: masterSheet._id,
+                position: startPos + idx
+              };
+            });
+            await Customer.insertMany(masterCustomers);
+          }
+        }
       } catch (dbError) {
         console.error('Database error during Google Sheets import:', dbError);
         throw new Error(`Database validation failed: ${dbError.message}`);

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AutoResizeTextarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search, FileSpreadsheet, Filter, X } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search, FileSpreadsheet, Filter, X, MoreHorizontal } from "lucide-react";
 import { format, isToday, parseISO, isPast, isValid, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -32,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { SpreadsheetWhatsAppDialog } from "@/components/SpreadsheetWhatsAppDialog";
 import GoogleSheetsDialog from "@/components/GoogleSheetsDialog";
+import { LeadDetailsDialog } from "@/components/LeadDetailsDialog";
 
 const Index = () => {
   const { id: spreadsheetId } = useParams<{ id: string }>();
@@ -40,6 +41,8 @@ const Index = () => {
   const [selectedWhatsAppCustomer, setSelectedWhatsAppCustomer] = useState<Customer | null>(null);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
   const [isGoogleSheetsDialogOpen, setIsGoogleSheetsDialogOpen] = useState(false);
+  const [selectedDetailCustomer, setSelectedDetailCustomer] = useState<Customer | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
   // Redirect if no valid spreadsheetId
   useEffect(() => {
@@ -1133,6 +1136,10 @@ const Index = () => {
                         setSelectedWhatsAppCustomer(c);
                         setIsWhatsAppDialogOpen(true);
                       }}
+                      onDetailsClick={(c) => {
+                        setSelectedDetailCustomer(c);
+                        setIsDetailsDialogOpen(true);
+                      }}
                       is_meta={spreadsheet?.is_meta}
                       meta_headers={spreadsheet?.meta_headers}
                     />
@@ -1191,6 +1198,12 @@ const Index = () => {
           toast({ title: "Data imported from Google Sheets!" });
         }}
       />
+
+      <LeadDetailsDialog
+        isOpen={isDetailsDialogOpen}
+        onClose={() => setIsDetailsDialogOpen(false)}
+        customer={selectedDetailCustomer}
+      />
     </div >
   );
 };
@@ -1217,6 +1230,7 @@ function SpreadsheetRow({
   focusedCell,
   setFocusedCell,
   onWhatsAppClick,
+  onDetailsClick,
   is_meta,
   meta_headers
 }: {
@@ -1241,6 +1255,7 @@ function SpreadsheetRow({
   focusedCell: string | null;
   setFocusedCell: React.Dispatch<React.SetStateAction<string | null>>;
   onWhatsAppClick: (customer: Customer) => void;
+  onDetailsClick: (customer: Customer) => void;
   is_meta?: boolean;
   meta_headers?: string[];
 }) {
@@ -1540,6 +1555,15 @@ function SpreadsheetRow({
             className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-green-600 hover:bg-green-50 transition-colors"
           >
             <MessageCircle className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDetailsClick(customer)}
+            className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+            title="View Lead Details"
+          >
+            <MoreHorizontal className="h-3 w-3" />
           </Button>
         </div>
       </ResizableTableCell>

@@ -3,6 +3,7 @@ import metaService from '../services/metaService.js';
 import Customer from '../models/Customer.js';
 import Business from '../models/Business.js';
 import User from '../models/User.js';
+import mongoose from 'mongoose';
 import auth from '../middleware/auth.js';
 import checkPermission from '../middleware/permissions.js';
 
@@ -83,7 +84,7 @@ router.post('/webhook', async (req, res) => {
                         }
 
                         if (!pageAccessToken) {
-                            console.warn(`[META-WEBHOOK] ERROR: No access token found for Page ID: ${pageId} (User: ${user.username})`);
+                            console.warn(`[META-WEBHOOK] ERROR: No access token found for Page ID: ${pageId} (Business: ${business.name})`);
                             continue;
                         }
 
@@ -177,7 +178,7 @@ router.post('/webhook', async (req, res) => {
                             const saveLeadToSpreadsheet = async (targetSpreadsheet) => {
                                 // Duplicate check scoped to THIS spreadsheet
                                 const existing = await Customer.findOne({
-                                    user_id: user._id,
+                                    business_id: business._id,
                                     spreadsheet_id: targetSpreadsheet._id,
                                     'meta_data.meta_lead_id': normalizedLeadId
                                 });

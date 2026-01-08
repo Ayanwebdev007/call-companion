@@ -79,7 +79,7 @@ router.get('/', auth, checkPermission('dashboard'), async (req, res) => {
 
 // POST new customer
 router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
-  const { spreadsheet_id, customer_name, company_name, phone_number, next_call_date, next_call_time, last_call_date, remark, color, status } = req.body;
+  const { spreadsheet_id, customer_name, company_name, phone_number, next_call_date, next_call_time, last_call_date, remark, color, status, meta_data } = req.body;
 
   if (!spreadsheet_id) {
     return res.status(400).json({ message: 'spreadsheet_id is required' });
@@ -136,11 +136,35 @@ router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
     remark: remark || '',
     color: color || null,
     status: status || 'New',
+    meta_data: meta_data || {},
     position: newPosition
   });
 
   try {
     const newCustomer = await customer.save();
+
+    // SYNC TO MASTER SHEET
+    if (spreadsheet.is_meta && !spreadsheet.is_master) {
+      const masterSheet = await Spreadsheet.findOne({
+        business_id: user.business_id,
+        page_name: spreadsheet.page_name,
+        form_name: spreadsheet.form_name,
+        is_master: true
+      });
+
+      if (masterSheet) {
+        console.log(`[SYNC] Mirroring manual lead to Master Sheet: ${masterSheet.name}`);
+        const masterCustomer = new Customer({
+          ...req.body,
+          user_id: req.user.id,
+          business_id: user.business_id,
+          spreadsheet_id: masterSheet._id,
+          position: (await Customer.countDocuments({ spreadsheet_id: masterSheet._id }))
+        });
+        await masterCustomer.save();
+      }
+    }
+
     res.status(201).json(newCustomer);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -273,6 +297,18 @@ router.post('/bulk-import', auth, async (req, res) => {
         position: currentPosition++
       };
 
+      // Handle dynamic meta_data for Meta spreadsheets
+      if (spreadsheet.is_meta && spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
+        customerData.meta_data = {};
+        spreadsheet.meta_headers.forEach(header => {
+          // Find value in normalized row that matches the header
+          const normalizedHeader = header.toLowerCase().replace(/\s+/g, '_');
+          if (row[normalizedHeader] !== undefined) {
+            customerData.meta_data[header] = row[normalizedHeader].toString().trim();
+          }
+        });
+      }
+
       customers.push(customerData);
     }
 
@@ -282,6 +318,30 @@ router.post('/bulk-import', auth, async (req, res) => {
 
     // Insert all customers
     const insertedCustomers = await Customer.insertMany(customers);
+
+    // SYNC TO MASTER SHEET (BULK)
+    if (spreadsheet.is_meta && !spreadsheet.is_master) {
+      const masterSheet = await Spreadsheet.findOne({
+        business_id: spreadsheet.business_id,
+        page_name: spreadsheet.page_name,
+        form_name: spreadsheet.form_name,
+        is_master: true
+      });
+
+      if (masterSheet) {
+        console.log(`[SYNC] Mirroring bulk import to Master Sheet: ${masterSheet.name}`);
+        const startPos = await Customer.countDocuments({ spreadsheet_id: masterSheet._id });
+        const masterCustomers = insertedCustomers.map((c, idx) => {
+          const { id, _id, spreadsheet_id, ...rest } = c.toObject();
+          return {
+            ...rest,
+            spreadsheet_id: masterSheet._id,
+            position: startPos + idx
+          };
+        });
+        await Customer.insertMany(masterCustomers);
+      }
+    }
 
     res.status(201).json({
       message: `${insertedCustomers.length} customers imported successfully`,
@@ -435,7 +495,7 @@ router.get('/export/:spreadsheetId', auth, async (req, res) => {
         }
       }
 
-      return {
+      const dataRow = {
         'customer_name': customer.customer_name || '',
         'company_name': customer.company_name || '',
         'phone_number': customer.phone_number || '',
@@ -445,6 +505,23 @@ router.get('/export/:spreadsheetId', auth, async (req, res) => {
         'remark': customer.remark || '',
         'color': customer.color || ''
       };
+
+      // Add dynamic headers if it's a Meta spreadsheet
+      if (spreadsheet.is_meta && spreadsheet.meta_headers) {
+        spreadsheet.meta_headers.forEach(header => {
+          let value = '';
+          if (customer.meta_data) {
+            if (customer.meta_data instanceof Map) {
+              value = customer.meta_data.get(header) || '';
+            } else {
+              value = customer.meta_data[header] || '';
+            }
+          }
+          dataRow[header] = value;
+        });
+      }
+
+      return dataRow;
     });
 
     // Create workbook and worksheet
