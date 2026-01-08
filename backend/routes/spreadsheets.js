@@ -7,7 +7,7 @@ import checkPermission from '../middleware/permissions.js';
 
 const router = express.Router();
 
-// GET all spreadsheets for logged in user (owned and shared)
+// GET all spreadsheets for logged in user
 router.get('/', auth, checkPermission('dashboard'), async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -58,8 +58,6 @@ router.get('/:id', auth, async (req, res) => {
     }
 
     let spreadsheet = await Spreadsheet.findOne(query);
-
-
 
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found' });
@@ -196,6 +194,37 @@ router.post('/:id/view', auth, async (req, res) => {
   try {
     // No-op for now - view tracking removed
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST assign users to spreadsheet (Admin only)
+router.post('/:id/assign', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admins can assign users to forms' });
+    }
+
+    const { userIds } = req.body;
+
+    if (!Array.isArray(userIds)) {
+      return res.status(400).json({ message: 'userIds must be an array' });
+    }
+
+    // Update the spreadsheet with assigned users
+    const spreadsheet = await Spreadsheet.findOneAndUpdate(
+      { _id: req.params.id, business_id: user.business_id },
+      { assigned_users: userIds },
+      { new: true }
+    );
+
+    if (!spreadsheet) {
+      return res.status(404).json({ message: 'Spreadsheet not found' });
+    }
+
+    res.json({ message: 'Users assigned successfully', spreadsheet });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
