@@ -27,7 +27,7 @@ const Profile = () => {
 
   // Personal Info State
   const [activeTab, setActiveTab] = useState<'security' | 'personal' | 'business'>('personal');
-  const [editUsername, setEditUsername] = useState("");
+  const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
 
   // Business Info State
@@ -42,7 +42,7 @@ const Profile = () => {
 
   useEffect(() => {
     if (user) {
-      setEditUsername(user.username || "");
+      setEditName(user.username || ""); // user.username holds the Display Name because of backend key mapping
       setEditEmail(user.email || "");
       if (user.role === 'admin') {
         fetchBusinessData();
@@ -68,13 +68,13 @@ const Profile = () => {
   };
 
   const handleUpdateProfile = async () => {
-    if (!editUsername || !editEmail) {
-      toast({ title: "Username and email are required", variant: "destructive" });
+    if (!editName || !editEmail) {
+      toast({ title: "Name and email are required", variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
-      const res = await updateProfile(editUsername, editEmail);
+      const res = await updateProfile(editName, editEmail);
       toast({ title: res.message });
       // Update local storage/context if the API returns the updated user
       // Ideally, the AuthContext should expose a method to update the user state without full login
@@ -386,10 +386,10 @@ const Profile = () => {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground/80">Username</label>
+                        <label className="text-sm font-medium text-foreground/80">Name</label>
                         <Input
-                          value={editUsername}
-                          onChange={(e) => setEditUsername(e.target.value)}
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
                           className="bg-secondary/50 border-input"
                         />
                       </div>

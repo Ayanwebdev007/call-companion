@@ -15,6 +15,7 @@ import { Plus, Trash2, ShieldCheck, User as UserIcon, KeyRound } from "lucide-re
 interface BusinessUser {
     id: string;
     username: string;
+    name?: string; // Display name
     email: string;
     role: string;
     permissions: string[];
@@ -27,7 +28,7 @@ const UserManagement = () => {
     const [users, setUsers] = useState<BusinessUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [newUser, setNewUser] = useState({ username: "", email: "", password: "" });
+    const [newUser, setNewUser] = useState({ name: "", email: "", password: "" });
     const [selectedUserPermissions, setSelectedUserPermissions] = useState<{ userId: string, permissions: string[] } | null>(null);
 
     const availablePermissions = [
@@ -61,7 +62,7 @@ const UserManagement = () => {
             });
             toast({ title: "Success", description: "User created successfully" });
             setIsCreateOpen(false);
-            setNewUser({ username: "", email: "", password: "" });
+            setNewUser({ name: "", email: "", password: "" });
             fetchUsers();
         } catch (err: any) {
             toast({ title: "Error", description: err.response?.data?.message || "Failed to create user", variant: "destructive" });
@@ -147,8 +148,8 @@ const UserManagement = () => {
                         </DialogHeader>
                         <form onSubmit={handleCreateUser} className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="username">Username</Label>
-                                <Input id="username" value={newUser.username} onChange={e => setNewUser({ ...newUser, username: e.target.value })} required />
+                                <Label htmlFor="name">Name</Label>
+                                <Input id="name" value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} required />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email</Label>
@@ -188,7 +189,7 @@ const UserManagement = () => {
                                                 <UserIcon className="h-5 w-5 text-slate-400" />
                                             </div>
                                             <div>
-                                                <p className="font-medium">{u.username}</p>
+                                                <p className="font-medium">{u.name || u.username}</p>
                                                 <p className="text-xs text-muted-foreground">{u.email}</p>
                                             </div>
                                         </div>

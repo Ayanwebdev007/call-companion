@@ -203,8 +203,8 @@ export const resetPassword = async (token: string, password: string): Promise<{ 
   return response.data;
 };
 
-export const updateProfile = async (username: string, email: string): Promise<{ message: string, user: { id: string, username: string, email: string, role: string, permissions: string[], business_id: string } }> => {
-  const response = await api.put(`${API_BASE_URL}/api/auth/update-profile`, { username, email });
+export const updateProfile = async (name: string, email: string): Promise<{ message: string, user: { id: string, username: string, email: string, role: string, permissions: string[], business_id: string } }> => {
+  const response = await api.put(`${API_BASE_URL}/api/auth/update-profile`, { name, email });
   return response.data;
 };
 

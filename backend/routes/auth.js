@@ -11,100 +11,121 @@ import checkPermission from '../middleware/permissions.js';
 
 const router = express.Router();
 
-// Register
+// @route   POST /api/auth/register
+// @desc    Register a new business and admin user
+// @access  Public
 router.post('/register', async (req, res) => {
-  const { username, email, password } = req.body;
-
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    let user = await User.findOne({ $or: [{ username }, { email }] });
-    if (user) {
-      return res.status(400).json({ message: 'User or email already exists' });
+    const { businessName, adminName, email, password } = req.body;
+
+    // Check if user already exists
+    let existingUser = await User.findOne({ email }).session(session);
+    if (existingUser) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: 'User with this email already exists' });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // 1. Create Business
+    const newBusiness = new Business({
+      name: businessName,
+      admin_id: new mongoose.Types.ObjectId(), // Placeholder, will update after user creation
+      settings: {}
+    });
+    await newBusiness.save({ session });
 
-    user = new User({
-      username,
+    // 2. Create Admin User
+    // We use email as the username for unique constraint compatibility, but 'name' is the display name
+    const newUser = new User({
+      username: email,
+      name: adminName,
       email,
-      password: hashedPassword,
+      password: await bcrypt.hash(password, 10),
+      business_id: newBusiness._id,
       role: 'admin',
       permissions: ['dashboard', 'poster', 'webhooks']
     });
 
-    await user.save();
+    // Explicitly set plain_password for admin visibility if desired (based on previous request)
+    newUser.plain_password = password;
 
-    // Create Business for the new admin
-    const business = new Business({
-      name: `${username}'s Business`,
-      admin_id: user.id
+    await newUser.save({ session });
+
+    // 3. Update Business with real Admin ID
+    newBusiness.admin_id = newUser._id;
+    await newBusiness.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    // Generate Token
+    const token = jwt.sign(
+      { id: newUser._id, role: newUser.role, business_id: newUser.business_id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.status(201).json({
+      token,
+      user: {
+        id: newUser._id,
+        username: newUser.name, // Send display name as username for frontend compatibility
+        email: newUser.email,
+        role: newUser.role,
+        permissions: newUser.permissions,
+        business_id: newUser.business_id
+      }
     });
 
-    await business.save();
-
-    user.business_id = business.id;
-    await user.save();
-
-    const payload = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      permissions: user.permissions,
-      business_id: user.business_id
-    };
-
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET || 'secret_key_change_me',
-      { expiresIn: '1d' },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token, user: payload });
-      }
-    );
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    await session.abortTransaction();
+    session.endSession();
+    console.error(err);
+    res.status(500).json({ message: 'Server error during registration' });
   }
 });
 
-// Login
+// @route   POST /api/auth/login
+// @desc    Authenticate user & get token
+// @access  Public
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-
   try {
-    let user = await User.findOne({ username });
+    const { email, password } = req.body;
+
+    // Find by email
+    const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid Credentials' });
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid Credentials' });
+      return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const payload = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      permissions: user.permissions,
-      business_id: user.business_id
-    };
-
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET || 'secret_key_change_me',
-      { expiresIn: '1d' },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token, user: payload });
-      }
+    const token = jwt.sign(
+      { id: user._id, role: user.role, business_id: user.business_id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
     );
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        username: user.name || user.username, // Fallback to username if name missing
+        email: user.email,
+        role: user.role,
+        permissions: user.permissions,
+        business_id: user.business_id
+      }
+    });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -219,11 +240,11 @@ router.post('/change-password', auth, async (req, res) => {
 
 // Update Profile
 router.put('/update-profile', auth, async (req, res) => {
-  const { username, email } = req.body;
+  const { name, email } = req.body;
 
   // Basic validation
-  if (!username || !email) {
-    return res.status(400).json({ message: 'Username and email are required' });
+  if (!name || !email) {
+    return res.status(400).json({ message: 'Name and email are required' });
   }
 
   try {
@@ -232,15 +253,21 @@ router.put('/update-profile', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    user.username = username;
+    user.name = name;
+    // We update email, and also sync username to email for consistency if desired, or just leave username alone.
+    // Since we Login with Email now, username is legacy. But let's keep it unique by syncing to email if we want, OR just ignore it.
+    // If we update email, we should check if new email is taken (handled by unique constraint error).
     user.email = email;
+    // user.username = email; // Optional: Sync username to email to keep it unique and relevant? 
+    // If we do sync, we might hit collision if we don't handle it carefully. Let's just update email and name.
+
     await user.save();
 
     res.json({
       message: 'Profile updated successfully',
       user: {
         id: user.id,
-        username: user.username,
+        username: user.name, // Return name as username for frontend compat
         email: user.email,
         role: user.role,
         permissions: user.permissions,
@@ -249,7 +276,6 @@ router.put('/update-profile', auth, async (req, res) => {
     });
   } catch (err) {
     if (err.code === 11000) {
-      if (err.keyPattern.username) return res.status(400).json({ message: 'Username is already taken' });
       if (err.keyPattern.email) return res.status(400).json({ message: 'Email is already taken' });
     }
     console.error(err.message);
@@ -347,19 +373,21 @@ router.get('/business/users', auth, async (req, res) => {
 
 // Admin: Create user in business
 router.post('/business/users', auth, async (req, res) => {
-  const { username, email, password, permissions } = req.body;
+  const { name, email, password, permissions } = req.body;
   try {
     const adminUser = await User.findById(req.user.id);
     if (adminUser.role !== 'admin') return res.status(403).json({ message: 'Access denied' });
 
-    let user = await User.findOne({ $or: [{ username }, { email }] });
-    if (user) return res.status(400).json({ message: 'User already exists' });
+    // Check if email already used
+    let user = await User.findOne({ email });
+    if (user) return res.status(400).json({ message: 'User with this email already exists' });
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     user = new User({
-      username,
+      username: email, // Use email as unique identifier backend-side
+      name: name,      // Display name
       email,
       password: hashedPassword,
       business_id: adminUser.business_id,
@@ -369,7 +397,7 @@ router.post('/business/users', auth, async (req, res) => {
     });
 
     await user.save();
-    res.json({ message: 'User created successfully', user: { id: user.id, username, email, role: 'user', permissions: user.permissions } });
+    res.json({ message: 'User created successfully', user: { id: user.id, username: user.name, email, role: 'user', permissions: user.permissions } });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');

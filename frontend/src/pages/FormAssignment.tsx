@@ -13,6 +13,7 @@ import { FileSpreadsheet, Users, Save } from "lucide-react";
 interface BusinessUser {
     id: string;
     username: string;
+    name?: string;
     email: string;
     role: string;
 }
@@ -159,7 +160,7 @@ const FormAssignment = () => {
                                                     onCheckedChange={() => toggleUser(u.id)}
                                                 />
                                                 <Label htmlFor={`user-${u.id}`} className="cursor-pointer">
-                                                    <p className="font-medium">{u.username}</p>
+                                                    <p className="font-medium">{u.name || u.username}</p>
                                                     <p className="text-xs text-muted-foreground">{u.email}</p>
                                                 </Label>
                                             </div>

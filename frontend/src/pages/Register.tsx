@@ -13,7 +13,8 @@ import axios from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Register = () => {
-  const [username, setUsername] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [adminName, setAdminName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login } = useAuth();
@@ -25,11 +26,11 @@ const Register = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/auth/register`, { username, email, password });
+      const res = await axios.post(`${API_BASE_URL}/api/auth/register`, { businessName, adminName, email, password });
       login(res.data.token, res.data.user);
       toast({
         title: "Success",
-        description: "Account created successfully",
+        description: "Business account created successfully",
       });
       navigate('/');
     } catch (err: unknown) {
@@ -58,10 +59,10 @@ const Register = () => {
         <div className="absolute inset-0 bg-gradient-to-bl from-primary via-slate-900 to-background opacity-90" />
         <div className="relative z-10 flex flex-col items-center justify-center p-16 text-center max-w-2xl animate-fade-in">
           <h2 className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-white/60 mb-6 drop-shadow-sm">
-            Start your journey with us
+            Start your business journey
           </h2>
           <p className="text-xl text-white/80 leading-relaxed font-light">
-            Join thousands of users who have transformed their workflow.
+            Join thousands of businesses who have transformed their workflow.
           </p>
         </div>
       </div>
@@ -78,9 +79,9 @@ const Register = () => {
             <div className="p-4 bg-primary/10 rounded-2xl ring-1 ring-primary/20 shadow-xl backdrop-blur-3xl mb-4 animate-pulse-soft">
               <Phone className="h-8 w-8 text-primary" />
             </div>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">Create an account</h1>
+            <h1 className="text-4xl font-bold tracking-tight text-foreground">Create Business Account</h1>
             <p className="text-muted-foreground text-lg">
-              Get started efficiently today
+              Set up your organization efficiently
             </p>
           </div>
 
@@ -89,12 +90,23 @@ const Register = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid w-full items-center gap-4">
                   <div className="flex flex-col space-y-2">
-                    <Label htmlFor="username" className="text-base text-foreground/80 dark:text-gray-300">Username</Label>
+                    <Label htmlFor="businessName" className="text-base text-foreground/80 dark:text-gray-300">Business Name</Label>
                     <Input
-                      id="username"
-                      placeholder="Choose a username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      id="businessName"
+                      placeholder="My Company"
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      required
+                      className="h-12 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all"
+                    />
+                  </div>
+                  <div className="flex flex-col space-y-2">
+                    <Label htmlFor="adminName" className="text-base text-foreground/80 dark:text-gray-300">Admin Name</Label>
+                    <Input
+                      id="adminName"
+                      placeholder="Your Name"
+                      value={adminName}
+                      onChange={(e) => setAdminName(e.target.value)}
                       required
                       className="h-12 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all"
                     />
@@ -104,7 +116,7 @@ const Register = () => {
                     <Input
                       id="email"
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder="admin@company.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -116,7 +128,7 @@ const Register = () => {
                     <Input
                       id="password"
                       type="password"
-                      placeholder="Choose a password"
+                      placeholder="Choose a secure password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
@@ -132,9 +144,9 @@ const Register = () => {
                   {loading ? (
                     <div className="flex items-center gap-2">
                       <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Creating account...</span>
+                      <span>Creating business...</span>
                     </div>
-                  ) : "Create account"}
+                  ) : "Create Account"}
                 </Button>
               </form>
             </CardContent>
