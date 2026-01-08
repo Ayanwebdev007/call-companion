@@ -33,8 +33,6 @@ export const GoogleLoginButton = () => {
                     title: "Account Not Found",
                     description: "No account is associated with this Google email. Please register your business account first.",
                 });
-                // We stay on the current page but show the toast. 
-                // If they are on Login, maybe redirect to Register.
                 if (window.location.pathname === '/login') {
                     navigate('/register');
                 }
@@ -49,22 +47,25 @@ export const GoogleLoginButton = () => {
     };
 
     return (
-        <div className="flex justify-center w-full overflow-hidden rounded-lg hover:opacity-90 transition-opacity">
-            <GoogleLogin
-                onSuccess={handleSuccess}
-                onError={() => {
-                    toast({
-                        variant: "destructive",
-                        title: "Error",
-                        description: "Google login was unsuccessful. Please try again.",
-                    });
-                }}
-                useOneTap
-                theme="filled_blue"
-                shape="pill"
-                width="100%"
-                size="large"
-            />
+        <div className="flex justify-center w-full max-w-[300px] mx-auto overflow-hidden rounded-md">
+            <div className="w-full flex justify-center translate-y-[2px]">
+                <GoogleLogin
+                    onSuccess={handleSuccess}
+                    onError={() => {
+                        toast({
+                            variant: "destructive",
+                            title: "Error",
+                            description: "Google login was unsuccessful. Please try again.",
+                        });
+                    }}
+                    useOneTap
+                    theme="filled_blue"
+                    shape="rectangular"
+                    width="300"
+                    size="large"
+                    text="continue_with"
+                />
+            </div>
         </div>
     );
 };
