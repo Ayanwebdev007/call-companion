@@ -20,64 +20,10 @@ router.get('/', auth, checkPermission('dashboard'), async (req, res) => {
       query.assigned_users = req.user.id;
     }
 
-    // Get business spreadsheets
-    const businessSpreadsheets = await Spreadsheet.find(query).sort({ created_at: -1 });
+    // Get spreadsheets
+    const spreadsheets = await Spreadsheet.find(query).sort({ created_at: -1 });
 
-    // Get shared spreadsheets
-    const sharedRecords = await Sharing.find({ shared_with_user_id: req.user.id })
-      .populate('spreadsheet_id')
-      .populate('owner_user_id', 'username');
-
-    const sharedSpreadsheets = sharedRecords
-      .filter(record => record.spreadsheet_id && record.owner_user_id) // Filter out records with null references
-      .map(record => {
-        const spreadsheetObj = record.spreadsheet_id.toObject();
-        return {
-          ...spreadsheetObj,
-          id: spreadsheetObj.id || record.spreadsheet_id._id.toString(), // Ensure we have an ID
-          permission_level: record.permission_level,
-          owner: record.owner_user_id.username,
-          is_shared: true
-        };
-      });
-
-    // Combine business and shared spreadsheets
-    const allSpreadsheets = [...businessSpreadsheets, ...sharedSpreadsheets];
-
-    // Remove duplicates by ID
-    const uniqueSpreadsheets = allSpreadsheets.filter((spreadsheet, index, self) =>
-      index === self.findIndex(s => s.id === spreadsheet.id)
-    );
-
-    // Sort by created_at descending
-    uniqueSpreadsheets.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-    // Calculate new leads count for each unique spreadsheet
-    const spreadsheetsWithCounts = await Promise.all(uniqueSpreadsheets.map(async (s) => {
-      const spreadsheetId = s.id || s._id;
-
-      // Get last view log for this user and spreadsheet
-      const log = await ViewLog.findOne({ user_id: req.user.id, spreadsheet_id: spreadsheetId });
-
-      const query = {
-        spreadsheet_id: spreadsheetId,
-        user_id: s.user_id // Filter by owner of spreadsheet to be safe, though id is usually enough
-      };
-
-      if (log) {
-        query.created_at = { $gt: log.last_viewed_at };
-      }
-
-      const newLeadsCount = await Customer.countDocuments(query);
-
-      return {
-        ...s.toObject ? s.toObject() : s,
-        id: spreadsheetId,
-        newLeadsCount
-      };
-    }));
-
-    res.json(spreadsheetsWithCounts);
+    res.json(spreadsheets);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -113,17 +59,7 @@ router.get('/:id', auth, async (req, res) => {
 
     let spreadsheet = await Spreadsheet.findOne(query);
 
-    // If not owned, check if it's shared with the user
-    if (!spreadsheet) {
-      const sharedRecord = await Sharing.findOne({
-        spreadsheet_id: req.params.id,
-        shared_with_user_id: req.user.id
-      }).populate('spreadsheet_id');
 
-      if (sharedRecord) {
-        spreadsheet = sharedRecord.spreadsheet_id;
-      }
-    }
 
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found' });
@@ -255,14 +191,10 @@ router.post('/merge', auth, async (req, res) => {
   }
 });
 
-// POST mark spreadsheet as viewed
+// POST mark spreadsheet as viewed (deprecated - kept for compatibility)
 router.post('/:id/view', auth, async (req, res) => {
   try {
-    await ViewLog.findOneAndUpdate(
-      { user_id: req.user.id, spreadsheet_id: req.params.id },
-      { last_viewed_at: new Date() },
-      { upsert: true, new: true }
-    );
+    // No-op for now - view tracking removed
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ message: err.message });
