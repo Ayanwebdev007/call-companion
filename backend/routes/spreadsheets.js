@@ -200,7 +200,7 @@ router.post('/:id/view', auth, async (req, res) => {
 });
 
 // POST assign users to spreadsheet (Admin only)
-router.post('/:id/assign', auth, async (req, res) => {
+router.put('/:id/assign', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (user.role !== 'admin') {
