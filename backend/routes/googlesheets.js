@@ -134,7 +134,10 @@ router.post('/import', auth, async (req, res) => {
         if (spreadsheet.is_meta && spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
           customer.meta_data = {};
           spreadsheet.meta_headers.forEach(header => {
-            const val = getMappedValue(row, headers, header);
+            // First check if there's an explicit mapping for this header
+            // We'll use the header name as the key in columnMapping
+            const mappingHeader = columnMapping[header] || header;
+            const val = getMappedValue(row, headers, mappingHeader);
             if (val) {
               customer.meta_data[header] = val;
             }

@@ -10,8 +10,9 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Link, CheckCircle, AlertCircle, ArrowRight, Download, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/lib/api";
+import { fetchSpreadsheet, api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { useEffect } from "react";
 
 interface GoogleSheetsDialogProps {
   open: boolean;
@@ -34,13 +35,7 @@ interface SheetData {
 }
 
 interface ColumnMapping {
-  customerName: string;
-  companyName: string;
-  phoneNumber: string;
-  remarks: string;
-  nextCallDate: string;
-  nextCallTime: string;
-  lastCallDate: string;
+  [key: string]: string;
 }
 
 const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplete }: GoogleSheetsDialogProps) => {
@@ -54,21 +49,49 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
   const [selectedSheetName, setSelectedSheetName] = useState("");
   const [spreadsheetTitle, setSpreadsheetTitle] = useState("");
   const [sheetData, setSheetData] = useState<SheetData | null>(null);
+  const [metaHeaders, setMetaHeaders] = useState<string[]>([]);
+  const [isMeta, setIsMeta] = useState(false);
 
   // Row range selection
   const [importMode, setImportMode] = useState<'all' | 'range'>('all');
   const [startRow, setStartRow] = useState<string>("2");
   const [endRow, setEndRow] = useState<string>("100");
   const [totalRowsInSheet, setTotalRowsInSheet] = useState<number>(0);
-  const [columnMapping, setColumnMapping] = useState<ColumnMapping>({
-    customerName: '',
-    companyName: '',
-    phoneNumber: '',
-    remarks: '',
-    nextCallDate: '',
-    nextCallTime: '',
-    lastCallDate: ''
-  });
+  const [columnMapping, setColumnMapping] = useState<ColumnMapping>({});
+
+  // Fetch spreadsheet details to get meta headers
+  useEffect(() => {
+    if (open && spreadsheetId) {
+      fetchSpreadsheet(spreadsheetId)
+        .then(data => {
+          setIsMeta(!!data.is_meta);
+          setMetaHeaders(data.meta_headers || []);
+
+          // Reset mapping with default empty values for standard fields
+          const initialMapping: ColumnMapping = {
+            customerName: '',
+            companyName: '',
+            phoneNumber: '',
+            remarks: '',
+            nextCallDate: '',
+            nextCallTime: '',
+            lastCallDate: ''
+          };
+
+          // Also add entries for meta headers
+          if (data.meta_headers) {
+            data.meta_headers.forEach(header => {
+              initialMapping[header] = '';
+            });
+          }
+
+          setColumnMapping(initialMapping);
+        })
+        .catch(err => {
+          console.error("Error fetching spreadsheet details:", err);
+        });
+    }
+  }, [open, spreadsheetId]);
 
   const customerFields = [
     { key: 'customerName', label: 'Customer Name', required: true },
@@ -77,7 +100,14 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
     { key: 'remarks', label: 'Remarks', required: false },
     { key: 'nextCallDate', label: 'Next Call Date', required: false },
     { key: 'nextCallTime', label: 'Next Call Time', required: false },
-    { key: 'lastCallDate', label: 'Last Call Date', required: false }
+    { key: 'lastCallDate', label: 'Last Call Date', required: false },
+    // Add meta headers dynamically
+    ...metaHeaders.map(header => ({
+      key: header,
+      label: header,
+      required: false,
+      isMeta: true
+    }))
   ];
 
   const validateUrl = async () => {
@@ -164,6 +194,13 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
         if (lowerHeader.includes('last') && lowerHeader.includes('call') && lowerHeader.includes('date')) {
           if (!autoMapping.lastCallDate) autoMapping.lastCallDate = header;
         }
+
+        // Auto-map Meta headers by exact (non-case sensitive) name
+        metaHeaders.forEach(metaHeader => {
+          if (lowerHeader === metaHeader.toLowerCase()) {
+            if (!autoMapping[metaHeader]) autoMapping[metaHeader] = header;
+          }
+        });
       });
 
       setColumnMapping(autoMapping);
@@ -449,30 +486,36 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
                 <Separator className="my-4" />
 
                 <div className="space-y-4">
-                  {customerFields.map((field) => (
-                    <div key={field.key} className="grid grid-cols-4 items-center gap-4">
-                      <Label className="text-sm font-medium">
-                        {field.label}
-                        {field.required && <span className="text-red-500 ml-1">*</span>}
-                      </Label>
-                      <Select
-                        value={columnMapping[field.key as keyof ColumnMapping]}
-                        onValueChange={(value) =>
-                          setColumnMapping(prev => ({ ...prev, [field.key]: value }))
-                        }
-                      >
-                        <SelectTrigger className="col-span-3">
-                          <SelectValue placeholder="Select column..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="no-import">-- Do not import --</SelectItem>
-                          {sheetData.headers.map((header) => (
-                            <SelectItem key={header} value={header}>
-                              {header}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  {customerFields.map((field: any) => (
+                    <div key={field.key} className="grid grid-cols-4 items-start gap-4 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                      <div className="flex flex-col">
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          {field.label}
+                          {field.required && <span className="text-red-500">*</span>}
+                          {field.isMeta && <Badge variant="outline" className="text-[10px] h-4 bg-blue-50 text-blue-600 border-blue-200">Meta</Badge>}
+                        </Label>
+                        {field.isMeta && <span className="text-[10px] text-muted-foreground">Dynamic Meta field</span>}
+                      </div>
+                      <div className="col-span-3">
+                        <Select
+                          value={columnMapping[field.key] || ""}
+                          onValueChange={(value) =>
+                            setColumnMapping(prev => ({ ...prev, [field.key]: value }))
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select column..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="no-import">-- Do not import --</SelectItem>
+                            {sheetData.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
                   ))}
                 </div>
