@@ -19,6 +19,15 @@ const Home = () => {
     return "Good evening";
   };
 
+  const hasPermission = (permission: string) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    return user.permissions?.includes(permission);
+  };
+
+  const showDashboard = hasPermission('dashboard');
+  const showPoster = hasPermission('poster');
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -55,45 +64,54 @@ const Home = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Quick Action: Calling */}
-            <Card
-              className="group relative overflow-hidden transition-all hover:shadow-2xl border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-primary/50"
-              onClick={() => navigate("/calling")}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-4 bg-primary/10 rounded-2xl ring-1 ring-primary/20 shadow-lg group-hover:scale-110 transition-transform">
-                    <Phone className="h-8 w-8 text-primary" />
+            {showDashboard && (
+              <Card
+                className="group relative overflow-hidden transition-all hover:shadow-2xl border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-primary/50"
+                onClick={() => navigate("/calling")}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-4 bg-primary/10 rounded-2xl ring-1 ring-primary/20 shadow-lg group-hover:scale-110 transition-transform">
+                      <Phone className="h-8 w-8 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-foreground mb-2">Start Calling</h3>
+                      <Button className="w-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+                        Launch Dashboard
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-foreground mb-2">Start Calling</h3>
-                    <Button className="w-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
-                      Launch Dashboard
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Quick Action: Poster Generator */}
-            <Card
-              className="group relative overflow-hidden transition-all hover:shadow-2xl border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-blue-500/50"
-              onClick={() => navigate("/poster-generator")}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-4 bg-blue-500/10 rounded-2xl ring-1 ring-blue-500/20 shadow-lg group-hover:scale-110 transition-transform">
-                    <Palette className="h-8 w-8 text-blue-500" />
+            {showPoster && (
+              <Card
+                className="group relative overflow-hidden transition-all hover:shadow-2xl border-border/50 bg-card/60 backdrop-blur-md cursor-pointer hover:border-blue-500/50"
+                onClick={() => navigate("/poster-generator")}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-4 bg-blue-500/10 rounded-2xl ring-1 ring-blue-500/20 shadow-lg group-hover:scale-110 transition-transform">
+                      <Palette className="h-8 w-8 text-blue-500" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-foreground mb-2">Poster Generator</h3>
+                      <Button className="w-full bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all border-0">
+                        Launch Generator
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-foreground mb-2">Poster Generator</h3>
-                    <Button className="w-full bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all border-0">
-                      Launch Generator
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
+            {!showDashboard && !showPoster && (
+              <div className="col-span-full py-12 text-center bg-card/30 rounded-xl border border-dashed border-border">
+                <p className="text-muted-foreground">You don't have permission to access any modules. Please contact your administrator.</p>
+              </div>
+            )}
 
           </div>
         </main>
