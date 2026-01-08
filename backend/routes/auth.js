@@ -257,15 +257,39 @@ router.put('/update-profile', auth, async (req, res) => {
   }
 });
 
-// Get current user (with Business Settings)
+// Get current user (with Business Settings & Auto-Migration)
 router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password').lean();
 
     if (user.business_id) {
-      const business = await Business.findById(user.business_id).select('settings');
-      if (business && business.settings) {
-        user.settings = business.settings;
+      const business = await Business.findById(user.business_id);
+
+      if (business) {
+        // MIGRATION CHECK: If Admin has legacy settings but Business is empty, migrate them.
+        // We check for 'metaVerifyToken' or 'metaPages' existence in user settings.
+        // Note: user.settings comes from lean(), assuming it exists in DB doc even if not in Schema.
+
+        const userHasSettings = user.settings && (user.settings.metaVerifyToken || (user.settings.metaPages && user.settings.metaPages.length > 0));
+        const businessHasSettings = business.settings && (business.settings.metaVerifyToken || (business.settings.metaPages && business.settings.metaPages.length > 0));
+
+        if (user.role === 'admin' && userHasSettings && !businessHasSettings) {
+          console.log(`[AUTH] Migrating legacy settings from Admin (${user.username}) to Business (${business.name})...`);
+
+          // Merge legacy user settings into business settings
+          business.settings = {
+            ...business.settings, // Keep defaults/structure
+            ...user.settings      // Overwrite with legacy data
+          };
+
+          await business.save();
+          console.log('[AUTH] Migration complete.');
+        }
+
+        // Always serve the Business settings strictly
+        if (business.settings) {
+          user.settings = business.settings;
+        }
       }
     }
 
