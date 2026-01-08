@@ -54,28 +54,28 @@ const Login = () => {
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background overflow-hidden">
       {/* Left Side - Login Form */}
-      <div className="relative flex flex-col justify-center items-center p-8 lg:p-12 animate-fade-in z-10 w-full max-w-xl mx-auto lg:max-w-none">
+      <div className="relative flex flex-col justify-center items-center p-6 lg:p-8 animate-fade-in z-10 w-full max-w-xl mx-auto lg:max-w-none">
 
         <div className="absolute top-4 right-4 z-50">
           <ThemeToggle />
         </div>
 
-        <div className="mx-auto grid w-full max-w-[400px] gap-6 animate-fade-in-up relative z-10">
-          <div className="flex flex-col items-center gap-2 text-center mb-6">
-            <div className="p-4 bg-primary/10 rounded-2xl ring-1 ring-primary/20 shadow-xl backdrop-blur-3xl mb-4 animate-pulse-soft">
-              <Phone className="h-8 w-8 text-primary" />
+        <div className="mx-auto grid w-full max-w-[350px] gap-6 animate-fade-in-up relative z-10">
+          <div className="flex flex-col items-center gap-2 text-center mb-4">
+            <div className="p-3 bg-primary/10 rounded-2xl ring-1 ring-primary/20 shadow-xl backdrop-blur-3xl mb-2 animate-pulse-soft">
+              <Phone className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">Welcome back</h1>
-            <p className="text-muted-foreground text-lg">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome back</h1>
+            <p className="text-muted-foreground text-sm">
               Enter your credentials to access your account
             </p>
           </div>
           <Card className="border border-border/50 dark:border-white/10 shadow-2xl bg-card/60 dark:bg-black/40 backdrop-blur-xl">
-            <CardContent className="pt-8 px-8">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid w-full items-center gap-4">
-                  <div className="flex flex-col space-y-2">
-                    <Label htmlFor="email" className="text-base text-foreground/80 dark:text-gray-300">Email</Label>
+            <CardContent className="pt-6 px-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid w-full items-center gap-3">
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor="email" className="text-sm text-foreground/80 dark:text-gray-300">Email</Label>
                     <Input
                       id="email"
                       type="email"
@@ -83,15 +83,15 @@ const Login = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="h-12 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all"
+                      className="h-10 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all font-medium"
                     />
                   </div>
-                  <div className="flex flex-col space-y-2">
+                  <div className="flex flex-col space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password" className="text-base text-foreground/80 dark:text-gray-300">Password</Label>
+                      <Label htmlFor="password" className="text-sm text-foreground/80 dark:text-gray-300">Password</Label>
                       <Link
                         to="/forgot-password"
-                        className="text-sm font-semibold text-primary hover:text-primary/80 hover:underline transition-all"
+                        className="text-xs font-semibold text-primary hover:text-primary/80 hover:underline transition-all"
                       >
                         Forgot password?
                       </Link>
@@ -103,12 +103,12 @@ const Login = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="h-12 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all"
+                      className="h-10 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all font-medium"
                     />
                   </div>
                 </div>
                 <Button
-                  className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all active:scale-95 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  className="w-full h-10 text-sm font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all active:scale-95 bg-primary hover:bg-primary/90 text-primary-foreground"
                   type="submit"
                   disabled={loading}
                 >
@@ -121,19 +121,19 @@ const Login = () => {
                 </Button>
               </form>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4 pb-8 pt-2">
+            <CardFooter className="flex flex-col gap-3 pb-6 pt-2">
               <div className="relative w-full">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t border-border/50 dark:border-white/10"></span>
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
+                <div className="relative flex justify-center text-[10px] uppercase tracking-wider">
                   <span className="bg-card dark:bg-transparent px-2 text-muted-foreground">Or continue with</span>
                 </div>
               </div>
-              <p className="text-center text-sm text-muted-foreground">
+              <p className="text-center text-xs text-muted-foreground">
                 Don't have an account?{" "}
                 <Link to="/register" className="font-semibold text-primary hover:text-primary/80 hover:underline transition-all">
-                  Sign up
+                  Register Business
                 </Link>
               </p>
             </CardFooter>

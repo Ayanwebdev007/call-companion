@@ -68,51 +68,51 @@ const Register = () => {
       </div>
 
       {/* Right Side - Register Form */}
-      <div className="relative flex flex-col justify-center items-center p-8 lg:p-12 animate-fade-in z-10 w-full max-w-xl mx-auto lg:max-w-none">
+      <div className="relative flex flex-col justify-center items-center p-6 lg:p-8 animate-fade-in z-10 w-full max-w-xl mx-auto lg:max-w-none">
 
         <div className="absolute top-4 right-4 z-50">
           <ThemeToggle />
         </div>
 
-        <div className="w-full max-w-sm space-y-8 animate-fade-in-up">
-          <div className="flex flex-col items-center gap-2 text-center mb-6">
-            <div className="p-4 bg-primary/10 rounded-2xl ring-1 ring-primary/20 shadow-xl backdrop-blur-3xl mb-4 animate-pulse-soft">
-              <Phone className="h-8 w-8 text-primary" />
+        <div className="w-full max-w-[350px] space-y-6 animate-fade-in-up">
+          <div className="flex flex-col items-center gap-2 text-center mb-4">
+            <div className="p-3 bg-primary/10 rounded-2xl ring-1 ring-primary/20 shadow-xl backdrop-blur-3xl mb-2 animate-pulse-soft">
+              <Phone className="h-6 w-6 text-primary" />
             </div>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">Create Business Account</h1>
-            <p className="text-muted-foreground text-lg">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Create Business Account</h1>
+            <p className="text-muted-foreground text-sm">
               Set up your organization efficiently
             </p>
           </div>
 
           <Card className="border border-border/50 dark:border-white/10 shadow-2xl bg-card/60 dark:bg-black/40 backdrop-blur-xl">
-            <CardContent className="pt-8 px-8">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid w-full items-center gap-4">
-                  <div className="flex flex-col space-y-2">
-                    <Label htmlFor="businessName" className="text-base text-foreground/80 dark:text-gray-300">Business Name</Label>
+            <CardContent className="pt-6 px-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid w-full items-center gap-3">
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor="businessName" className="text-sm text-foreground/80 dark:text-gray-300">Business Name</Label>
                     <Input
                       id="businessName"
                       placeholder="My Company"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
                       required
-                      className="h-12 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all"
+                      className="h-10 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all font-medium"
                     />
                   </div>
-                  <div className="flex flex-col space-y-2">
-                    <Label htmlFor="adminName" className="text-base text-foreground/80 dark:text-gray-300">Admin Name</Label>
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor="adminName" className="text-sm text-foreground/80 dark:text-gray-300">Admin Name</Label>
                     <Input
                       id="adminName"
                       placeholder="Your Name"
                       value={adminName}
                       onChange={(e) => setAdminName(e.target.value)}
                       required
-                      className="h-12 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all"
+                      className="h-10 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all font-medium"
                     />
                   </div>
-                  <div className="flex flex-col space-y-2">
-                    <Label htmlFor="email" className="text-base text-foreground/80 dark:text-gray-300">Email</Label>
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor="email" className="text-sm text-foreground/80 dark:text-gray-300">Email</Label>
                     <Input
                       id="email"
                       type="email"
@@ -120,11 +120,11 @@ const Register = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className="h-12 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all"
+                      className="h-10 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all font-medium"
                     />
                   </div>
-                  <div className="flex flex-col space-y-2">
-                    <Label htmlFor="password" className="text-base text-foreground/80 dark:text-gray-300">Password</Label>
+                  <div className="flex flex-col space-y-1.5">
+                    <Label htmlFor="password" className="text-sm text-foreground/80 dark:text-gray-300">Password</Label>
                     <Input
                       id="password"
                       type="password"
@@ -132,12 +132,12 @@ const Register = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="h-12 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all"
+                      className="h-10 bg-background/50 dark:bg-white/5 border-input dark:border-white/10 text-foreground dark:text-white placeholder:text-muted-foreground focus-visible:ring-primary/50 transition-all font-medium"
                     />
                   </div>
                 </div>
                 <Button
-                  className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all active:scale-95 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  className="w-full h-10 text-sm font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all active:scale-95 bg-primary hover:bg-primary/90 text-primary-foreground"
                   type="submit"
                   disabled={loading}
                 >
@@ -150,8 +150,8 @@ const Register = () => {
                 </Button>
               </form>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4 pb-8 pt-2">
-              <p className="text-center text-sm text-muted-foreground">
+            <CardFooter className="flex flex-col gap-3 pb-6 pt-2">
+              <p className="text-center text-xs text-muted-foreground">
                 Already have an account?{" "}
                 <Link to="/login" className="font-semibold text-primary hover:text-primary/80 hover:underline transition-all">
                   Sign in
