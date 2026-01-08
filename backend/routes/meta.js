@@ -321,7 +321,7 @@ router.get('/analytics', auth, checkPermission('dashboard'), async (req, res) =>
             },
             { $replaceRoot: { newRoot: "$doc" } },
             { $sort: { created_at: -1 } },
-            { $limit: 40 }
+            { $limit: 100 }
         ]);
 
         const SpreadsheetModel = mongoose.model('Spreadsheet');

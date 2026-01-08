@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { fetchSpreadsheets, fetchMetaAnalytics, Spreadsheet } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import { Facebook, Info, AlertCircle, CheckCircle2, Clock, MapPin, Hash, ArrowRi
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export default function MetaInsights() {
+    const [isExpanded, setIsExpanded] = useState(false);
     const navigate = useNavigate();
     const { data: spreadsheets = [], isLoading: sheetsLoading } = useQuery({
         queryKey: ["spreadsheets"],
@@ -275,7 +277,18 @@ export default function MetaInsights() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/30">
-                                {analytics?.recentLeads.map((lead) => (
+                                {(() => {
+                                    const leads = analytics?.recentLeads || [];
+                                    const filteredLeads = isExpanded
+                                        ? leads.filter(l => {
+                                            const date = new Date(l.created_at || Date.now());
+                                            const threeDaysAgo = new Date();
+                                            threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+                                            return date >= threeDaysAgo;
+                                        })
+                                        : leads.slice(0, 5);
+
+                                    return filteredLeads.map((lead) => (
                                     <tr key={lead.id} className="hover:bg-accent/5 transition-colors group">
                                         <td className="px-4 py-3">
                                             <div className="flex flex-col">
@@ -324,7 +337,8 @@ export default function MetaInsights() {
                                             </Button>
                                         </td>
                                     </tr>
-                                ))}
+                                    ));
+                                })()}
                                 {analytics?.recentLeads.length === 0 && (
                                     <tr>
                                         <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground italic">No leads found in this period.</td>
@@ -333,6 +347,19 @@ export default function MetaInsights() {
                             </tbody>
                         </table>
                     </div>
+                    </div>
+                    {analytics?.recentLeads && analytics.recentLeads.length > 5 && (
+                        <div className="mt-4 text-center">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsExpanded(!isExpanded)}
+                                className="text-xs"
+                            >
+                                {isExpanded ? "Show Less" : "View More (Last 3 Days)"}
+                            </Button>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -399,6 +426,6 @@ export default function MetaInsights() {
                     <strong>Pro Tip:</strong> Click on any bar or pie slice to jump directly to those filtered spreadsheets in the Meta Dashboard.
                 </p>
             </div>
-        </div>
+        </div >
     );
 }
