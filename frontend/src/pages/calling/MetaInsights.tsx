@@ -98,8 +98,15 @@ export default function MetaInsights() {
     }
 
 
+    // Filter for only real Meta leads (webhook pulled)
+    const leads = (analytics?.recentLeads || []).filter(lead => {
+        const metaId = lead.meta_data instanceof Map
+            ? lead.meta_data.get('meta_lead_id')
+            : (lead.meta_data as any)?.meta_lead_id;
+        return !!metaId;
+    });
+
     // Leads for the main view (Top 5)
-    const leads = analytics?.recentLeads || [];
     const visibleLeads = leads.slice(0, 5);
 
     // Leads for the Popup view (Last 3 Days)

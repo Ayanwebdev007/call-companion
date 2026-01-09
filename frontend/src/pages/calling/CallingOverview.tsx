@@ -22,6 +22,12 @@ export default function CallingOverview() {
     const sharedSpreadsheets = spreadsheets.filter(s => s.is_shared).length;
     const metaSpreadsheets = spreadsheets.filter(s => s.is_meta).length;
     const manualSpreadsheets = totalSpreadsheets - metaSpreadsheets;
+    const recentMetaLeads = (analytics?.recentLeads || []).filter(lead => {
+        const metaId = lead.meta_data instanceof Map
+            ? lead.meta_data.get('meta_lead_id')
+            : (lead.meta_data as any)?.meta_lead_id;
+        return !!metaId;
+    });
 
     return (
         <div className="p-8 space-y-8 animate-fade-in">
@@ -81,7 +87,7 @@ export default function CallingOverview() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ) : analytics?.recentLeads.slice(0, 5).map((lead) => (
+                                        ) : recentMetaLeads.slice(0, 5).map((lead) => (
                                             <tr key={lead.id} className="hover:bg-primary/5 transition-colors group/row">
                                                 <td className="px-6 py-4">
                                                     <div className="flex flex-col">
@@ -131,7 +137,7 @@ export default function CallingOverview() {
                                                 </td>
                                             </tr>
                                         ))}
-                                        {!analyticsLoading && (!analytics?.recentLeads || analytics.recentLeads.length === 0) && (
+                                        {!analyticsLoading && recentMetaLeads.length === 0 && (
                                             <tr>
                                                 <td colSpan={6} className="px-6 py-16 text-center text-muted-foreground italic">
                                                     No recent leads found. Connect your Meta webhook to see them here!
