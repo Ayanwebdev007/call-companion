@@ -64,7 +64,13 @@ const GoogleSheetsExportDialog = ({
         { id: 'next_call_time', label: 'Next Call Time' },
         { id: 'remark', label: 'Remark' },
         { id: 'status', label: 'Status' }
-    ];
+    ].filter(f => {
+        if (metaHeaders.length > 0) {
+            // If it's a Meta sheet, we hide identity fields as they are redundant with Meta headers
+            return !['customer_name', 'company_name', 'phone_number', 'status'].includes(f.id);
+        }
+        return true;
+    });
 
     useEffect(() => {
         if (open) {

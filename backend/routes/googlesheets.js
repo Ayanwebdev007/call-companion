@@ -267,42 +267,70 @@ router.post('/export', auth, async (req, res) => {
       is_deleted: { $ne: true }
     }).sort({ position: 1 });
 
-    // 3. Format data for Google Sheets
-    const headers = [
-      'Customer Name',
-      'Company Name',
-      'Phone Number',
-      'Next Call Date',
-      'Last Call Date',
-      'Next Call Time',
-      'Remark'
-    ];
+    // 3. Format data for Google Sheets based on mapping if provided
+    const mapping = req.body.columnMapping;
+    let headers = [];
+    let dataRows = [];
 
-    // Add meta headers if they exist
-    if (spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
-      headers.push(...spreadsheet.meta_headers);
-    }
+    if (mapping && Object.keys(mapping).length > 0) {
+      // Use custom mapping (Dynamic)
+      headers = Object.values(mapping);
+      const fields = Object.keys(mapping);
 
-    const dataRows = customers.map(c => {
-      const row = [
-        c.customer_name || '',
-        c.company_name || 'N/A',
-        c.phone_number || 'N/A',
-        c.next_call_date || '',
-        c.last_call_date || '',
-        c.next_call_time || '',
-        c.remark || ''
+      dataRows = customers.map(c => {
+        return fields.map(field => {
+          // Handle standard fields
+          if (field === 'customer_name') return c.customer_name || '';
+          if (field === 'company_name') return c.company_name || '';
+          if (field === 'phone_number') return c.phone_number || '';
+          if (field === 'next_call_date') return c.next_call_date || '';
+          if (field === 'next_call_time') return c.next_call_time || '';
+          if (field === 'last_call_date') return c.last_call_date || '';
+          if (field === 'remark') return c.remark || '';
+          if (field === 'status') return c.status || '';
+
+          // Handle meta data fields
+          if (c.meta_data) {
+            return c.meta_data[field] || '';
+          }
+          return '';
+        });
+      });
+    } else {
+      // Fallback to default headers (same as existing logic)
+      headers = [
+        'Customer Name',
+        'Company Name',
+        'Phone Number',
+        'Next Call Date',
+        'Last Call Date',
+        'Next Call Time',
+        'Remark'
       ];
 
-      // Add meta data values in order
       if (spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
-        spreadsheet.meta_headers.forEach(h => {
-          row.push(c.meta_data ? (c.meta_data[h] || '') : '');
-        });
+        headers.push(...spreadsheet.meta_headers);
       }
 
-      return row;
-    });
+      dataRows = customers.map(c => {
+        const row = [
+          c.customer_name || '',
+          c.company_name || 'N/A',
+          c.phone_number || 'N/A',
+          c.next_call_date || '',
+          c.last_call_date || '',
+          c.next_call_time || '',
+          c.remark || ''
+        ];
+
+        if (spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
+          spreadsheet.meta_headers.forEach(h => {
+            row.push(c.meta_data ? (c.meta_data[h] || '') : '');
+          });
+        }
+        return row;
+      });
+    }
 
     const finalData = [headers, ...dataRows];
 
