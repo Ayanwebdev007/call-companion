@@ -3,6 +3,7 @@ import googleSheetsService from '../services/googleSheetsService.js';
 import Customer from '../models/Customer.js';
 import Spreadsheet from '../models/Spreadsheet.js';
 import auth from '../middleware/auth.js';
+import { syncToGoogleSheets } from '../services/syncService.js';
 
 const router = express.Router();
 
@@ -330,6 +331,21 @@ router.post('/export', auth, async (req, res) => {
   } catch (error) {
     console.error('Error exporting to Google Sheets:', error);
     res.status(500).json({ message: error.message || 'Failed to export data' });
+  }
+});
+
+// Manual Sync trigger
+router.post('/sync/:spreadsheetId', auth, async (req, res) => {
+  try {
+    const { spreadsheetId } = req.params;
+
+    // Perform sync
+    await syncToGoogleSheets(spreadsheetId);
+
+    res.json({ success: true, message: 'Synchronization triggered successfully' });
+  } catch (error) {
+    console.error('Manual sync error:', error);
+    res.status(500).json({ message: error.message || 'Failed to trigger sync' });
   }
 });
 

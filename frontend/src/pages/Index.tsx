@@ -10,7 +10,7 @@ import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, Check
 import { format, isToday, parseISO, isPast, isValid, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, bulkInsertCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet, recordSpreadsheetView, restoreCustomer, bulkRestoreCustomers } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, bulkInsertCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet, recordSpreadsheetView, restoreCustomer, bulkRestoreCustomers, syncGoogleSheet } from "@/lib/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +25,7 @@ import {
 
 
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, Undo2, Redo2 } from "lucide-react";
+import { LogOut, Undo2, Redo2, RefreshCw } from "lucide-react";
 import { useHistory, HistoryAction } from "@/context/HistoryContext";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
@@ -38,6 +38,7 @@ import { LeadDetailsDialog } from "@/components/LeadDetailsDialog";
 
 const Index = () => {
   const { id: spreadsheetId } = useParams<{ id: string }>();
+  const [isSyncing, setIsSyncing] = useState(false);
   const navigate = useNavigate();
   // State for WhatsApp Dialog
   const [selectedWhatsAppCustomer, setSelectedWhatsAppCustomer] = useState<Customer | null>(null);
@@ -590,7 +591,7 @@ const Index = () => {
                     </span>
                   </div>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8 border-l border-border/30 rounded-none rounded-r-lg" onClick={() => setIsExportDialogOpen(true)} title="Export to Google Sheets (Backup)">
+                <Button variant="ghost" size="sm" className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8 border-l border-border/30 rounded-none" onClick={() => setIsExportDialogOpen(true)} title="Export to Google Sheets (Backup)">
                   <div className="flex items-center justify-center gap-2 w-full">
                     <Upload className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
                     <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
@@ -598,6 +599,38 @@ const Index = () => {
                     </span>
                   </div>
                 </Button>
+                {spreadsheet?.linked_google_sheet_url && (
+                  <Button variant="ghost" size="sm" className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8 border-l border-border/30 rounded-none"
+                    onClick={async () => {
+                      if (!spreadsheetId) return;
+                      setIsSyncing(true);
+                      try {
+                        const res = await syncGoogleSheet(spreadsheetId);
+                        toast({
+                          title: "Sync successful",
+                          description: res.message,
+                        });
+                      } catch (error: any) {
+                        toast({
+                          title: "Sync failed",
+                          description: error.response?.data?.message || error.message,
+                          variant: "destructive",
+                        });
+                      } finally {
+                        setIsSyncing(false);
+                      }
+                    }}
+                    disabled={isSyncing}
+                    title="Refresh Sync with Google Sheets"
+                  >
+                    <div className="flex items-center justify-center gap-2 w-full">
+                      <RefreshCw className={cn("h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400", isSyncing && "animate-spin")} />
+                      <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
+                        {isSyncing ? 'Syncing...' : 'Sync'}
+                      </span>
+                    </div>
+                  </Button>
+                )}
                 <Button variant="ghost" size="sm" className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8" onClick={async () => {
                   if (!spreadsheetId) return;
                   try {
@@ -789,91 +822,93 @@ const Index = () => {
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
-        </div>
+        </div >
 
         {/* Bulk Actions Bar */}
-        {showCheckboxes && (
-          <div className="bg-primary/5 border-b border-border/50 px-4 py-2 flex items-center gap-4 backdrop-blur-sm animate-in slide-in-from-top-2">
-            <div className="flex items-center gap-4 flex-1">
-              <span className="text-sm font-medium text-primary">
-                {selectedCustomers.size} selected
-              </span>
+        {
+          showCheckboxes && (
+            <div className="bg-primary/5 border-b border-border/50 px-4 py-2 flex items-center gap-4 backdrop-blur-sm animate-in slide-in-from-top-2">
+              <div className="flex items-center gap-4 flex-1">
+                <span className="text-sm font-medium text-primary">
+                  {selectedCustomers.size} selected
+                </span>
 
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" className="h-7 px-3 text-xs gap-2">
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete Selected
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete {selectedCustomers.size} customer(s) from the database.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={() => {
-                        const selectedIds = Array.from(selectedCustomers);
-                        const customersToDelete = customers.filter(c => selectedIds.includes(c.id));
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" className="h-7 px-3 text-xs gap-2">
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete Selected
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete {selectedCustomers.size} customer(s) from the database.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={() => {
+                          const selectedIds = Array.from(selectedCustomers);
+                          const customersToDelete = customers.filter(c => selectedIds.includes(c.id));
 
-                        const restoreAction: HistoryAction = {
-                          type: 'BULK_DELETE',
-                          description: `Delete ${selectedIds.length} leads`,
-                          undo: async () => {
-                            await bulkRestoreCustomers(selectedIds);
-                            queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
-                          },
-                          redo: async () => {
-                            await bulkDeleteMutation.mutateAsync(selectedIds);
-                          }
-                        };
+                          const restoreAction: HistoryAction = {
+                            type: 'BULK_DELETE',
+                            description: `Delete ${selectedIds.length} leads`,
+                            undo: async () => {
+                              await bulkRestoreCustomers(selectedIds);
+                              queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
+                            },
+                            redo: async () => {
+                              await bulkDeleteMutation.mutateAsync(selectedIds);
+                            }
+                          };
 
-                        pushAction(restoreAction);
-                        bulkDeleteMutation.mutate(selectedIds);
-                      }}
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                          pushAction(restoreAction);
+                          bulkDeleteMutation.mutate(selectedIds);
+                        }}
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={selectAllCustomers}
+                className="h-7 px-3 text-xs ml-auto"
+              >
+                {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowCheckboxes(false);
+                  setSelectedCustomers(new Set());
+                }}
+                className="h-7 w-7 p-0 ml-2 text-muted-foreground hover:text-foreground"
+                title="Close Selection Mode"
+              >
+                <span className="text-lg leading-none">&times;</span>
+              </Button>
             </div>
+          )
+        }
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={selectAllCustomers}
-              className="h-7 px-3 text-xs ml-auto"
-            >
-              {selectedCustomers.size === displayedCustomers.length ? "Deselect All" : "Select All"}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setShowCheckboxes(false);
-                setSelectedCustomers(new Set());
-              }}
-              className="h-7 w-7 p-0 ml-2 text-muted-foreground hover:text-foreground"
-              title="Close Selection Mode"
-            >
-              <span className="text-lg leading-none">&times;</span>
-            </Button>
-          </div>
-        )}
-
-      </div>
+      </div >
 
 
 
       {/* Spreadsheet - Only this section should scroll */}
-      <div className="flex-1 overflow-auto bg-muted/10">
+      < div className="flex-1 overflow-auto bg-muted/10" >
         <ResizableTable className="w-full border-separate border-spacing-0">
           <ResizableTableHeader className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm shadow-sm supports-[backdrop-filter]:bg-background/60">
             <ResizableTableRow className="bg-muted/50 hover:bg-muted/60 transition-colors border-b border-border/50">
@@ -1279,14 +1314,14 @@ const Index = () => {
         </ResizableTable>
       </div >
       {/* WhatsApp Message Dialog */}
-      <SpreadsheetWhatsAppDialog
+      < SpreadsheetWhatsAppDialog
         isOpen={isWhatsAppDialogOpen}
         onClose={() => setIsWhatsAppDialogOpen(false)}
         customer={selectedWhatsAppCustomer}
       />
 
       {/* Google Sheets Import Dialog */}
-      <GoogleSheetsDialog
+      < GoogleSheetsDialog
         open={isGoogleSheetsDialogOpen}
         onOpenChange={setIsGoogleSheetsDialogOpen}
         spreadsheetId={spreadsheetId || ""}
@@ -1297,7 +1332,7 @@ const Index = () => {
         }}
       />
 
-      <LeadDetailsDialog
+      < LeadDetailsDialog
         isOpen={isDetailsDialogOpen}
         onClose={() => setIsDetailsDialogOpen(false)}
         customer={selectedDetailCustomer}

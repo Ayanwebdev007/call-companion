@@ -286,6 +286,11 @@ export const exportToGoogleSheet = async (
   return response.data;
 };
 
+export const syncGoogleSheet = async (spreadsheetId: string): Promise<{ success: boolean; message: string }> => {
+  const response = await api.post(`${API_BASE_URL}/api/googlesheets/sync/${spreadsheetId}`);
+  return response.data;
+};
+
 // Create axios instance with base URL
 export const api = axios.create({
   baseURL: API_BASE_URL
