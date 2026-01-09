@@ -14,6 +14,10 @@ const spreadsheetSchema = new mongoose.Schema({
   meta_headers: { type: [String], default: [] },
   is_meta: { type: Boolean, default: false },
   is_master: { type: Boolean, default: false },
+  linked_google_sheet_url: { type: String, default: '' },
+  linked_sheet_name: { type: String, default: '' },
+  column_mapping: { type: Object, default: null },
+  realtime_sync: { type: Boolean, default: false },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now }
 });

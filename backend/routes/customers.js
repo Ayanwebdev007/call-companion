@@ -7,6 +7,7 @@ import auth from '../middleware/auth.js';
 import checkPermission from '../middleware/permissions.js';
 import XLSX from 'xlsx';
 import fs from 'fs';
+import { syncToGoogleSheets } from '../services/syncService.js';
 
 const router = express.Router();
 
@@ -164,6 +165,9 @@ router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
         await masterCustomer.save();
       }
     }
+
+    // Trigger background sync to Google Sheets
+    syncToGoogleSheets(spreadsheet_id);
 
     res.status(201).json(newCustomer);
   } catch (err) {
@@ -368,10 +372,11 @@ router.post('/bulk-import', auth, async (req, res) => {
     }
 
     res.status(201).json({
-      message: `${insertedCustomers.length} customers imported successfully`,
-      count: insertedCustomers.length,
       customers: insertedCustomers
     });
+
+    // Trigger background sync to Google Sheets
+    syncToGoogleSheets(spreadsheetId);
   } catch (err) {
     console.error('Bulk import error:', err);
     res.status(500).json({ message: 'Error importing customers', error: err.message });
@@ -655,6 +660,9 @@ router.put('/:id', auth, async (req, res) => {
       );
     }
 
+    // Trigger background sync to Google Sheets
+    syncToGoogleSheets(updatedCustomer.spreadsheet_id);
+
     res.json(updatedCustomer);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -705,6 +713,9 @@ router.delete('/:id', auth, async (req, res) => {
     if (!deletedCustomer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
+    // Trigger background sync to Google Sheets
+    syncToGoogleSheets(deletedCustomer.spreadsheet_id);
+
     res.json({ message: 'Customer deleted (soft)' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -794,9 +805,12 @@ router.post('/bulk-delete', auth, async (req, res) => {
 
     console.log('Delete result:', result);
 
+    // Trigger background sync for affected spreadsheets
+    spreadsheetIds.forEach(sid => syncToGoogleSheets(sid));
+
     res.json({
-      message: `${result.deletedCount} customers deleted successfully`,
-      deletedCount: result.deletedCount
+      message: `${result.modifiedCount || 0} customers deleted successfully`,
+      deletedCount: result.modifiedCount || 0
     });
   } catch (err) {
     console.error('Bulk delete error:', err);
@@ -919,6 +933,9 @@ router.post('/restore/:id', auth, async (req, res) => {
       { new: true }
     );
 
+    // Trigger background sync to Google Sheets
+    syncToGoogleSheets(restoredCustomer.spreadsheet_id);
+
     res.json({ message: 'Customer restored', customer: restoredCustomer });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -968,6 +985,9 @@ router.post('/bulk-restore', auth, async (req, res) => {
         $set: { is_deleted: false, deleted_at: null }
       }
     );
+
+    // Trigger background sync for affected spreadsheets
+    spreadsheetIds.forEach(sid => syncToGoogleSheets(sid));
 
     res.json({
       message: `${result.modifiedCount} customers restored`,
@@ -1028,6 +1048,10 @@ router.post('/reorder', auth, async (req, res) => {
     );
 
     await Promise.all(updates);
+
+    // Trigger background sync for affected spreadsheets
+    spreadsheetIds.forEach(sid => syncToGoogleSheets(sid));
+
     res.json({ message: 'Order updated successfully' });
   } catch (err) {
     console.error('Reorder error:', err);

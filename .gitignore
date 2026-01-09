@@ -1,3 +1,10 @@
+# Security
+.env
+backend/.env
+backend/service-account.json
+frontend/.env
+*.json.local
+
 # Logs
 logs
 *.log

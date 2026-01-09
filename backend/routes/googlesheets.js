@@ -231,6 +231,108 @@ router.post('/import', auth, async (req, res) => {
   }
 });
 
+// Export to Google Sheets
+router.post('/export', auth, async (req, res) => {
+  try {
+    const { spreadsheetId, sheetUrl, sheetName } = req.body;
+
+    if (!spreadsheetId || !sheetUrl) {
+      return res.status(400).json({ message: 'Spreadsheet ID and Sheet URL are required' });
+    }
+
+    // 1. Verify access
+    const spreadsheet = await Spreadsheet.findById(spreadsheetId);
+    if (!spreadsheet) return res.status(404).json({ message: 'Spreadsheet not found' });
+
+    // Admin or Owner/Assigned check
+    const isOwner = spreadsheet.user_id.toString() === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    const isAssigned = spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id);
+
+    if (!isAdmin && !isOwner && !isAssigned) {
+      // Check Sharing
+      const Sharing = (await import('../models/Sharing.js')).default;
+      const sharing = await Sharing.findOne({
+        spreadsheet_id: spreadsheetId,
+        shared_with_user_id: req.user.id,
+        permission_level: 'read-write'
+      });
+      if (!sharing) return res.status(403).json({ message: 'You do not have write access to this spreadsheet' });
+    }
+
+    // 2. Fetch all customers
+    const customers = await Customer.find({
+      spreadsheet_id: spreadsheetId,
+      is_deleted: { $ne: true }
+    }).sort({ position: 1 });
+
+    // 3. Format data for Google Sheets
+    const headers = [
+      'Customer Name',
+      'Company Name',
+      'Phone Number',
+      'Next Call Date',
+      'Last Call Date',
+      'Next Call Time',
+      'Remark'
+    ];
+
+    // Add meta headers if they exist
+    if (spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
+      headers.push(...spreadsheet.meta_headers);
+    }
+
+    const dataRows = customers.map(c => {
+      const row = [
+        c.customer_name || '',
+        c.company_name || 'N/A',
+        c.phone_number || 'N/A',
+        c.next_call_date || '',
+        c.last_call_date || '',
+        c.next_call_time || '',
+        c.remark || ''
+      ];
+
+      // Add meta data values in order
+      if (spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
+        spreadsheet.meta_headers.forEach(h => {
+          row.push(c.meta_data ? (c.meta_data[h] || '') : '');
+        });
+      }
+
+      return row;
+    });
+
+    const finalData = [headers, ...dataRows];
+
+    // 4. Update the spreadsheet with sync settings and URL
+    spreadsheet.linked_google_sheet_url = sheetUrl;
+    spreadsheet.linked_sheet_name = sheetName || '';
+    if (req.body.columnMapping) {
+      spreadsheet.column_mapping = req.body.columnMapping;
+    }
+    if (req.body.realtimeSync !== undefined) {
+      spreadsheet.realtime_sync = req.body.realtimeSync;
+    }
+    spreadsheet.updated_at = Date.now();
+    await spreadsheet.save();
+
+    // 5. Perform the final export
+    console.log(`[SHEETS] Exporting ${customers.length} rows to ${sheetUrl} [${sheetName || 'First Sheet'}]...`);
+    await googleSheetsService.updateSheetData(sheetUrl, finalData, sheetName);
+
+    res.json({
+      success: true,
+      message: `Successfully exported ${customers.length} total leads to Google Sheets.`,
+      url: sheetUrl
+    });
+
+  } catch (error) {
+    console.error('Error exporting to Google Sheets:', error);
+    res.status(500).json({ message: error.message || 'Failed to export data' });
+  }
+});
+
 // Helper method to get mapped value from row
 function getMappedValue(row, headers, mapping) {
   if (!mapping || mapping === '' || mapping === 'no-import') return '';

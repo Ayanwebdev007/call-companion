@@ -36,6 +36,10 @@ export interface Spreadsheet {
   meta_headers?: string[];
   is_meta?: boolean;
   is_master?: boolean;
+  linked_google_sheet_url?: string;
+  linked_sheet_name?: string;
+  column_mapping?: Record<string, string>;
+  realtime_sync?: boolean;
   created_at: string;
   updated_at: string;
   permission_level?: 'read-only' | 'read-write';
@@ -262,6 +266,23 @@ export const importFromGoogleSheet = async (data: {
   sheetData: any;
 }): Promise<{ success: boolean; imported: number; message: string }> => {
   const response = await api.post(`${API_BASE_URL}/api/googlesheets/import`, data);
+  return response.data;
+};
+
+export const exportToGoogleSheet = async (
+  spreadsheetId: string,
+  sheetUrl: string,
+  sheetName?: string,
+  columnMapping?: Record<string, string>,
+  realtimeSync?: boolean
+): Promise<{ success: boolean; message: string; url: string }> => {
+  const response = await api.post(`${API_BASE_URL}/api/googlesheets/export`, {
+    spreadsheetId,
+    sheetUrl,
+    sheetName,
+    columnMapping,
+    realtimeSync
+  });
   return response.data;
 };
 

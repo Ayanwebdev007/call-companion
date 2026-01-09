@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { AutoResizeTextarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search, FileSpreadsheet, Filter, X, MoreHorizontal } from "lucide-react";
+import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, CheckSquare, ArrowLeft, Share2, User, Users, Plus, Download, Search, FileSpreadsheet, Filter, X, MoreHorizontal, Upload } from "lucide-react";
 import { format, isToday, parseISO, isPast, isValid, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,13 +26,14 @@ import {
 
 import { useAuth } from "@/context/AuthContext";
 import { LogOut, Undo2, Redo2 } from "lucide-react";
-import { useHistory } from "@/context/HistoryContext";
+import { useHistory, HistoryAction } from "@/context/HistoryContext";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { SpreadsheetWhatsAppDialog } from "@/components/SpreadsheetWhatsAppDialog";
 import GoogleSheetsDialog from "@/components/GoogleSheetsDialog";
+import GoogleSheetsExportDialog from "@/components/GoogleSheetsExportDialog";
 import { LeadDetailsDialog } from "@/components/LeadDetailsDialog";
 
 const Index = () => {
@@ -42,6 +43,7 @@ const Index = () => {
   const [selectedWhatsAppCustomer, setSelectedWhatsAppCustomer] = useState<Customer | null>(null);
   const [isWhatsAppDialogOpen, setIsWhatsAppDialogOpen] = useState(false);
   const [isGoogleSheetsDialogOpen, setIsGoogleSheetsDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [selectedDetailCustomer, setSelectedDetailCustomer] = useState<Customer | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
 
@@ -584,7 +586,15 @@ const Index = () => {
                   <div className="flex items-center justify-center gap-2 w-full">
                     <FileSpreadsheet className="h-4 w-4 flex-shrink-0 text-green-600 dark:text-green-400" />
                     <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
-                      Google Sheets
+                      Import
+                    </span>
+                  </div>
+                </Button>
+                <Button variant="ghost" size="sm" className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8 border-l border-border/30 rounded-none rounded-r-lg" onClick={() => setIsExportDialogOpen(true)} title="Export to Google Sheets (Backup)">
+                  <div className="flex items-center justify-center gap-2 w-full">
+                    <Upload className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                    <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
+                      Export
                     </span>
                   </div>
                 </Button>
@@ -1292,6 +1302,19 @@ const Index = () => {
         onClose={() => setIsDetailsDialogOpen(false)}
         customer={selectedDetailCustomer}
       />
+
+      {spreadsheet && (
+        <GoogleSheetsExportDialog
+          open={isExportDialogOpen}
+          onOpenChange={setIsExportDialogOpen}
+          spreadsheetId={spreadsheetId!}
+          spreadsheetName={spreadsheet.name}
+          initialUrl={spreadsheet.linked_google_sheet_url}
+          metaHeaders={spreadsheet.meta_headers || []}
+          initialMapping={spreadsheet.column_mapping}
+          initialRealtimeSync={spreadsheet.realtime_sync}
+        />
+      )}
     </div >
   );
 };

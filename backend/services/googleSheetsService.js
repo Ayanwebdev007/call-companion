@@ -1,4 +1,6 @@
 import { google } from 'googleapis';
+import fs from 'fs';
+import path from 'path';
 
 class GoogleSheetsService {
   constructor() {
@@ -9,11 +11,20 @@ class GoogleSheetsService {
 
   initializeAuth() {
     try {
-      // Initialize Google Auth with API key for public sheets access
-      this.auth = new google.auth.GoogleAuth({
-        apiKey: process.env.GOOGLE_API_KEY,
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
-      });
+      const serviceAccountPath = path.resolve(process.cwd(), 'service-account.json');
+
+      if (fs.existsSync(serviceAccountPath)) {
+        // Use Service Account if available (Premium/Write access)
+        console.log('[SHEETS] Initializing with Service Account...');
+        this.auth = new google.auth.GoogleAuth({
+          keyFile: serviceAccountPath,
+          scopes: ['https://www.googleapis.com/auth/spreadsheets']
+        });
+      } else if (process.env.GOOGLE_API_KEY) {
+        // Fallback to API Key for read-only public access
+        console.log('[SHEETS] Initializing with API Key (Read-only)...');
+        this.auth = process.env.GOOGLE_API_KEY;
+      }
 
       this.sheets = google.sheets({
         version: 'v4',
@@ -26,16 +37,14 @@ class GoogleSheetsService {
 
   async getSheetData(sheetUrl, selectedSheetName = null, range = null) {
     if (!this.sheets) {
-      throw new Error('Google Sheets API not initialized. Check your GOOGLE_API_KEY.');
+      throw new Error('Google Sheets API not initialized. Please ensure service-account.json or GOOGLE_API_KEY is set.');
     }
     try {
-      // Extract spreadsheet ID from URL
       const spreadsheetId = this.extractSpreadsheetId(sheetUrl);
       if (!spreadsheetId) {
         throw new Error('Invalid Google Sheets URL');
       }
 
-      // Get spreadsheet metadata
       const spreadsheet = await this.sheets.spreadsheets.get({
         spreadsheetId
       });
@@ -49,7 +58,6 @@ class GoogleSheetsService {
         sheetName = firstSheet.properties.title;
       }
 
-      // Fetch headers first (always from Row 1)
       const headerResponse = await this.sheets.spreadsheets.values.get({
         spreadsheetId,
         range: `${sheetName}!A1:AZ1`,
@@ -57,11 +65,8 @@ class GoogleSheetsService {
       });
       const headers = headerResponse.data.values?.[0] || [];
 
-      // Determine the data range
-      // If range is provided (e.g. "A10:AZ50"), use it. Otherwise default to A2:AZ500 for preview
       const dataRange = range || `${sheetName}!A2:AZ500`;
 
-      // Get the data
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId,
         range: dataRange,
@@ -84,8 +89,51 @@ class GoogleSheetsService {
     }
   }
 
+  async updateSheetData(sheetUrl, data, selectedSheetName = null) {
+    if (!this.sheets) {
+      throw new Error('Google Sheets API not initialized. Service Account required for write operations.');
+    }
+
+    try {
+      const spreadsheetId = this.extractSpreadsheetId(sheetUrl);
+      if (!spreadsheetId) throw new Error('Invalid Google Sheets URL');
+
+      // 1. Get sheet info to find the correct name
+      const spreadsheet = await this.sheets.spreadsheets.get({ spreadsheetId });
+      let sheetName = selectedSheetName;
+      if (!sheetName) {
+        sheetName = spreadsheet.data.sheets[0].properties.title;
+      }
+
+      // 2. Clear existing content first
+      console.log(`[SHEETS] Clearing sheet: ${sheetName}...`);
+      await this.sheets.spreadsheets.values.clear({
+        spreadsheetId,
+        range: `${sheetName}!A1:ZZ5000`
+      });
+
+      // 3. Update with new data starting from A1
+      console.log(`[SHEETS] Exporting ${data.length} rows to ${sheetName}...`);
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: `${sheetName}!A1`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: data
+        }
+      });
+
+      return { success: true, updatedRows: data.length };
+    } catch (error) {
+      console.error('Error updating Google Sheets data:', error);
+      if (error.message.includes('PERMISSION_DENIED')) {
+        throw new Error('Permission denied. Please share the Google Sheet with the Service Account email address.');
+      }
+      throw new Error(`Failed to update sheet: ${error.message}`);
+    }
+  }
+
   extractSpreadsheetId(url) {
-    // Extract spreadsheet ID from various Google Sheets URL formats
     const patterns = [
       /\/d\/([a-zA-Z0-9-_]+)/,
       /spreadsheets\.google\.com\/.*\?id=([a-zA-Z0-9-_]+)/,
@@ -94,17 +142,14 @@ class GoogleSheetsService {
 
     for (const pattern of patterns) {
       const match = url.match(pattern);
-      if (match) {
-        return match[1];
-      }
+      if (match) return match[1];
     }
-
     return null;
   }
 
   async validateSheetAccess(sheetUrl) {
     if (!this.sheets) {
-      return { valid: false, error: 'Google Sheets API not initialized. Check your GOOGLE_API_KEY.' };
+      return { valid: false, error: 'Google Sheets API not initialized.' };
     }
     try {
       const spreadsheetId = this.extractSpreadsheetId(sheetUrl);
@@ -112,7 +157,6 @@ class GoogleSheetsService {
         return { valid: false, error: 'Invalid Google Sheets URL' };
       }
 
-      // Try to access the spreadsheet and get its metadata
       const response = await this.sheets.spreadsheets.get({
         spreadsheetId
       });
@@ -133,7 +177,7 @@ class GoogleSheetsService {
       return {
         valid: false,
         error: error.message.includes('PERMISSION_DENIED')
-          ? 'Sheet is not publicly accessible or requires permission'
+          ? 'Permission denied. If importing a private sheet, ensure IT IS SHARED with the Service Account email.'
           : `Unable to access the sheet: ${error.message}`
       };
     }
