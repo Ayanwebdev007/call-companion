@@ -689,6 +689,9 @@ router.post('/bulk-delete', auth, async (req, res) => {
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     console.log('User ID:', req.user.id);
 
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       console.log('No customer IDs provided or invalid format');
@@ -763,6 +766,84 @@ router.post('/bulk-delete', auth, async (req, res) => {
     console.error('Bulk delete error:', err);
     console.error('Error stack:', err.stack);
     res.status(500).json({ message: 'Error deleting customers', error: err.message });
+  }
+});
+
+// POST bulk insert (for Undo restoration)
+router.post('/bulk-insert', auth, checkPermission('dashboard'), async (req, res) => {
+  try {
+    const { spreadsheetId, customers } = req.body;
+
+    if (!spreadsheetId || !customers || !Array.isArray(customers)) {
+      return res.status(400).json({ message: 'spreadsheetId and customers array are required' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const spreadsheet = await Spreadsheet.findOne({ _id: spreadsheetId, business_id: user.business_id });
+    if (!spreadsheet) {
+      return res.status(404).json({ message: 'Spreadsheet not found or access denied' });
+    }
+
+    // Check write access
+    let hasWriteAccess = user.role === 'admin' || (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
+    if (!hasWriteAccess) {
+      const sharing = await Sharing.findOne({
+        spreadsheet_id: spreadsheetId,
+        shared_with_user_id: req.user.id
+      });
+      hasWriteAccess = sharing && sharing.permission_level === 'read-write';
+    }
+
+    if (!hasWriteAccess) {
+      return res.status(403).json({ message: 'You do not have write access to this spreadsheet' });
+    }
+
+    // Prepare customers for insertion (ensure correct business_id and spreadsheet_id)
+    const customersToInsert = customers.map(c => {
+      const { id, _id, ...rest } = c;
+      return {
+        ...rest,
+        spreadsheet_id: spreadsheetId,
+        business_id: user.business_id,
+        user_id: req.user.id
+      };
+    });
+
+    const insertedCustomers = await Customer.insertMany(customersToInsert);
+
+    // Sync to Master Sheet if applicable
+    if (spreadsheet.is_meta && !spreadsheet.is_master) {
+      const masterSheet = await Spreadsheet.findOne({
+        business_id: spreadsheet.business_id,
+        page_name: spreadsheet.page_name,
+        form_name: spreadsheet.form_name,
+        is_master: true
+      });
+
+      if (masterSheet) {
+        console.log(`[SYNC] Mirroring bulk-insert to Master Sheet: ${masterSheet.name}`);
+        const startPos = await Customer.countDocuments({ spreadsheet_id: masterSheet._id });
+        const masterCustomers = insertedCustomers.map((c, idx) => {
+          const { id, _id, spreadsheet_id, ...rest } = c.toObject();
+          return {
+            ...rest,
+            spreadsheet_id: masterSheet._id,
+            position: startPos + idx
+          };
+        });
+        await Customer.insertMany(masterCustomers);
+      }
+    }
+
+    res.status(201).json({
+      message: `${insertedCustomers.length} leads restored successfully`,
+      count: insertedCustomers.length
+    });
+  } catch (err) {
+    console.error('Bulk insert error:', err);
+    res.status(500).json({ message: 'Error restoring leads', error: err.message });
   }
 });
 
