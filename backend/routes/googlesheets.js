@@ -34,7 +34,7 @@ router.post('/fetch', auth, async (req, res) => {
 
     let range = null;
     if (startRow && endRow) {
-      range = `${sheetName}!A${startRow}:Z${endRow}`;
+      range = `${sheetName}!A${startRow}:AZ${endRow}`;
     }
 
     const sheetData = await googleSheetsService.getSheetData(sheetUrl, sheetName, range);
@@ -109,6 +109,7 @@ router.post('/import', auth, async (req, res) => {
 
       const customer = {
         user_id: req.user.id,
+        business_id: spreadsheet.business_id,
         spreadsheet_id: spreadsheetId,
         customer_name: getMappedValue(row, headers, columnMapping.customerName),
         company_name: getMappedValue(row, headers, columnMapping.companyName),

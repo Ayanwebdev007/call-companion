@@ -215,14 +215,11 @@ router.post('/webhook', async (req, res) => {
                                 // Update headers
                                 const leadHeaders = Object.keys(leadDetails.fieldMap || {});
                                 if (leadHeaders.length > 0) {
-                                    const currentHeaders = targetSpreadsheet.meta_headers || [];
-                                    const newHeaders = [...new Set([...currentHeaders, ...leadHeaders])];
-
-                                    if (newHeaders.length !== currentHeaders.length) {
-                                        targetSpreadsheet.meta_headers = newHeaders;
-                                        await targetSpreadsheet.save();
-                                        console.log(`[META-WEBHOOK] Updated headers for ${targetSpreadsheet.name}`);
-                                    }
+                                    await mongoose.model('Spreadsheet').updateOne(
+                                        { _id: targetSpreadsheet._id },
+                                        { $addToSet: { meta_headers: { $each: leadHeaders } } }
+                                    );
+                                    console.log(`[META-WEBHOOK] Updated headers for ${targetSpreadsheet.name}`);
                                 }
                                 console.log(`[META-WEBHOOK] Lead ${leadId} -> ${targetSpreadsheet.name}`);
                             };

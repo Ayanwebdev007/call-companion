@@ -52,14 +52,14 @@ class GoogleSheetsService {
       // Fetch headers first (always from Row 1)
       const headerResponse = await this.sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: `${sheetName}!A1:Z1`,
+        range: `${sheetName}!A1:AZ1`,
         valueRenderOption: 'UNFORMATTED_VALUE'
       });
       const headers = headerResponse.data.values?.[0] || [];
 
       // Determine the data range
-      // If range is provided (e.g. "A10:Z50"), use it. Otherwise default to A2:Z500 for preview
-      const dataRange = range || `${sheetName}!A2:Z500`;
+      // If range is provided (e.g. "A10:AZ50"), use it. Otherwise default to A2:AZ500 for preview
+      const dataRange = range || `${sheetName}!A2:AZ500`;
 
       // Get the data
       const response = await this.sheets.spreadsheets.values.get({

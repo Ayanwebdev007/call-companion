@@ -284,6 +284,7 @@ router.post('/bulk-import', auth, async (req, res) => {
 
       const customerData = {
         user_id: req.user.id,
+        business_id: spreadsheet.business_id,
         spreadsheet_id: spreadsheetId,
         customer_name: customerName.toString().trim(),
         company_name: companyName.toString().trim(),
@@ -615,7 +616,7 @@ router.put('/:id', auth, async (req, res) => {
 
       await Customer.updateMany(
         {
-          user_id: req.user.id,
+          business_id: updatedCustomer.business_id,
           'meta_data.meta_lead_id': leadId,
           _id: { $ne: updatedCustomer._id }
         },
