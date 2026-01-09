@@ -114,6 +114,15 @@ export const bulkDeleteCustomers = async (ids: string[]): Promise<{ deletedCount
   return response.data;
 };
 
+export const restoreCustomer = async (id: string): Promise<void> => {
+  await api.post(`${API_URL}/restore/${id}`);
+};
+
+export const bulkRestoreCustomers = async (ids: string[]): Promise<{ restoredCount: number }> => {
+  const response = await api.post(`${API_URL}/bulk-restore`, { ids });
+  return response.data;
+};
+
 export const reorderCustomers = async (customerIds: string[]): Promise<void> => {
   await api.post(`${API_URL}/reorder`, { customerIds });
 };

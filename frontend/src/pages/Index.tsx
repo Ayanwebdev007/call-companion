@@ -10,7 +10,7 @@ import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, Check
 import { format, isToday, parseISO, isPast, isValid, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, bulkInsertCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet, recordSpreadsheetView } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, bulkInsertCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet, recordSpreadsheetView, restoreCustomer, bulkRestoreCustomers } from "@/lib/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -815,7 +815,7 @@ const Index = () => {
                           type: 'BULK_DELETE',
                           description: `Delete ${selectedIds.length} leads`,
                           undo: async () => {
-                            await bulkInsertCustomers(spreadsheetId!, customersToDelete);
+                            await bulkRestoreCustomers(selectedIds);
                             queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
                           },
                           redo: async () => {
@@ -1197,7 +1197,7 @@ const Index = () => {
                           type: 'DELETE_CUSTOMER',
                           description: `Delete lead ${customerToDelete.customer_name}`,
                           undo: async () => {
-                            await bulkInsertCustomers(spreadsheetId!, [customerToDelete]);
+                            await restoreCustomer(customer.id);
                             queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
                           },
                           redo: async () => {

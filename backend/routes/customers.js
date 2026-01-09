@@ -53,7 +53,7 @@ router.get('/', auth, checkPermission('dashboard'), async (req, res) => {
     }
 
     // Build query
-    const baseFilter = { spreadsheet_id: spreadsheetId };
+    const baseFilter = { spreadsheet_id: spreadsheetId, is_deleted: { $ne: true } };
     let filter = baseFilter;
     if (q && typeof q === 'string' && q.trim().length > 0) {
       // Escape regex special characters and build case-insensitive regex
@@ -693,18 +693,22 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(403).json({ message: 'You do not have write access to this spreadsheet' });
     }
 
-    const deletedCustomer = await Customer.findOneAndDelete({ _id: req.params.id, business_id: user.business_id });
+    const deletedCustomer = await Customer.findOneAndUpdate(
+      { _id: req.params.id, business_id: user.business_id },
+      { is_deleted: true, deleted_at: new Date() },
+      { new: true }
+    );
     if (!deletedCustomer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
-    res.json({ message: 'Customer deleted' });
+    res.json({ message: 'Customer deleted (soft)' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// BULK DELETE customers (using POST instead of DELETE with data)
-router.post('/bulk-delete', auth, async (req, res) => {
+// BULK DELETE customers (Soft Delete)
+router.post('/bulk-delete', auth, checkPermission('dashboard'), async (req, res) => {
   try {
     console.log('Bulk delete request received');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
@@ -772,10 +776,15 @@ router.post('/bulk-delete', auth, async (req, res) => {
       console.error('Error checking customers before deletion:', checkErr);
     }
 
-    const result = await Customer.deleteMany({
-      _id: { $in: validIds },
-      business_id: user.business_id // Strict isolation
-    });
+    const result = await Customer.updateMany(
+      {
+        _id: { $in: validIds },
+        business_id: user.business_id
+      },
+      {
+        $set: { is_deleted: true, deleted_at: new Date() }
+      }
+    );
 
     console.log('Delete result:', result);
 
@@ -865,6 +874,59 @@ router.post('/bulk-insert', auth, checkPermission('dashboard'), async (req, res)
   } catch (err) {
     console.error('Bulk insert error:', err);
     res.status(500).json({ message: 'Error restoring leads', error: err.message });
+  }
+});
+
+// RESTORE customer (Soft Delete Reversal)
+router.post('/restore/:id', auth, checkPermission('dashboard'), async (req, res) => {
+  try {
+    const customer = await Customer.findById(req.params.id);
+    if (!customer) return res.status(404).json({ message: 'Customer not found' });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (customer.business_id.toString() !== user.business_id.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const restoredCustomer = await Customer.findOneAndUpdate(
+      { _id: req.params.id },
+      { is_deleted: false, deleted_at: null },
+      { new: true }
+    );
+
+    res.json({ message: 'Customer restored', customer: restoredCustomer });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// BULK RESTORE customers
+router.post('/bulk-restore', auth, checkPermission('dashboard'), async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) return res.status(400).json({ message: 'IDs array required' });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const result = await Customer.updateMany(
+      {
+        _id: { $in: ids },
+        business_id: user.business_id
+      },
+      {
+        $set: { is_deleted: false, deleted_at: null }
+      }
+    );
+
+    res.json({
+      message: `${result.modifiedCount} customers restored`,
+      restoredCount: result.modifiedCount
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 

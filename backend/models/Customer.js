@@ -14,7 +14,9 @@ const customerSchema = new mongoose.Schema({
   meta_data: { type: Map, of: String, default: {} },
   color: { type: String, enum: ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', null], default: null },
   status: { type: String, default: 'new' },
-  position: { type: Number, default: 0 } // For drag and drop ordering
+  position: { type: Number, default: 0 }, // For drag and drop ordering
+  is_deleted: { type: Boolean, default: false },
+  deleted_at: { type: Date, default: null }
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 // Indexes to support search within a spreadsheet
@@ -27,6 +29,9 @@ customerSchema.index({ spreadsheet_id: 1, position: -1 });
 
 // Index for Meta deduplication and syncing
 customerSchema.index({ business_id: 1, 'meta_data.meta_lead_id': 1 });
+
+// Index for soft-delete filtering
+customerSchema.index({ spreadsheet_id: 1, is_deleted: 1 });
 
 // Map _id to id
 customerSchema.set('toJSON', {
