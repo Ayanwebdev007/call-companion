@@ -368,6 +368,26 @@ router.post('/sync/:spreadsheetId', auth, async (req, res) => {
   try {
     const { spreadsheetId } = req.params;
 
+    // 1. Verify access
+    const spreadsheet = await Spreadsheet.findById(spreadsheetId);
+    if (!spreadsheet) return res.status(404).json({ message: 'Spreadsheet not found' });
+
+    // Admin or Owner/Assigned check
+    const isOwner = spreadsheet.user_id.toString() === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    const isAssigned = spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id);
+
+    if (!isAdmin && !isOwner && !isAssigned) {
+      // Check Sharing
+      const Sharing = (await import('../models/Sharing.js')).default;
+      const sharing = await Sharing.findOne({
+        spreadsheet_id: spreadsheetId,
+        shared_with_user_id: req.user.id,
+        permission_level: 'read-write'
+      });
+      if (!sharing) return res.status(403).json({ message: 'You do not have write access to this spreadsheet' });
+    }
+
     // Perform sync (force bypasses realtime_sync flag)
     await syncToGoogleSheets(spreadsheetId, true);
 

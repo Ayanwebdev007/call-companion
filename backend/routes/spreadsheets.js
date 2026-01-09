@@ -66,10 +66,25 @@ router.get('/:id', auth, async (req, res) => {
     let spreadsheet = await Spreadsheet.findOne(query);
 
     if (!spreadsheet) {
+      // Check if it's shared with the user
+      const Sharing = (await import('../models/Sharing.js')).default;
+      const sharing = await Sharing.findOne({ spreadsheet_id: req.params.id, shared_with_user_id: req.user.id });
+      if (sharing) {
+        spreadsheet = await Spreadsheet.findById(req.params.id);
+        if (spreadsheet) {
+          const spreadObject = spreadsheet.toObject();
+          spreadObject.permission_level = sharing.permission_level;
+          spreadObject.is_shared = true;
+          return res.json(spreadObject);
+        }
+      }
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
 
-    res.json(spreadsheet);
+    // If owner or admin, it's read-write
+    const spreadObject = spreadsheet.toObject();
+    spreadObject.permission_level = 'read-write';
+    res.json(spreadObject);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

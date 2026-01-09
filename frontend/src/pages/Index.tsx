@@ -583,7 +583,12 @@ const Index = () => {
 
               <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-lg border border-border/50">
                 <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
-                <Button variant="ghost" size="sm" className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8" onClick={() => setIsGoogleSheetsDialogOpen(true)} title="Import from Google Sheets">
+                <Button variant="ghost" size="sm"
+                  className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8"
+                  onClick={() => setIsGoogleSheetsDialogOpen(true)}
+                  title="Import from Google Sheets"
+                  disabled={spreadsheet?.permission_level === 'read-only'}
+                >
                   <div className="flex items-center justify-center gap-2 w-full">
                     <FileSpreadsheet className="h-4 w-4 flex-shrink-0 text-green-600 dark:text-green-400" />
                     <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
@@ -591,7 +596,12 @@ const Index = () => {
                     </span>
                   </div>
                 </Button>
-                <Button variant="ghost" size="sm" className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8 border-l border-border/30 rounded-none" onClick={() => setIsExportDialogOpen(true)} title="Export to Google Sheets (Backup)">
+                <Button variant="ghost" size="sm"
+                  className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8 border-l border-border/30 rounded-none"
+                  onClick={() => setIsExportDialogOpen(true)}
+                  title="Export to Google Sheets (Backup)"
+                  disabled={spreadsheet?.permission_level === 'read-only'}
+                >
                   <div className="flex items-center justify-center gap-2 w-full">
                     <Upload className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
                     <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
@@ -620,8 +630,8 @@ const Index = () => {
                         setIsSyncing(false);
                       }
                     }}
-                    disabled={isSyncing}
-                    title="Refresh Sync with Google Sheets"
+                    disabled={isSyncing || spreadsheet?.permission_level === 'read-only'}
+                    title={spreadsheet?.permission_level === 'read-only' ? "Read-only access" : "Refresh Sync with Google Sheets"}
                   >
                     <div className="flex items-center justify-center gap-2 w-full">
                       <RefreshCw className={cn("h-4 w-4 flex-shrink-0 text-amber-600 dark:text-amber-400", isSyncing && "animate-spin")} />
