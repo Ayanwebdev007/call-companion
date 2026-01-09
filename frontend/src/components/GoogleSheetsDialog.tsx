@@ -208,9 +208,11 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
           if (!autoMapping.lastCallDate) autoMapping.lastCallDate = header;
         }
 
-        // Auto-map Meta headers by exact (non-case sensitive) name
+        // Auto-map Meta headers by exact (non-case sensitive) name or close match
         metaHeaders.forEach(metaHeader => {
-          if (lowerHeader === metaHeader.toLowerCase()) {
+          const lh = header.toLowerCase();
+          const lm = metaHeader.toLowerCase();
+          if (lh === lm || (lm.length > 3 && lh.includes(lm))) {
             if (!autoMapping[metaHeader]) autoMapping[metaHeader] = header;
           }
         });

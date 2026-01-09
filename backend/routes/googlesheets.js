@@ -120,6 +120,19 @@ router.post('/import', auth, async (req, res) => {
         position: customers.length // Maintain order from sheet
       };
 
+      // Handle dynamic meta_data for Meta spreadsheets first so rescue logic can use it
+      if (spreadsheet.is_meta && spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
+        customer.meta_data = {};
+        spreadsheet.meta_headers.forEach(header => {
+          // First check if there's an explicit mapping for this header
+          const mappingHeader = columnMapping[header] || header;
+          const val = getMappedValue(row, headers, mappingHeader);
+          if (val) {
+            customer.meta_data[header] = val;
+          }
+        });
+      }
+
       if (customer.customer_name || customer.phone_number) {
         // Fallback for company_name which is required but might be missing in some rows
         if (!customer.company_name) customer.company_name = 'N/A';
@@ -127,21 +140,8 @@ router.post('/import', auth, async (req, res) => {
         if (!customer.customer_name) customer.customer_name = 'Unknown';
         if (!customer.phone_number) customer.phone_number = 'N/A';
 
-        // Handle dynamic meta_data for Meta spreadsheets
-        if (spreadsheet.is_meta && spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
-          customer.meta_data = {};
-          spreadsheet.meta_headers.forEach(header => {
-            // First check if there's an explicit mapping for this header
-            const mappingHeader = columnMapping[header] || header;
-            const val = getMappedValue(row, headers, mappingHeader);
-            if (val) {
-              customer.meta_data[header] = val;
-            }
-          });
-        }
-
         customers.push(customer);
-      } else if (spreadsheet.is_meta && Object.keys(customer.meta_data || {}).length > 0) {
+      } else if (spreadsheet.is_meta && customer.meta_data && Object.keys(customer.meta_data).length > 0) {
         // RESCUE: If it's a Meta sheet and we have meta_data, but standard fields were skipped in mapping
         // Try to find name/phone in meta_data
         let foundName = '';
