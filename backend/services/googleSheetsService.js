@@ -13,9 +13,17 @@ class GoogleSheetsService {
     try {
       const serviceAccountPath = path.resolve(process.cwd(), 'service-account.json');
 
-      if (fs.existsSync(serviceAccountPath)) {
-        // Use Service Account if available (Premium/Write access)
-        console.log('[SHEETS] Initializing with Service Account...');
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        // Use credentials from environment variable (Common for Render/Heroku)
+        console.log('[SHEETS] Initializing with Service Account (from ENV)...');
+        const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+        this.auth = new google.auth.GoogleAuth({
+          credentials,
+          scopes: ['https://www.googleapis.com/auth/spreadsheets']
+        });
+      } else if (fs.existsSync(serviceAccountPath)) {
+        // Use Service Account file if available
+        console.log('[SHEETS] Initializing with Service Account (from file)...');
         this.auth = new google.auth.GoogleAuth({
           keyFile: serviceAccountPath,
           scopes: ['https://www.googleapis.com/auth/spreadsheets']
