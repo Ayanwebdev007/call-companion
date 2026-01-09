@@ -117,6 +117,11 @@ export const reorderCustomers = async (customerIds: string[]): Promise<void> => 
   await api.post(`${API_URL}/reorder`, { customerIds });
 };
 
+export const bulkInsertCustomers = async (spreadsheetId: string, customers: Partial<Customer>[]): Promise<{ message: string; count: number }> => {
+  const response = await api.post(`${API_URL}/bulk-insert`, { spreadsheetId, customers });
+  return response.data;
+};
+
 export interface SharedUser {
   username: string;
   permission_level: 'read-only' | 'read-write';

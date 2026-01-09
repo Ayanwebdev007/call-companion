@@ -10,7 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Link, CheckCircle, AlertCircle, ArrowRight, Download, FileSpreadsheet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { fetchSpreadsheet, api } from "@/lib/api";
+import { fetchSpreadsheet, bulkInsertCustomers, api } from "@/lib/api";
+import { useHistory } from "@/context/HistoryContext";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 
@@ -19,6 +20,7 @@ interface GoogleSheetsDialogProps {
   onOpenChange: (open: boolean) => void;
   spreadsheetId: string;
   onImportComplete?: () => void;
+  currentCustomers?: any[];
 }
 
 interface Sheet {
@@ -38,8 +40,9 @@ interface ColumnMapping {
   [key: string]: string;
 }
 
-const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplete }: GoogleSheetsDialogProps) => {
+const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplete, currentCustomers }: GoogleSheetsDialogProps) => {
   const { toast } = useToast();
+  const { pushAction } = useHistory();
   const [step, setStep] = useState<'url' | 'sheets' | 'mapping' | 'importing'>('url');
   const [sheetUrl, setSheetUrl] = useState("");
   const [isValidating, setIsValidating] = useState(false);
@@ -251,6 +254,22 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
 
     setIsImporting(true);
     try {
+      if (overwrite && currentCustomers && currentCustomers.length > 0) {
+        pushAction({
+          type: 'GOOGLE_SHEETS_OVERWRITE',
+          description: `Google Sheets Import (Overwrite)`,
+          undo: async () => {
+            await bulkInsertCustomers(spreadsheetId, currentCustomers);
+            onImportComplete?.();
+          },
+          redo: async () => {
+            // Re-running the exact same import might be complex, 
+            // but we can at least restore the "redo" capability if we wanted.
+            // For now, undoing the restore is the priority.
+          }
+        });
+      }
+
       const response = await api.post('/api/googlesheets/import', {
         spreadsheetId,
         sheetUrl,

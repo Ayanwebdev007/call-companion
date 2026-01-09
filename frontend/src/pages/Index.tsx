@@ -10,7 +10,7 @@ import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, Check
 import { format, isToday, parseISO, isPast, isValid, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet, recordSpreadsheetView } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, bulkInsertCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet, recordSpreadsheetView } from "@/lib/api";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +25,8 @@ import {
 
 
 import { useAuth } from "@/context/AuthContext";
-import { LogOut } from "lucide-react";
+import { LogOut, Undo2, Redo2 } from "lucide-react";
+import { useHistory } from "@/context/HistoryContext";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTableHead, ResizableTableRow, ResizableTableCell } from "@/components/ui/resizable-table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -55,6 +56,7 @@ const Index = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
+  const { pushAction, undo, redo, canUndo, canRedo, isProcessing } = useHistory();
 
   // Fetch shared users for this spreadsheet
   const { data: sharedUsers = [], isLoading: sharedUsersLoading } = useQuery({
@@ -142,6 +144,33 @@ const Index = () => {
     }, 300);
     return () => clearTimeout(t);
   }, [searchQuery]);
+
+  // Keyboard shortcuts for Undo/Redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          if (canRedo && !isProcessing) {
+            e.preventDefault();
+            redo();
+          }
+        } else {
+          if (canUndo && !isProcessing) {
+            e.preventDefault();
+            undo();
+          }
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        if (canRedo && !isProcessing) {
+          e.preventDefault();
+          redo();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo, canUndo, canRedo, isProcessing]);
 
   // Mark spreadsheet as viewed on entry
   useEffect(() => {
@@ -492,9 +521,33 @@ const Index = () => {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div className="flex flex-col">
-                <h1 className="text-xl font-bold text-foreground tracking-tight">
-                  {spreadsheet ? spreadsheet.name : 'Calling CRM'}
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold text-foreground tracking-tight">
+                    {spreadsheet ? spreadsheet.name : 'Calling CRM'}
+                  </h1>
+                  <div className="flex items-center gap-1 ml-2 border-l border-border/40 pl-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={undo}
+                      disabled={!canUndo || isProcessing}
+                      className={cn("h-7 w-7", !canUndo && "opacity-30")}
+                      title="Undo (Ctrl+Z)"
+                    >
+                      <Undo2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={redo}
+                      disabled={!canRedo || isProcessing}
+                      className={cn("h-7 w-7", !canRedo && "opacity-30")}
+                      title="Redo (Ctrl+Y)"
+                    >
+                      <Redo2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
                 <span className="text-xs text-muted-foreground font-medium">Welcome back, {user?.username}</span>
               </div>
             </div>
@@ -755,7 +808,23 @@ const Index = () => {
                     <AlertDialogAction
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       onClick={() => {
-                        bulkDeleteMutation.mutate(Array.from(selectedCustomers));
+                        const selectedIds = Array.from(selectedCustomers);
+                        const customersToDelete = customers.filter(c => selectedIds.includes(c.id));
+
+                        const restoreAction: HistoryAction = {
+                          type: 'BULK_DELETE',
+                          description: `Delete ${selectedIds.length} leads`,
+                          undo: async () => {
+                            await bulkInsertCustomers(spreadsheetId!, customersToDelete);
+                            queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
+                          },
+                          redo: async () => {
+                            await bulkDeleteMutation.mutateAsync(selectedIds);
+                          }
+                        };
+
+                        pushAction(restoreAction);
+                        bulkDeleteMutation.mutate(selectedIds);
                       }}
                     >
                       Delete
@@ -1120,7 +1189,25 @@ const Index = () => {
                       selectedCustomers={selectedCustomers}
                       onToggleSelect={toggleCustomerSelection}
                       onCellChange={handleCellChange}
-                      onDelete={() => deleteMutation.mutate(customer.id)}
+                      onDelete={() => {
+                        const customerToDelete = customers.find(c => c.id === customer.id);
+                        if (!customerToDelete) return;
+
+                        const restoreAction: HistoryAction = {
+                          type: 'DELETE_CUSTOMER',
+                          description: `Delete lead ${customerToDelete.customer_name}`,
+                          undo: async () => {
+                            await bulkInsertCustomers(spreadsheetId!, [customerToDelete]);
+                            queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
+                          },
+                          redo: async () => {
+                            await deleteMutation.mutateAsync(customer.id);
+                          }
+                        };
+
+                        pushAction(restoreAction);
+                        deleteMutation.mutate(customer.id);
+                      }}
                       onDragStart={handleDragStart}
                       onDragOver={handleDragOver}
                       onDragEnter={handleDragEnter}
@@ -1193,6 +1280,7 @@ const Index = () => {
         open={isGoogleSheetsDialogOpen}
         onOpenChange={setIsGoogleSheetsDialogOpen}
         spreadsheetId={spreadsheetId || ""}
+        currentCustomers={customers}
         onImportComplete={() => {
           queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] });
           toast({ title: "Data imported from Google Sheets!" });

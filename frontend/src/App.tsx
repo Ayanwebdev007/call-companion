@@ -19,6 +19,7 @@ import FormAssignment from "./pages/FormAssignment";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./context/AuthContext";
+import { HistoryProvider } from "./context/HistoryContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PermissionGuard from "./components/PermissionGuard";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -33,57 +34,59 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ErrorBoundary>
       <AuthProvider>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <HistoryProvider>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/" element={<Home />} />
+                  <Route element={<ProtectedRoute />}>
+                    <Route path="/" element={<Home />} />
 
-                  {/* Calling Dashboard - Requires 'dashboard' permission */}
-                  <Route element={<PermissionGuard permission="dashboard" />}>
-                    <Route path="/calling" element={<CallingLayout />}>
-                      <Route index element={<CallingOverview />} />
-                      <Route path="manual" element={<Dashboard key="manual" filterType="manual" />} />
-                      <Route path="meta" element={<Dashboard key="meta" filterType="meta" />} />
-                      <Route path="insights" element={<MetaInsights />} />
+                    {/* Calling Dashboard - Requires 'dashboard' permission */}
+                    <Route element={<PermissionGuard permission="dashboard" />}>
+                      <Route path="/calling" element={<CallingLayout />}>
+                        <Route index element={<CallingOverview />} />
+                        <Route path="manual" element={<Dashboard key="manual" filterType="manual" />} />
+                        <Route path="meta" element={<Dashboard key="meta" filterType="meta" />} />
+                        <Route path="insights" element={<MetaInsights />} />
 
-                      {/* Webhook Settings - Requires 'webhooks' permission */}
-                      <Route element={<PermissionGuard permission="webhooks" />}>
-                        <Route path="webhook" element={<MetaSettings />} />
+                        {/* Webhook Settings - Requires 'webhooks' permission */}
+                        <Route element={<PermissionGuard permission="webhooks" />}>
+                          <Route path="webhook" element={<MetaSettings />} />
+                        </Route>
                       </Route>
                     </Route>
+
+                    {/* Poster Generator - Requires 'poster' permission */}
+                    <Route element={<PermissionGuard permission="poster" />}>
+                      <Route path="/poster-generator" element={<PosterGenerator />} />
+                    </Route>
+
+                    {/* Admin Only Routes */}
+                    <Route element={<PermissionGuard requireAdmin />}>
+                      <Route path="/admin/users" element={<UserManagement />} />
+                      <Route path="/admin/assignments" element={<FormAssignment />} />
+                    </Route>
+
+                    <Route path="/whatsapp" element={<WhatsAppSettings />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/spreadsheet/:id" element={<Index />} />
                   </Route>
 
-                  {/* Poster Generator - Requires 'poster' permission */}
-                  <Route element={<PermissionGuard permission="poster" />}>
-                    <Route path="/poster-generator" element={<PosterGenerator />} />
-                  </Route>
-
-                  {/* Admin Only Routes */}
-                  <Route element={<PermissionGuard requireAdmin />}>
-                    <Route path="/admin/users" element={<UserManagement />} />
-                    <Route path="/admin/assignments" element={<FormAssignment />} />
-                  </Route>
-
-                  <Route path="/whatsapp" element={<WhatsAppSettings />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/spreadsheet/:id" element={<Index />} />
-                </Route>
-
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </ThemeProvider>
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </ThemeProvider>
+        </HistoryProvider>
       </AuthProvider>
     </ErrorBoundary>
   </QueryClientProvider>
