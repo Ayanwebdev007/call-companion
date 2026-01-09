@@ -23,7 +23,7 @@ customerSchema.index({ spreadsheet_id: 1, company_name: 1 });
 customerSchema.index({ spreadsheet_id: 1, phone_number: 1 });
 
 // Index for Meta deduplication and syncing
-customerSchema.index({ user_id: 1, 'meta_data.meta_lead_id': 1 });
+customerSchema.index({ business_id: 1, 'meta_data.meta_lead_id': 1 });
 
 // Map _id to id
 customerSchema.set('toJSON', {

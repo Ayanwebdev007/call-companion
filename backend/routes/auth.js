@@ -535,6 +535,13 @@ router.delete('/business/users/:id', auth, async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found in your business' });
 
     await User.deleteOne({ _id: req.params.id });
+
+    // Cleanup: Remove this user from all spreadsheet assignments in the business
+    await (await import('../models/Spreadsheet.js')).default.updateMany(
+      { business_id: adminUser.business_id },
+      { $pull: { assigned_users: req.params.id } }
+    );
+
     res.json({ message: 'User deleted successfully' });
   } catch (err) {
     console.error(err.message);
