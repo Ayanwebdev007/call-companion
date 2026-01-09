@@ -99,6 +99,13 @@ router.post('/import', auth, async (req, res) => {
       return res.status(400).json({ message: 'No data source found for import' });
     }
 
+    // Get starting position for new customers
+    let startPosition = 0;
+    if (!req.body.overwrite) {
+      const lastCustomer = await Customer.findOne({ spreadsheet_id: spreadsheetId }).sort({ position: -1 });
+      startPosition = lastCustomer ? lastCustomer.position + 1 : 0;
+    }
+
     // Map and import customers
     const customers = [];
     const headers = finalHeaders;
@@ -118,7 +125,7 @@ router.post('/import', auth, async (req, res) => {
         next_call_date: getMappedValue(row, headers, columnMapping.nextCallDate) || new Date().toISOString().split('T')[0],
         next_call_time: getMappedValue(row, headers, columnMapping.nextCallTime) || '',
         last_call_date: getMappedValue(row, headers, columnMapping.lastCallDate) || '',
-        position: customers.length // Maintain order from sheet
+        position: startPosition + customers.length // Maintain order and append correctly
       };
 
       // Handle dynamic meta_data for Meta spreadsheets first so rescue logic can use it
@@ -165,11 +172,12 @@ router.post('/import', auth, async (req, res) => {
     // Now safely delete and insert if we have data
     if (customers.length > 0) {
       try {
-        // ONLY DELETE IF WE HAVE NEW DATA TO REPLACE IT WITH
-        await Customer.deleteMany({
-          spreadsheet_id: spreadsheetId,
-          user_id: req.user.id
-        });
+        if (req.body.overwrite) {
+          // ONLY DELETE IF OVERWRITE IS REQUESTED
+          await Customer.deleteMany({
+            spreadsheet_id: spreadsheetId
+          });
+        }
 
         const insertedCustomers = await Customer.insertMany(customers);
 
