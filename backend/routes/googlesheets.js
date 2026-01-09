@@ -81,11 +81,8 @@ router.post('/import', auth, async (req, res) => {
       return res.status(403).json({ message: 'You do not have access to this spreadsheet' });
     }
 
-    // Clear existing customers for this spreadsheet (optional - you might want to merge instead)
-    await Customer.deleteMany({
-      spreadsheet_id: spreadsheetId,
-      user_id: req.user.id
-    });
+    // Move deletion to after parsing, but for now we'll collect customers first.
+    // We will delete only if we actually have leads to replace them with.
 
     // If a specific range is requested, fetch fresh data on the backend to avoid payload limits
     let finalData = sheetData?.data;
@@ -135,7 +132,6 @@ router.post('/import', auth, async (req, res) => {
           customer.meta_data = {};
           spreadsheet.meta_headers.forEach(header => {
             // First check if there's an explicit mapping for this header
-            // We'll use the header name as the key in columnMapping
             const mappingHeader = columnMapping[header] || header;
             const val = getMappedValue(row, headers, mappingHeader);
             if (val) {
@@ -145,12 +141,35 @@ router.post('/import', auth, async (req, res) => {
         }
 
         customers.push(customer);
+      } else if (spreadsheet.is_meta && Object.keys(customer.meta_data || {}).length > 0) {
+        // RESCUE: If it's a Meta sheet and we have meta_data, but standard fields were skipped in mapping
+        // Try to find name/phone in meta_data
+        let foundName = '';
+        let foundPhone = '';
+
+        for (const [key, val] of Object.entries(customer.meta_data)) {
+          const lKey = key.toLowerCase();
+          if (!foundName && (lKey.includes('name') || lKey.includes('customer'))) foundName = val;
+          if (!foundPhone && (lKey.includes('phone') || lKey.includes('mobile') || lKey.includes('tel') || lKey.includes('contact'))) foundPhone = val;
+        }
+
+        customer.customer_name = foundName || 'Meta Lead';
+        customer.phone_number = foundPhone || 'N/A';
+        customer.company_name = customer.company_name || 'N/A';
+
+        customers.push(customer);
       }
     }
 
-    // Bulk insert customers
+    // Now safely delete and insert if we have data
     if (customers.length > 0) {
       try {
+        // ONLY DELETE IF WE HAVE NEW DATA TO REPLACE IT WITH
+        await Customer.deleteMany({
+          spreadsheet_id: spreadsheetId,
+          user_id: req.user.id
+        });
+
         const insertedCustomers = await Customer.insertMany(customers);
 
         // SYNC TO MASTER SHEET (BULK)

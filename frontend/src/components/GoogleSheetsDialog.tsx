@@ -94,9 +94,22 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
   }, [open, spreadsheetId]);
 
   const customerFields = [
-    { key: 'customerName', label: 'Customer Name', required: true },
-    { key: 'companyName', label: 'Company Name', required: true },
-    { key: 'phoneNumber', label: 'Phone Number', required: true },
+    // Core fields - only show as separate if NOT in Meta headers to avoid confusion
+    ...(!metaHeaders.some(h => {
+      const lh = h.toLowerCase();
+      return lh.includes('name') || lh.includes('customer');
+    }) ? [{ key: 'customerName', label: 'Customer Name', required: true }] : []),
+
+    ...(!metaHeaders.some(h => {
+      const lh = h.toLowerCase();
+      return lh.includes('company') || lh.includes('business');
+    }) ? [{ key: 'companyName', label: 'Company Name', required: true }] : []),
+
+    ...(!metaHeaders.some(h => {
+      const lh = h.toLowerCase();
+      return lh.includes('phone') || lh.includes('mobile');
+    }) ? [{ key: 'phoneNumber', label: 'Phone Number', required: true }] : []),
+
     { key: 'remarks', label: 'Remarks', required: false },
     { key: 'nextCallDate', label: 'Next Call Date', required: false },
     { key: 'nextCallTime', label: 'Next Call Time', required: false },
@@ -216,14 +229,18 @@ const GoogleSheetsDialog = ({ open, onOpenChange, spreadsheetId, onImportComplet
   };
 
   const importData = async () => {
-    // Validate required mappings
-    const requiredFields = ['customerName', 'companyName', 'phoneNumber'];
-    const missingFields = requiredFields.filter(field => !columnMapping[field as keyof ColumnMapping]);
+    // Validate required mappings - only check core ones if they were displayed
+    const requiredFields = [];
+    if (!metaHeaders.some(h => h.toLowerCase().includes('name') || h.toLowerCase().includes('customer'))) requiredFields.push('customerName');
+    if (!metaHeaders.some(h => h.toLowerCase().includes('company') || h.toLowerCase().includes('business'))) requiredFields.push('companyName');
+    if (!metaHeaders.some(h => h.toLowerCase().includes('phone') || h.toLowerCase().includes('mobile'))) requiredFields.push('phoneNumber');
+
+    const missingFields = requiredFields.filter(field => !columnMapping[field]);
 
     if (missingFields.length > 0) {
       toast({
         title: "Missing required mappings",
-        description: "Please map Customer Name, Company Name, and Phone Number",
+        description: "Please map all required fields",
         variant: "destructive"
       });
       return;
