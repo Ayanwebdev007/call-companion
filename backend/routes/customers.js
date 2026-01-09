@@ -708,7 +708,7 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 // BULK DELETE customers (Soft Delete)
-router.post('/bulk-delete', auth, checkPermission('dashboard'), async (req, res) => {
+router.post('/bulk-delete', auth, async (req, res) => {
   try {
     console.log('Bulk delete request received');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
@@ -799,8 +799,8 @@ router.post('/bulk-delete', auth, checkPermission('dashboard'), async (req, res)
   }
 });
 
-// POST bulk insert (for Undo restoration)
-router.post('/bulk-insert', auth, checkPermission('dashboard'), async (req, res) => {
+// POST bulk insert (for Undo restoration/Import)
+router.post('/bulk-insert', auth, async (req, res) => {
   try {
     const { spreadsheetId, customers } = req.body;
 
@@ -878,7 +878,7 @@ router.post('/bulk-insert', auth, checkPermission('dashboard'), async (req, res)
 });
 
 // RESTORE customer (Soft Delete Reversal)
-router.post('/restore/:id', auth, checkPermission('dashboard'), async (req, res) => {
+router.post('/restore/:id', auth, async (req, res) => {
   try {
     const customer = await Customer.findById(req.params.id);
     if (!customer) return res.status(404).json({ message: 'Customer not found' });
@@ -903,7 +903,7 @@ router.post('/restore/:id', auth, checkPermission('dashboard'), async (req, res)
 });
 
 // BULK RESTORE customers
-router.post('/bulk-restore', auth, checkPermission('dashboard'), async (req, res) => {
+router.post('/bulk-restore', auth, async (req, res) => {
   try {
     const { ids } = req.body;
     if (!ids || !Array.isArray(ids)) return res.status(400).json({ message: 'IDs array required' });
