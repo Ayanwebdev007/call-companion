@@ -196,8 +196,10 @@ router.post('/bulk-import', auth, async (req, res) => {
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
 
-    // Check ownership or sharing with write permission
-    let hasWriteAccess = spreadsheet.user_id.toString() === req.user.id;
+    // Check role or assignment (Admin, Owner, or Assigned User)
+    let hasWriteAccess = user.role === 'admin' ||
+      spreadsheet.user_id.toString() === req.user.id ||
+      (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
 
     if (!hasWriteAccess) {
       // Check if shared with this user with write permission
@@ -677,8 +679,10 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
 
-    // Check role or assignment (Admin or Assigned User)
-    let hasWriteAccess = user.role === 'admin' || (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
+    // Check role or assignment (Admin, Owner, or Assigned User)
+    let hasWriteAccess = user.role === 'admin' ||
+      spreadsheet.user_id.toString() === req.user.id ||
+      (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
 
     if (!hasWriteAccess) {
       // Check if shared with this user with write permission
@@ -749,8 +753,10 @@ router.post('/bulk-delete', auth, async (req, res) => {
         continue;
       }
 
-      // Check ownership or sharing with write permission
-      let hasWriteAccess = spreadsheet.user_id.toString() === req.user.id;
+      // Check role or assignment (Admin, Owner, or Assigned User)
+      let hasWriteAccess = user.role === 'admin' ||
+        spreadsheet.user_id.toString() === req.user.id ||
+        (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
 
       if (!hasWriteAccess) {
         // Check if shared with this user with write permission
@@ -816,8 +822,11 @@ router.post('/bulk-insert', auth, async (req, res) => {
       return res.status(404).json({ message: 'Spreadsheet not found or access denied' });
     }
 
-    // Check write access
-    let hasWriteAccess = user.role === 'admin' || (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
+    // Check write access (Admin, Owner, or Assigned User)
+    let hasWriteAccess = user.role === 'admin' ||
+      spreadsheet.user_id.toString() === req.user.id ||
+      (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
+
     if (!hasWriteAccess) {
       const sharing = await Sharing.findOne({
         spreadsheet_id: spreadsheetId,
@@ -886,7 +895,21 @@ router.post('/restore/:id', auth, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    if (customer.business_id.toString() !== user.business_id.toString()) {
+    // Check write access (Admin, Owner, or Assigned User)
+    const spreadsheet = await Spreadsheet.findById(customer.spreadsheet_id);
+    let hasWriteAccess = user.role === 'admin' ||
+      (spreadsheet && spreadsheet.user_id.toString() === user.id) ||
+      (spreadsheet && spreadsheet.assigned_users && spreadsheet.assigned_users.includes(user.id));
+
+    if (!hasWriteAccess && spreadsheet) {
+      const sharing = await Sharing.findOne({
+        spreadsheet_id: spreadsheet._id,
+        shared_with_user_id: user.id
+      });
+      hasWriteAccess = sharing && sharing.permission_level === 'read-write';
+    }
+
+    if (!hasWriteAccess) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -910,6 +933,31 @@ router.post('/bulk-restore', auth, async (req, res) => {
 
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // For bulk restore, we need to check if user has access to ALL customers' spreadsheets
+    const customers = await Customer.find({ _id: { $in: ids } });
+    const spreadsheetIds = [...new Set(customers.map(c => c.spreadsheet_id.toString()))];
+
+    for (const spreadsheetId of spreadsheetIds) {
+      const spreadsheet = await Spreadsheet.findById(spreadsheetId);
+      if (!spreadsheet) continue;
+
+      let hasWriteAccess = user.role === 'admin' ||
+        spreadsheet.user_id.toString() === req.user.id ||
+        (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
+
+      if (!hasWriteAccess) {
+        const sharing = await Sharing.findOne({
+          spreadsheet_id: spreadsheetId,
+          shared_with_user_id: req.user.id
+        });
+        hasWriteAccess = sharing && sharing.permission_level === 'read-write';
+      }
+
+      if (!hasWriteAccess) {
+        return res.status(403).json({ message: `Access denied for spreadsheet ${spreadsheet.name || spreadsheetId}` });
+      }
+    }
 
     const result = await Customer.updateMany(
       {
@@ -952,8 +1000,10 @@ router.post('/reorder', auth, async (req, res) => {
         continue;
       }
 
-      // Check ownership or sharing with write permission
-      let hasWriteAccess = spreadsheet.user_id.toString() === req.user.id;
+      // Check role or assignment (Admin, Owner, or Assigned User)
+      let hasWriteAccess = user.role === 'admin' ||
+        spreadsheet.user_id.toString() === req.user.id ||
+        (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
 
       if (!hasWriteAccess) {
         // Check if shared with this user with write permission
