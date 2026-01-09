@@ -5,12 +5,13 @@ import Spreadsheet from '../models/Spreadsheet.js';
 /**
  * Synchronizes a spreadsheet's data to Google Sheets if realtime sync is enabled.
  * @param {string} spreadsheetId - The ID of the CRM spreadsheet.
+ * @param {boolean} force - If true, bypasses the realtime_sync check (for manual sync).
  */
-export const syncToGoogleSheets = async (spreadsheetId) => {
+export const syncToGoogleSheets = async (spreadsheetId, force = false) => {
     try {
         // 1. Fetch settings
         const spreadsheet = await Spreadsheet.findById(spreadsheetId);
-        if (!spreadsheet || !spreadsheet.realtime_sync || !spreadsheet.linked_google_sheet_url) {
+        if (!spreadsheet || (!force && !spreadsheet.realtime_sync) || !spreadsheet.linked_google_sheet_url) {
             return;
         }
 
@@ -46,7 +47,7 @@ export const syncToGoogleSheets = async (spreadsheetId) => {
 
                     // Handle meta data fields
                     if (c.meta_data) {
-                        return c.meta_data[field] || '';
+                        return (c.meta_data instanceof Map ? c.meta_data.get(field) : c.meta_data[field]) || '';
                     }
                     return '';
                 });
@@ -71,7 +72,8 @@ export const syncToGoogleSheets = async (spreadsheetId) => {
                 ];
                 if (spreadsheet.meta_headers) {
                     spreadsheet.meta_headers.forEach(h => {
-                        row.push(c.meta_data ? (c.meta_data[h] || '') : '');
+                        const val = c.meta_data instanceof Map ? c.meta_data.get(h) : c.meta_data[h];
+                        row.push(val || '');
                     });
                 }
                 return row;

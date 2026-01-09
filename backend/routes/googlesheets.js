@@ -291,7 +291,7 @@ router.post('/export', auth, async (req, res) => {
 
           // Handle meta data fields
           if (c.meta_data) {
-            return c.meta_data[field] || '';
+            return (c.meta_data instanceof Map ? c.meta_data.get(field) : c.meta_data[field]) || '';
           }
           return '';
         });
@@ -325,7 +325,8 @@ router.post('/export', auth, async (req, res) => {
 
         if (spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
           spreadsheet.meta_headers.forEach(h => {
-            row.push(c.meta_data ? (c.meta_data[h] || '') : '');
+            const val = c.meta_data instanceof Map ? c.meta_data.get(h) : c.meta_data[h];
+            row.push(val || '');
           });
         }
         return row;
@@ -367,8 +368,8 @@ router.post('/sync/:spreadsheetId', auth, async (req, res) => {
   try {
     const { spreadsheetId } = req.params;
 
-    // Perform sync
-    await syncToGoogleSheets(spreadsheetId);
+    // Perform sync (force bypasses realtime_sync flag)
+    await syncToGoogleSheets(spreadsheetId, true);
 
     res.json({ success: true, message: 'Synchronization triggered successfully' });
   } catch (error) {
