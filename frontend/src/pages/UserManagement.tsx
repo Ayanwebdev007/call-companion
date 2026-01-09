@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,9 +43,7 @@ const UserManagement = () => {
 
     const fetchUsers = async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/business/users`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get('/api/auth/business/users');
             setUsers(res.data);
         } catch (err: any) {
             toast({ title: "Error", description: err.response?.data?.message || "Failed to fetch users", variant: "destructive" });
@@ -57,9 +55,7 @@ const UserManagement = () => {
     const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/business/users`, newUser, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post('/api/auth/business/users', newUser);
             toast({ title: "Success", description: "User created successfully" });
             setIsCreateOpen(false);
             setNewUser({ name: "", email: "", password: "" });
@@ -72,9 +68,7 @@ const UserManagement = () => {
     const handleDeleteUser = async (id: string) => {
         if (!confirm("Are you sure you want to delete this user?")) return;
         try {
-            await axios.delete(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/business/users/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`/api/auth/business/users/${id}`);
             toast({ title: "Success", description: "User deleted successfully" });
             fetchUsers();
         } catch (err: any) {
@@ -85,9 +79,8 @@ const UserManagement = () => {
     const handleUpdatePermissions = async () => {
         if (!selectedUserPermissions) return;
         try {
-            await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/business/users/${selectedUserPermissions.userId}/permissions`,
-                { permissions: selectedUserPermissions.permissions },
-                { headers: { Authorization: `Bearer ${token}` } }
+            await api.put(`/api/auth/business/users/${selectedUserPermissions.userId}/permissions`,
+                { permissions: selectedUserPermissions.permissions }
             );
             toast({ title: "Success", description: "Permissions updated successfully" });
             setSelectedUserPermissions(null);
@@ -103,9 +96,8 @@ const UserManagement = () => {
     const handleResetPassword = async () => {
         if (!selectedUserForReset || !resetPasswordValue) return;
         try {
-            await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/business/users/${selectedUserForReset.userId}/reset-password`,
-                { password: resetPasswordValue },
-                { headers: { Authorization: `Bearer ${token}` } }
+            await api.post(`/api/auth/business/users/${selectedUserForReset.userId}/reset-password`,
+                { password: resetPasswordValue }
             );
             toast({ title: "Success", description: "Password reset successfully" });
             setSelectedUserForReset(null);

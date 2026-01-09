@@ -14,6 +14,8 @@ import { GoogleLoginButton } from '@/components/GoogleLoginButton';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const Login = () => {
+  const searchParams = new URLSearchParams(window.location.search);
+  const isExpired = searchParams.get('expired') === 'true';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login } = useAuth();
@@ -62,16 +64,23 @@ const Login = () => {
         </div>
 
         <div className="mx-auto grid w-full max-w-[350px] gap-6 animate-fade-in-up relative z-10">
-          <div className="flex flex-col items-center gap-2 text-center mb-4">
-            <div className="p-3 bg-primary/10 rounded-2xl ring-1 ring-primary/20 shadow-xl backdrop-blur-3xl mb-2 animate-pulse-soft">
-              <Phone className="h-6 w-6 text-primary" />
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome back</h1>
-            <p className="text-muted-foreground text-sm">
-              Enter your credentials to access your account
-            </p>
-          </div>
           <Card className="border border-border/50 dark:border-white/10 shadow-2xl bg-card/60 dark:bg-black/40 backdrop-blur-xl">
+            <CardHeader className="space-y-1">
+              <div className="flex justify-center mb-4">
+                <div className="p-3 bg-primary/10 rounded-2xl ring-1 ring-primary/20 shadow-xl backdrop-blur-3xl animate-pulse-soft">
+                  <Phone className="h-8 w-8 text-primary" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl font-bold text-center">Welcome back</CardTitle>
+              <CardDescription className="text-center">
+                Enter your credentials to access your account
+              </CardDescription>
+              {isExpired && (
+                <div className="mt-4 p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg text-orange-600 dark:text-orange-400 text-sm text-center font-medium animate-in fade-in slide-in-from-top-2">
+                  Your session has expired. Please login again.
+                </div>
+              )}
+            </CardHeader>
             <CardContent className="pt-6 px-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid w-full items-center gap-3">

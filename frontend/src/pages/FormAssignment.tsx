@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -41,12 +41,8 @@ const FormAssignment = () => {
     const fetchData = async () => {
         try {
             const [usersRes, spreadsheetsRes] = await Promise.all([
-                axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/business/users`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                }),
-                axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/spreadsheets`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                })
+                api.get('/api/auth/business/users'),
+                api.get('/api/spreadsheets')
             ]);
             setUsers(usersRes.data);
             setSpreadsheets(spreadsheetsRes.data);
@@ -72,9 +68,8 @@ const FormAssignment = () => {
         if (!selectedSpreadsheetId) return;
         setIsSaving(true);
         try {
-            await axios.put(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/spreadsheets/${selectedSpreadsheetId}/assign`,
-                { userIds: assignedUsers },
-                { headers: { Authorization: `Bearer ${token}` } }
+            await api.put(`/api/spreadsheets/${selectedSpreadsheetId}/assign`,
+                { userIds: assignedUsers }
             );
             toast({ title: "Success", description: "Assignments updated successfully" });
             fetchData(); // Refresh data to get updated assigned_users

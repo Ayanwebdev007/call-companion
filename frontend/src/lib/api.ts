@@ -264,6 +264,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Add interceptor to handle token expiration/unauthorized errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && (error.response.status === 401)) {
+      // Clear storage and redirect on authentication failure
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login?expired=true';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;
 // Meta Analytics
 export interface MetaAnalyticsResponse {
