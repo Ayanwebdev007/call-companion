@@ -33,11 +33,17 @@ router.get('/', auth, checkPermission('dashboard'), async (req, res) => {
 router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
+
+    // AUTO-ASSIGN: Get all users in the business
+    const businessUsers = await User.find({ business_id: user.business_id });
+    const userIds = businessUsers.map(u => u._id);
+
     const spreadsheet = new Spreadsheet({
       user_id: req.user.id,
       business_id: user.business_id,
       name: req.body.name,
-      description: req.body.description || ''
+      description: req.body.description || '',
+      assigned_users: userIds
     });
 
     const newSpreadsheet = await spreadsheet.save();
@@ -72,13 +78,25 @@ router.get('/:id', auth, async (req, res) => {
 // UPDATE spreadsheet
 router.put('/:id', auth, async (req, res) => {
   try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Find the spreadsheet and ensure it belongs to the same business
+    const query = { _id: req.params.id, business_id: user.business_id };
+
+    // Non-admins can only update their own spreadsheets
+    if (user.role !== 'admin') {
+      query.user_id = req.user.id;
+    }
+
     const updatedSpreadsheet = await Spreadsheet.findOneAndUpdate(
-      { _id: req.params.id, user_id: req.user.id },
+      query,
       { ...req.body, updated_at: Date.now() },
       { new: true }
     );
+
     if (!updatedSpreadsheet) {
-      return res.status(404).json({ message: 'Spreadsheet not found' });
+      return res.status(404).json({ message: 'Spreadsheet not found or access denied' });
     }
     res.json(updatedSpreadsheet);
   } catch (err) {
@@ -163,13 +181,17 @@ router.post('/merge', auth, async (req, res) => {
     // 4. Fetch and Copy Customers
     // We want to copy everything. Duplicate check? User said "merge data", usually implies union.
     // We'll simplisticly copy all.
-    const customers = await Customer.find({ spreadsheet_id: { $in: spreadsheetIds } }).lean();
+    const customers = await Customer.find({
+      spreadsheet_id: { $in: spreadsheetIds },
+      business_id: user.business_id // Strict isolation
+    }).lean();
 
     const newCustomers = customers.map(c => {
       const { _id, ...rest } = c; // Remove _id
       return {
         ...rest,
-        user_id: req.user.id, // Ensure user_id is set
+        user_id: req.user.id,
+        business_id: user.business_id, // Ensure business_id is preserved/set
         spreadsheet_id: newSpreadsheet._id,
         created_at: new Date(),
         updated_at: new Date()

@@ -105,13 +105,13 @@ const FormAssignment = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="glass-card border-slate-800 md:col-span-1">
+                <Card className="glass-card border-border md:col-span-1">
                     <CardHeader>
                         <CardTitle>Select Form</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <Select value={selectedSpreadsheetId} onValueChange={setSelectedSpreadsheetId}>
-                            <SelectTrigger className="bg-slate-900/50 border-slate-800">
+                            <SelectTrigger className="bg-background border-border">
                                 <SelectValue placeholder="Select a spreadsheet" />
                             </SelectTrigger>
                             <SelectContent>
@@ -129,7 +129,7 @@ const FormAssignment = () => {
                     </CardContent>
                 </Card>
 
-                <Card className="glass-card border-slate-800 md:col-span-2">
+                <Card className="glass-card border-border md:col-span-2">
                     <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle>Assign Users</CardTitle>
                         <Button
@@ -152,7 +152,7 @@ const FormAssignment = () => {
                                     <p className="text-center py-8 text-muted-foreground">No users (non-admins) found in your business.</p>
                                 ) : (
                                     users.filter(u => u.role !== 'admin').map(u => (
-                                        <div key={u.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 transition-colors">
+                                        <div key={u.id} className="flex items-center justify-between p-3 rounded-lg border border-border bg-accent/40 hover:bg-accent/60 transition-colors">
                                             <div className="flex items-center space-x-3">
                                                 <Checkbox
                                                     id={`user-${u.id}`}
@@ -164,7 +164,7 @@ const FormAssignment = () => {
                                                     <p className="text-xs text-muted-foreground">{u.email}</p>
                                                 </Label>
                                             </div>
-                                            <Badge variant={assignedUsers.includes(u.id) ? "default" : "outline"} className={assignedUsers.includes(u.id) ? "bg-blue-600/20 text-blue-400 border-blue-600/30" : "border-slate-800"}>
+                                            <Badge variant={assignedUsers.includes(u.id) ? "default" : "outline"} className={assignedUsers.includes(u.id) ? "bg-blue-600/20 text-blue-600 dark:text-blue-400 border-blue-600/30" : "border-border"}>
                                                 {assignedUsers.includes(u.id) ? "Assigned" : "Unassigned"}
                                             </Badge>
                                         </div>

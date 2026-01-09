@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['admin', 'user'], default: 'admin' },
   permissions: {
     type: [String],
-    default: ['dashboard', 'poster', 'webhooks'] // Default permissions for admin
+    default: ['dashboard', 'poster'] // Default permissions (webhooks off)
   },
   resetPasswordToken: String,
   resetPasswordExpires: Date,

@@ -559,14 +559,22 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Ensure customer belongs to user's business
+    if (customer.business_id.toString() !== user.business_id.toString()) {
+      return res.status(403).json({ message: 'Access denied: Customer belongs to another business' });
+    }
+
     // Check if user has write access to this spreadsheet
-    const spreadsheet = await Spreadsheet.findById(customer.spreadsheet_id);
+    const spreadsheet = await Spreadsheet.findOne({ _id: customer.spreadsheet_id, business_id: user.business_id });
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
 
-    // Check ownership or sharing with write permission
-    let hasWriteAccess = spreadsheet.user_id.toString() === req.user.id;
+    // Check role or assignment (Admin or Assigned User)
+    let hasWriteAccess = user.role === 'admin' || (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
 
     if (!hasWriteAccess) {
       // Check if shared with this user with write permission
@@ -582,7 +590,7 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     const updatedCustomer = await Customer.findOneAndUpdate(
-      { _id: req.params.id },
+      { _id: req.params.id, business_id: user.business_id },
       req.body,
       { new: true }
     );
@@ -639,14 +647,17 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
     // Check if user has write access to this spreadsheet
-    const spreadsheet = await Spreadsheet.findById(customer.spreadsheet_id);
+    const spreadsheet = await Spreadsheet.findOne({ _id: customer.spreadsheet_id, business_id: user.business_id });
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
 
-    // Check ownership or sharing with write permission
-    let hasWriteAccess = spreadsheet.user_id.toString() === req.user.id;
+    // Check role or assignment (Admin or Assigned User)
+    let hasWriteAccess = user.role === 'admin' || (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
 
     if (!hasWriteAccess) {
       // Check if shared with this user with write permission
@@ -661,7 +672,7 @@ router.delete('/:id', auth, async (req, res) => {
       return res.status(403).json({ message: 'You do not have write access to this spreadsheet' });
     }
 
-    const deletedCustomer = await Customer.findOneAndDelete({ _id: req.params.id });
+    const deletedCustomer = await Customer.findOneAndDelete({ _id: req.params.id, business_id: user.business_id });
     if (!deletedCustomer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
@@ -738,7 +749,8 @@ router.post('/bulk-delete', auth, async (req, res) => {
     }
 
     const result = await Customer.deleteMany({
-      _id: { $in: validIds }
+      _id: { $in: validIds },
+      business_id: user.business_id // Strict isolation
     });
 
     console.log('Delete result:', result);

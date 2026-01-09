@@ -55,7 +55,7 @@ router.post('/register', async (req, res) => {
       password: await bcrypt.hash(password, 10),
       business_id: newBusiness._id,
       role: 'admin',
-      permissions: ['dashboard', 'poster', 'webhooks']
+      permissions: ['dashboard', 'poster']
     });
 
     // Explicitly set plain_password for admin visibility if desired (based on previous request)
@@ -415,6 +415,30 @@ router.put('/settings', auth, async (req, res) => {
       return res.status(404).json({ message: 'Business not found' });
     }
 
+    // CHECK FOR COLLISIONS (Multi-tenant security)
+    if (settings.metaVerifyToken) {
+      const otherBusiness = await Business.findOne({
+        _id: { $ne: business._id },
+        'settings.metaVerifyToken': settings.metaVerifyToken
+      });
+      if (otherBusiness) {
+        return res.status(400).json({ message: 'This Meta Verify Token is already in use by another business.' });
+      }
+    }
+
+    if (settings.metaPageId) {
+      const otherBusiness = await Business.findOne({
+        _id: { $ne: business._id },
+        $or: [
+          { 'settings.metaPageId': settings.metaPageId },
+          { 'settings.metaPages.pageId': settings.metaPageId }
+        ]
+      });
+      if (otherBusiness) {
+        return res.status(400).json({ message: 'This Meta Page ID is already registered with another business.' });
+      }
+    }
+
     business.settings = {
       ...business.settings,
       ...settings
@@ -468,6 +492,13 @@ router.post('/business/users', auth, async (req, res) => {
     });
 
     await user.save();
+
+    // AUTO-ASSIGN: Add this new user to all existing spreadsheets in the business
+    await (await import('../models/Spreadsheet.js')).default.updateMany(
+      { business_id: adminUser.business_id },
+      { $addToSet: { assigned_users: user._id } }
+    );
+
     res.json({ message: 'User created successfully', user: { id: user.id, username: user.name, email, role: 'user', permissions: user.permissions } });
   } catch (err) {
     console.error(err.message);

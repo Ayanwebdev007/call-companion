@@ -165,11 +165,11 @@ const UserManagement = () => {
                 </Dialog>
             </div>
 
-            <Card className="glass-card border-slate-800">
+            <Card className="glass-card border-border">
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader>
-                            <TableRow className="hover:bg-transparent border-slate-800">
+                            <TableRow className="hover:bg-transparent border-border">
                                 <TableHead>User</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Permissions</TableHead>
@@ -182,10 +182,10 @@ const UserManagement = () => {
                             ) : users.length === 0 ? (
                                 <TableRow><TableCell colSpan={4} className="text-center py-8">No users found.</TableCell></TableRow>
                             ) : users.map(u => (
-                                <TableRow key={u.id} className="border-slate-800 hover:bg-slate-900/40">
+                                <TableRow key={u.id} className="border-border hover:bg-accent/40">
                                     <TableCell>
                                         <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center">
+                                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                                                 <UserIcon className="h-5 w-5 text-slate-400" />
                                             </div>
                                             <div>
@@ -202,7 +202,7 @@ const UserManagement = () => {
                                     <TableCell>
                                         <div className="flex flex-wrap gap-1">
                                             {u.permissions.map(p => (
-                                                <Badge key={p} variant="outline" className="text-[10px] py-0 border-slate-700">
+                                                <Badge key={p} variant="outline" className="text-[10px] py-0 border-border">
                                                     {p}
                                                 </Badge>
                                             ))}
@@ -262,8 +262,8 @@ const UserManagement = () => {
                     <div className="space-y-4 pt-4">
                         <div className="space-y-2">
                             <Label>Current Password</Label>
-                            <div className="p-3 bg-slate-900/50 rounded-md border border-slate-700 text-sm font-mono text-muted-foreground break-all">
-                                {selectedUserForReset?.plain_password || <span className="italic text-slate-500">Not recorded (old user)</span>}
+                            <div className="p-3 bg-muted/50 rounded-md border border-border text-sm font-mono text-muted-foreground break-all">
+                                {selectedUserForReset?.plain_password || <span className="italic text-muted-foreground/60">Not recorded (old user)</span>}
                             </div>
                         </div>
                         <div className="space-y-2">
@@ -274,7 +274,7 @@ const UserManagement = () => {
                                 value={resetPasswordValue}
                                 onChange={e => setResetPasswordValue(e.target.value)}
                                 placeholder="Enter new password to override"
-                                className="bg-slate-900/50 border-input"
+                                className="bg-background border-input"
                             />
                         </div>
                         <Button onClick={handleResetPassword} className="w-full bg-orange-600 hover:bg-orange-700">Reset Password</Button>

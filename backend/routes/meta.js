@@ -141,7 +141,7 @@ router.post('/webhook', async (req, res) => {
                                     ad_name: adName,
                                     is_meta: true,
                                     is_master: false,
-                                    assigned_users: [] // Initially unassigned
+                                    assigned_users: (await User.find({ business_id: business._id })).map(u => u._id)
                                 });
                                 await adSpreadsheet.save();
                             }
@@ -168,7 +168,7 @@ router.post('/webhook', async (req, res) => {
                                     form_name: formName,
                                     is_meta: true,
                                     is_master: true,
-                                    assigned_users: []
+                                    assigned_users: (await User.find({ business_id: business._id })).map(u => u._id)
                                 });
                                 await masterSpreadsheet.save();
 

@@ -11,18 +11,23 @@ router.post('/spreadsheets/:id/share', auth, async (req, res) => {
   try {
     const { username, permission_level } = req.body;
     const spreadsheetId = req.params.id;
-    
+
     // Validate that spreadsheetId is a valid ObjectId
     const mongoose = await import('mongoose');
     if (!mongoose.default.isValidObjectId(spreadsheetId)) {
       return res.status(400).json({ message: 'Invalid spreadsheet ID' });
     }
 
-    // Check if spreadsheet exists and user is the owner
-    const spreadsheet = await Spreadsheet.findOne({ 
-      _id: spreadsheetId, 
-      user_id: req.user.id 
-    });
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Check if spreadsheet exists and user has permission (Owner or Admin in business)
+    const query = { _id: spreadsheetId, business_id: user.business_id };
+    if (user.role !== 'admin') {
+      query.user_id = req.user.id;
+    }
+
+    const spreadsheet = await Spreadsheet.findOne(query);
 
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found or you do not have permission to share it' });
@@ -41,9 +46,9 @@ router.post('/spreadsheets/:id/share', auth, async (req, res) => {
 
     // Create or update sharing record
     const sharing = await Sharing.findOneAndUpdate(
-      { 
-        spreadsheet_id: spreadsheetId, 
-        shared_with_user_id: userToShareWith.id 
+      {
+        spreadsheet_id: spreadsheetId,
+        shared_with_user_id: userToShareWith.id
       },
       {
         spreadsheet_id: spreadsheetId,
@@ -54,9 +59,9 @@ router.post('/spreadsheets/:id/share', auth, async (req, res) => {
       { upsert: true, new: true }
     );
 
-    res.status(201).json({ 
-      message: 'Spreadsheet shared successfully', 
-      sharing 
+    res.status(201).json({
+      message: 'Spreadsheet shared successfully',
+      sharing
     });
   } catch (err) {
     console.error('Share error:', err);
@@ -75,7 +80,7 @@ router.get('/shared-spreadsheets', auth, async (req, res) => {
         console.error('Population error:', err);
         throw err;
       });
-    
+
     console.log('Shared records found:', sharedRecords.length);
     console.log('Shared records:', JSON.stringify(sharedRecords, null, 2));
 
@@ -100,7 +105,7 @@ router.delete('/spreadsheets/:id/share/:username', auth, async (req, res) => {
   try {
     const spreadsheetId = req.params.id;
     const username = req.params.username;
-    
+
     // Validate that spreadsheetId is a valid ObjectId
     const mongoose = await import('mongoose');
     if (!mongoose.default.isValidObjectId(spreadsheetId)) {
@@ -113,20 +118,25 @@ router.delete('/spreadsheets/:id/share/:username', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if spreadsheet exists and user is the owner
-    const spreadsheet = await Spreadsheet.findOne({ 
-      _id: spreadsheetId, 
-      user_id: req.user.id 
-    });
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Check if spreadsheet exists and user has permission (Owner or Admin in business)
+    const query = { _id: spreadsheetId, business_id: user.business_id };
+    if (user.role !== 'admin') {
+      query.user_id = req.user.id;
+    }
+
+    const spreadsheet = await Spreadsheet.findOne(query);
 
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found or you do not have permission to modify sharing' });
     }
 
     // Remove sharing record
-    const result = await Sharing.deleteOne({ 
-      spreadsheet_id: spreadsheetId, 
-      shared_with_user_id: userToRemove.id 
+    const result = await Sharing.deleteOne({
+      spreadsheet_id: spreadsheetId,
+      shared_with_user_id: userToRemove.id
     });
 
     if (result.deletedCount === 0) {
@@ -146,7 +156,7 @@ router.put('/spreadsheets/:id/share/:username', auth, async (req, res) => {
     const { permission_level } = req.body;
     const spreadsheetId = req.params.id;
     const username = req.params.username;
-    
+
     // Validate that spreadsheetId is a valid ObjectId
     const mongoose = await import('mongoose');
     if (!mongoose.default.isValidObjectId(spreadsheetId)) {
@@ -164,11 +174,16 @@ router.put('/spreadsheets/:id/share/:username', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if spreadsheet exists and user is the owner
-    const spreadsheet = await Spreadsheet.findOne({ 
-      _id: spreadsheetId, 
-      user_id: req.user.id 
-    });
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Check if spreadsheet exists and user has permission (Owner or Admin in business)
+    const query = { _id: spreadsheetId, business_id: user.business_id };
+    if (user.role !== 'admin') {
+      query.user_id = req.user.id;
+    }
+
+    const spreadsheet = await Spreadsheet.findOne(query);
 
     if (!spreadsheet) {
       return res.status(404).json({ message: 'Spreadsheet not found or you do not have permission to modify sharing' });
@@ -176,9 +191,9 @@ router.put('/spreadsheets/:id/share/:username', auth, async (req, res) => {
 
     // Update sharing record
     const sharing = await Sharing.findOneAndUpdate(
-      { 
-        spreadsheet_id: spreadsheetId, 
-        shared_with_user_id: userToUpdate.id 
+      {
+        spreadsheet_id: spreadsheetId,
+        shared_with_user_id: userToUpdate.id
       },
       { permission_level },
       { new: true }
@@ -188,9 +203,9 @@ router.put('/spreadsheets/:id/share/:username', auth, async (req, res) => {
       return res.status(404).json({ message: 'Sharing record not found' });
     }
 
-    res.json({ 
-      message: 'Permission level updated successfully', 
-      sharing 
+    res.json({
+      message: 'Permission level updated successfully',
+      sharing
     });
   } catch (err) {
     console.error('Update permission error:', err);
@@ -202,7 +217,7 @@ router.put('/spreadsheets/:id/share/:username', auth, async (req, res) => {
 router.get('/spreadsheets/:id/shared-users', auth, async (req, res) => {
   try {
     const spreadsheetId = req.params.id;
-    
+
     // Validate that spreadsheetId is a valid ObjectId
     const mongoose = await import('mongoose');
     if (!mongoose.default.isValidObjectId(spreadsheetId)) {
@@ -214,23 +229,31 @@ router.get('/spreadsheets/:id/shared-users', auth, async (req, res) => {
     if (!spreadsheetExists) {
       return res.status(404).json({ message: 'Spreadsheet not found' });
     }
-    
-    // Check if user is the owner or has access
-    let hasAccess = spreadsheetExists.user_id.toString() === req.user.id;
-    
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Business check is implicit since we use spreadsheetExists which should belong to the business
+    if (spreadsheetExists.business_id.toString() !== user.business_id.toString()) {
+      return res.status(403).json({ message: 'Access denied: Spreadsheet belongs to another business' });
+    }
+
+    // Check if user is the owner or admin or has access via assignment
+    let hasAccess = user.role === 'admin' || spreadsheetExists.user_id.toString() === req.user.id || (spreadsheetExists.assigned_users && spreadsheetExists.assigned_users.includes(req.user.id));
+
     if (!hasAccess) {
       // Check if shared with this user
-      const sharingRecord = await Sharing.findOne({ 
-        spreadsheet_id: spreadsheetId, 
-        shared_with_user_id: req.user.id 
+      const sharingRecord = await Sharing.findOne({
+        spreadsheet_id: spreadsheetId,
+        shared_with_user_id: req.user.id
       });
       hasAccess = !!sharingRecord;
     }
-    
+
     if (!hasAccess) {
       return res.status(403).json({ message: 'You do not have access to this spreadsheet' });
     }
-    
+
     const spreadsheet = spreadsheetExists;
 
     if (!spreadsheet) {
