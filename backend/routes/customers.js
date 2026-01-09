@@ -178,7 +178,8 @@ router.post('/bulk-import', auth, async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const { spreadsheetId } = req.body;
+    const { spreadsheetId, overwrite } = req.body;
+    const isOverwrite = overwrite === 'true'; // Handle string from FormData
     if (!spreadsheetId) {
       return res.status(400).json({ message: 'Spreadsheet ID is required' });
     }
@@ -250,10 +251,21 @@ router.post('/bulk-import', auth, async (req, res) => {
     };
 
     // Get the highest position value for this spreadsheet
-    const maxPositionCustomer = await Customer.findOne({
-      spreadsheet_id: spreadsheetId
-    }).sort({ position: -1 });
-    let currentPosition = maxPositionCustomer ? maxPositionCustomer.position + 1 : 0;
+    let currentPosition = 0;
+    if (isOverwrite) {
+      // If overwriting, we keep Meta leads. New leads start after the last preserved Meta lead.
+      const lastMetaLead = await Customer.findOne({
+        spreadsheet_id: spreadsheetId,
+        'meta_data.meta_lead_id': { $exists: true }
+      }).sort({ position: -1 });
+      currentPosition = lastMetaLead ? lastMetaLead.position + 1 : 0;
+    } else {
+      // If appending, start after the very last lead
+      const maxPositionCustomer = await Customer.findOne({
+        spreadsheet_id: spreadsheetId
+      }).sort({ position: -1 });
+      currentPosition = maxPositionCustomer ? maxPositionCustomer.position + 1 : 0;
+    }
 
     for (let i = 0; i < data.length; i++) {
       const originalRow = data[i];
@@ -315,6 +327,15 @@ router.post('/bulk-import', auth, async (req, res) => {
 
     if (errors.length > 0) {
       return res.status(400).json({ message: 'Validation errors', errors });
+    }
+
+    // Handle selective overwrite if requested
+    if (isOverwrite) {
+      // Delete only manual leads (those without meta_lead_id)
+      await Customer.deleteMany({
+        spreadsheet_id: spreadsheetId,
+        'meta_data.meta_lead_id': { $exists: false }
+      });
     }
 
     // Insert all customers

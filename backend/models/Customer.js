@@ -22,6 +22,9 @@ customerSchema.index({ spreadsheet_id: 1, customer_name: 1 });
 customerSchema.index({ spreadsheet_id: 1, company_name: 1 });
 customerSchema.index({ spreadsheet_id: 1, phone_number: 1 });
 
+// Index for positioning and sorting
+customerSchema.index({ spreadsheet_id: 1, position: -1 });
+
 // Index for Meta deduplication and syncing
 customerSchema.index({ business_id: 1, 'meta_data.meta_lead_id': 1 });
 

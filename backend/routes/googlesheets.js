@@ -101,7 +101,15 @@ router.post('/import', auth, async (req, res) => {
 
     // Get starting position for new customers
     let startPosition = 0;
-    if (!req.body.overwrite) {
+    if (req.body.overwrite) {
+      // If overwriting, we'll keep Meta leads. New leads should start after the last preserved Meta lead.
+      const lastMetaLead = await Customer.findOne({
+        spreadsheet_id: spreadsheetId,
+        'meta_data.meta_lead_id': { $exists: true }
+      }).sort({ position: -1 });
+      startPosition = lastMetaLead ? lastMetaLead.position + 1 : 0;
+    } else {
+      // If appending, just start after the very last lead
       const lastCustomer = await Customer.findOne({ spreadsheet_id: spreadsheetId }).sort({ position: -1 });
       startPosition = lastCustomer ? lastCustomer.position + 1 : 0;
     }
@@ -173,9 +181,10 @@ router.post('/import', auth, async (req, res) => {
     if (customers.length > 0) {
       try {
         if (req.body.overwrite) {
-          // ONLY DELETE IF OVERWRITE IS REQUESTED
+          // SELECTIVE OVERWRITE: Only delete manual leads, keep Meta automated leads
           await Customer.deleteMany({
-            spreadsheet_id: spreadsheetId
+            spreadsheet_id: spreadsheetId,
+            'meta_data.meta_lead_id': { $exists: false }
           });
         }
 

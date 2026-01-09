@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, Upload, FileSpreadsheet } from "lucide-react";
 import { bulkImportCustomers, downloadTemplate, BulkImportResponse } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 interface BulkImportDialogProps {
   onImportSuccess: () => void;
@@ -26,6 +27,7 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [overwrite, setOverwrite] = useState(false);
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,17 +79,17 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
 
     setIsUploading(true);
     try {
-      const result = await bulkImportCustomers(file, spreadsheetId);
+      const result = await bulkImportCustomers(file, spreadsheetId, overwrite);
       toast({
         title: "Import successful!",
         description: `${result.importedCount || 0} customers imported successfully`
       });
       setFile(null);
+      setOverwrite(false);
       setIsOpen(false);
       onImportSuccess();
     } catch (error: unknown) {
       console.error("Import error:", error);
-      // Handle different types of errors
       let errorMessage = "Failed to import customers";
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -154,6 +156,30 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
                   <p className="text-xs text-muted-foreground mt-1">
                     <span className="font-medium">Optional columns:</span> next_call_date, next_call_time, remark
                   </p>
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">Overwrite Existing Data</Label>
+                    <p className="text-[10px] text-muted-foreground italic">
+                      If enabled, previous manual leads will be replaced.
+                      <span className="text-blue-500 font-semibold ml-1">Meta webhook leads are preserved.</span>
+                    </p>
+                  </div>
+                  <div
+                    className={cn(
+                      "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                      overwrite ? "bg-red-500" : "bg-slate-200 dark:bg-slate-700"
+                    )}
+                    onClick={() => setOverwrite(!overwrite)}
+                  >
+                    <span
+                      className={cn(
+                        "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
+                        overwrite ? "translate-x-4" : "translate-x-0"
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
 

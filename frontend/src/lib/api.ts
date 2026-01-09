@@ -70,10 +70,11 @@ export interface BulkImportResponse {
   errors?: string[];
 }
 
-export const bulkImportCustomers = async (file: File, spreadsheetId: string): Promise<BulkImportResponse> => {
+export const bulkImportCustomers = async (file: File, spreadsheetId: string, overwrite: boolean = false): Promise<BulkImportResponse> => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('spreadsheetId', spreadsheetId);
+  formData.append('overwrite', overwrite.toString());
 
   const response = await api.post<BulkImportResponse>(`${API_URL}/bulk-import`, formData, {
     headers: {

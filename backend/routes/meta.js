@@ -188,6 +188,10 @@ router.post('/webhook', async (req, res) => {
                                     return;
                                 }
 
+                                // Get the last position in this spreadsheet to append correctly
+                                const lastCustomer = await Customer.findOne({ spreadsheet_id: targetSpreadsheet._id }).sort({ position: -1 });
+                                const newPosition = lastCustomer ? lastCustomer.position + 1 : 0;
+
                                 const customer = new Customer({
                                     user_id: business.admin_id,
                                     business_id: business._id,
@@ -207,7 +211,8 @@ router.post('/webhook', async (req, res) => {
                                         meta_form: formName,
                                         meta_page: pageName
                                     },
-                                    status: 'new'
+                                    status: 'new',
+                                    position: newPosition
                                 });
 
                                 await customer.save();
