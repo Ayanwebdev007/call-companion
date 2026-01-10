@@ -13,14 +13,17 @@ const ConnectMobile = () => {
     // Use a public QR code API for simplicity
     // Ideally this should be generated locally or by backend, but this works for "implement" speed.
     // We encode the token directly. Security Note: Token expires in 1 day.
+    // For Render, the mobile app needs to talk to the backend directly because the frontend rewrite 
+    // depends on the browser's relative path handling.
+    const backendUrl = 'https://call-companion-backend.onrender.com';
+
     const qrData = JSON.stringify({
         token: token,
-        serverUrl: window.location.origin.replace('localhost', '10.0.2.2') // Hint for emulator, but real device needs IP or domain
+        serverUrl: window.location.hostname === 'localhost' ? 'http://10.0.2.2:5000' : backendUrl
     });
 
-    // For QR, we just use the token mostly. The specific format depends on what mobile app expects.
-    // Standard: just the valid JWT.
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(token || '')}`;
+    // Use the full JSON data for the QR code
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
 
     const handleCopy = () => {
         if (token) {
