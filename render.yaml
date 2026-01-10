@@ -7,10 +7,12 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 18
+      - key: VITE_API_URL
+        value: "" # Empty means use relative path, which Render's routing will handle
     routes:
       - type: rewrite
         source: /api/*
-        destination: http://call-companion-backend.onrender.com/api/:splat
+        destination: https://call-companion-backend.onrender.com/api/:splat
       - type: rewrite
         source: /*
         destination: /index.html
