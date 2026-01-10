@@ -27,7 +27,7 @@ export function initializeSocketIO(server) {
         socket.on('mobile:authenticate', (token) => {
             try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET);
-                const userId = decoded.user.id;
+                const userId = decoded.id; // Corrected structure
 
                 // Store this socket for the user
                 mobileClients.set(userId, socket.id);
