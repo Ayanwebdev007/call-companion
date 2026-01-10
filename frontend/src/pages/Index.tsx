@@ -10,7 +10,9 @@ import { Trash2, CalendarIcon, MessageCircle, Phone, GripVertical, Square, Check
 import { format, isToday, parseISO, isPast, isValid, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, bulkInsertCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet, recordSpreadsheetView, restoreCustomer, bulkRestoreCustomers, syncGoogleSheet } from "@/lib/api";
+import { fetchCustomers, addCustomer, updateCustomer, deleteCustomer, Customer, bulkDeleteCustomers, bulkInsertCustomers, reorderCustomers, fetchSharedUsers, SharedUser, exportCustomers, fetchSpreadsheet, recordSpreadsheetView, restoreCustomer, bulkRestoreCustomers, syncGoogleSheet, requestMobileCall } from "@/lib/api";
+
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +34,7 @@ import { ResizableTable, ResizableTableHeader, ResizableTableBody, ResizableTabl
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { SpreadsheetWhatsAppDialog } from "@/components/SpreadsheetWhatsAppDialog";
+import { CallHistoryDialog } from "@/components/CallHistoryDialog";
 import GoogleSheetsDialog from "@/components/GoogleSheetsDialog";
 import GoogleSheetsExportDialog from "@/components/GoogleSheetsExportDialog";
 import { LeadDetailsDialog } from "@/components/LeadDetailsDialog";
@@ -47,6 +50,8 @@ const Index = () => {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [selectedDetailCustomer, setSelectedDetailCustomer] = useState<Customer | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [selectedCallCustomer, setSelectedCallCustomer] = useState<Customer | null>(null);
+  const [isCallHistoryDialogOpen, setIsCallHistoryDialogOpen] = useState(false);
 
   // Redirect if no valid spreadsheetId
   useEffect(() => {
@@ -509,6 +514,30 @@ const Index = () => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleAddRow();
+    }
+  };
+
+  const handleMobileCall = async (customer: Customer) => {
+    toast({
+      title: "Sending Call Request...",
+      description: `Requesting mobile to call ${customer.customer_name}...`,
+    });
+
+    try {
+      await requestMobileCall(customer.id, customer.phone_number, customer.customer_name);
+      toast({
+        title: "Call Request Sent",
+        description: "Check your mobile device to start the call.",
+        className: "bg-green-600 text-white border-none",
+        duration: 5000,
+      });
+    } catch (error) {
+      console.error("Call request failed:", error);
+      toast({
+        title: "Call Failed",
+        description: "Could not send call request. Is the mobile app connected?",
+        variant: "destructive",
+      });
     }
   };
 
@@ -1282,6 +1311,7 @@ const Index = () => {
                         setSelectedDetailCustomer(c);
                         setIsDetailsDialogOpen(true);
                       }}
+                      onCallClick={(c) => handleMobileCall(c)}
                       is_meta={spreadsheet?.is_meta}
                       meta_headers={spreadsheet?.meta_headers}
                     />
@@ -1348,6 +1378,13 @@ const Index = () => {
         customer={selectedDetailCustomer}
       />
 
+      <CallHistoryDialog
+        isOpen={isCallHistoryDialogOpen}
+        onClose={() => setIsCallHistoryDialogOpen(false)}
+        customerName={selectedCallCustomer?.customer_name || ''}
+        phoneNumber={selectedCallCustomer?.phone_number || ''}
+      />
+
       {spreadsheet && (
         <GoogleSheetsExportDialog
           open={isExportDialogOpen}
@@ -1387,6 +1424,7 @@ function SpreadsheetRow({
   setFocusedCell,
   onWhatsAppClick,
   onDetailsClick,
+  onCallClick,
   is_meta,
   meta_headers
 }: {
@@ -1704,6 +1742,15 @@ function SpreadsheetRow({
       </ResizableTableCell>
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0.5 text-center h-6">
         <div className="flex items-center justify-center gap-1 h-full">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onCallClick(customer)}
+            className="h-6 w-6 p-0 rounded-full text-muted-foreground hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            title="View Call History"
+          >
+            <Phone className="h-3 w-3" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"

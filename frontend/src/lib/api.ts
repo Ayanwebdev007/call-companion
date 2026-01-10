@@ -360,3 +360,30 @@ export const fetchMetaAnalytics = async (): Promise<MetaAnalyticsResponse> => {
   const response = await api.get(`${API_BASE_URL}/api/meta/analytics`);
   return response.data;
 };
+
+// Mobile Calling API
+export const requestMobileCall = async (customerId: string, phoneNumber: string, customerName: string): Promise<{ success: boolean; request_id: string }> => {
+  const response = await api.post(`${API_BASE_URL}/api/mobile/request-call`, {
+    customer_id: customerId,
+    phone_number: phoneNumber,
+    customer_name: customerName
+  });
+  return response.data;
+};
+
+export interface CallLog {
+  _id: string;
+  user_id: string;
+  customer_id: string;
+  phone_number: string;
+  call_type: 'incoming' | 'outgoing' | 'missed' | 'rejected' | 'blocked' | 'unknown';
+  duration: number;
+  timestamp: string;
+  note: string;
+  synced_from_mobile: boolean;
+}
+
+export const getCallLogs = async (customerId: string): Promise<CallLog[]> => {
+  const response = await api.get(`${API_BASE_URL}/api/mobile/call-logs/${customerId}`);
+  return response.data;
+};

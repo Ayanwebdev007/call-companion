@@ -9,9 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { changePassword, updateProfile, fetchBusiness, updateBusiness } from "@/lib/api";
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { User, ArrowLeft, Shield, KeyRound, Check, LogOut, Mail, Phone, LayoutDashboard, Home as HomeIcon, Building2, MapPin, Globe } from "lucide-react";
+import { User, ArrowLeft, Shield, KeyRound, Check, LogOut, Mail, Phone, LayoutDashboard, Home as HomeIcon, Building2, MapPin, Globe, Smartphone } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import ConnectMobile from "@/components/ConnectMobile";
 import { useEffect } from "react";
 
 const Profile = () => {
@@ -26,7 +27,7 @@ const Profile = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   // Personal Info State
-  const [activeTab, setActiveTab] = useState<'security' | 'personal' | 'business'>('personal');
+  const [activeTab, setActiveTab] = useState<'security' | 'personal' | 'business' | 'mobile'>('personal');
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
 
@@ -229,6 +230,14 @@ const Profile = () => {
                     <User className="h-4 w-4 mr-2" />
                     Personal Info
                   </Button>
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-start font-medium ${activeTab === 'mobile' ? 'text-primary bg-primary/10 hover:bg-primary/20 hover:text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                    onClick={() => setActiveTab('mobile')}
+                  >
+                    <Smartphone className="h-4 w-4 mr-2" />
+                    Connect Mobile
+                  </Button>
                 </Card>
               </div>
 
@@ -371,6 +380,8 @@ const Profile = () => {
                       </Button>
                     </CardFooter>
                   </Card>
+                ) : activeTab === 'mobile' ? (
+                  <ConnectMobile />
                 ) : (
                   <Card className="border-border/50 bg-card/60 backdrop-blur-md shadow-lg">
                     <CardHeader>
@@ -418,8 +429,8 @@ const Profile = () => {
 
           </div>
         </main>
-      </SidebarInset>
-    </SidebarProvider>
+      </SidebarInset >
+    </SidebarProvider >
   );
 };
 

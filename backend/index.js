@@ -4,6 +4,8 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import fileUpload from 'express-fileupload';
 import path from 'path';
+import { createServer } from 'http';
+import { initializeSocketIO } from './socket.js';
 import customerRoutes from './routes/customers.js';
 import authRoutes from './routes/auth.js';
 import spreadsheetRoutes from './routes/spreadsheets.js';
@@ -12,10 +14,12 @@ import posterRoutes from './routes/poster.js';
 import whatsappRoutes from './routes/whatsapp.js';
 import googleSheetsRoutes from './routes/googlesheets.js';
 import metaRoutes from './routes/meta.js';
+import mobileRoutes from './routes/mobile.js'; // Mobile App Sync
 
 // 1. CORE CONFIG & PARSING
 dotenv.config();
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // Parse JSON bodies early so logs can see them
@@ -52,7 +56,7 @@ app.use((req, res, next) => {
 
 // Debug logging
 console.log('=========================================');
-console.log('SERVER STARTING - VERSION 3.2 (PRODUCTION)');
+console.log('SERVER STARTING - VERSION 3.3 (WebSocket)');
 console.log('=========================================');
 
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
@@ -82,6 +86,7 @@ app.use('/api', shareRoutes);
 app.use('/api', posterRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/googlesheets', googleSheetsRoutes);
+app.use('/api/mobile', mobileRoutes);
 
 
 
@@ -130,6 +135,10 @@ mongoose.connect(MONGO_URI)
     console.error('MongoDB Atlas connection error:', err);
   });
 
-app.listen(PORT, '0.0.0.0', () => {
+// Initialize Socket.IO
+initializeSocketIO(httpServer);
+
+httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log(`WebSocket server ready`);
 });
