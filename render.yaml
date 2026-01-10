@@ -6,7 +6,7 @@ services:
     staticPublishPath: frontend/dist
     envVars:
       - key: NODE_VERSION
-        value: 18
+        value: 20
       - key: VITE_API_URL
         value: "" # Empty means use relative path, which Render's routing will handle
     routes:
@@ -25,7 +25,7 @@ services:
     startCommand: cd backend && npm start
     envVars:
       - key: NODE_VERSION
-        value: 18
+        value: 20
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
