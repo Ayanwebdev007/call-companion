@@ -882,7 +882,32 @@ const Index = () => {
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           </div>
-        </div >
+        </div>
+
+        {/* Unified Sheet Sub-Sheet Selector */}
+        {spreadsheet?.is_unified && spreadsheet.linked_meta_sheets && spreadsheet.linked_meta_sheets.length > 0 && (
+          <div className="bg-background/95 border-b border-border/50 px-6 py-2 overflow-x-auto whitespace-nowrap scrollbar-hide flex gap-2">
+            <Button
+              variant={selectedLinkedSheetId === null ? "default" : "outline"}
+              size="sm"
+              className="rounded-full text-xs h-7"
+              onClick={() => setSelectedLinkedSheetId(null)}
+            >
+              All Leads
+            </Button>
+            {spreadsheet.linked_meta_sheets.map((linkedSheet: any) => (
+              <Button
+                key={linkedSheet._id || linkedSheet.id}
+                variant={selectedLinkedSheetId === (linkedSheet._id || linkedSheet.id) ? "default" : "outline"}
+                size="sm"
+                className="rounded-full text-xs h-7"
+                onClick={() => setSelectedLinkedSheetId(linkedSheet._id || linkedSheet.id)}
+              >
+                {linkedSheet.name}
+              </Button>
+            ))}
+          </div>
+        )}
 
         {/* Bulk Actions Bar */}
         {
