@@ -254,9 +254,6 @@ export default function CallingOverview() {
                     <h2 className="text-xl font-semibold flex items-center gap-2">
                         <Layers className="h-5 w-5 text-purple-500" />
                         Your Smart Lists
-                        <Button variant="ghost" size="sm" className="ml-auto text-xs" onClick={() => navigate("/calling/unified")}>
-                            View All <ArrowRight className="ml-1 h-3 w-3" />
-                        </Button>
                     </h2>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {unifiedSheets.map(sheet => (

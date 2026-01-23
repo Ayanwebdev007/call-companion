@@ -821,6 +821,48 @@ router.put('/:id', auth, async (req, res) => {
       );
 
       console.log('[SYNC] Source->Unified update result:', result);
+
+      // SELF-HEALING: Check if any Unified Sheets are MISSING this lead
+      try {
+        const linkedUnifiedSheets = await Spreadsheet.find({
+          business_id: user.business_id,
+          is_unified: true,
+          linked_meta_sheets: updatedCustomer.spreadsheet_id
+        });
+
+        console.log(`[SYNC SELF-HEAL] Checking ${linkedUnifiedSheets.length} linked Unified Sheets...`);
+
+        for (const unifiedSheet of linkedUnifiedSheets) {
+          const exists = await Customer.findOne({
+            spreadsheet_id: unifiedSheet._id,
+            'meta_data.source_customer_id': updatedCustomer._id.toString()
+          });
+
+          if (!exists) {
+            console.log(`[SYNC SELF-HEAL] Copy missing in "${unifiedSheet.name}". Creating...`);
+
+            const newCopy = new Customer({
+              ...updatedCustomer.toObject(),
+              _id: undefined,
+              spreadsheet_id: unifiedSheet._id,
+              position: 0,
+              meta_data: {
+                ...updatedCustomer.meta_data,
+                is_unified_copy: true,
+                source_spreadsheet_id: updatedCustomer.spreadsheet_id,
+                source_customer_id: updatedCustomer._id
+              }
+            });
+
+            delete newCopy._id;
+            delete newCopy.id;
+
+            await newCopy.save();
+          }
+        }
+      } catch (shErr) {
+        console.error('[SYNC SELF-HEAL ERROR]', shErr);
+      }
     } else if (isUnifiedCopy && sourceCustomerId) {
       // CASE 2: Unified Copy Updated -> Sync BACK to Source
       console.log(`[SYNC] Unified Copy updated, writing back to Source: ${sourceCustomerId}`);
@@ -850,7 +892,7 @@ router.put('/:id', auth, async (req, res) => {
       );
 
       console.log('[SYNC] Unified->Source update result:', result);
-    } else {
+    } else if (isUnifiedCopy && sourceCustomerId) {
       console.log('[SYNC] No sync action taken - neither source nor unified copy detected');
     }
 
