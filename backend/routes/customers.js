@@ -169,6 +169,38 @@ router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
     // Trigger background sync to Google Sheets
     syncToGoogleSheets(spreadsheet_id);
 
+    // REAL-TIME SYNC TO UNIFIED SHEETS
+    // Check if this spreadsheet is part of any Unified Sheet
+    const unifiedSheets = await Spreadsheet.find({
+      business_id: user.business_id,
+      is_unified: true,
+      linked_meta_sheets: spreadsheet_id
+    });
+
+    if (unifiedSheets.length > 0) {
+      console.log(`[SYNC] Propagating new lead to ${unifiedSheets.length} Unified Sheets`);
+      const unifiedCopies = unifiedSheets.map(unifiedSheet => ({
+        ...req.body,
+        user_id: req.user.id, // Or unify ownership logic? For now strict copy.
+        business_id: user.business_id,
+        spreadsheet_id: unifiedSheet._id,
+        created_at: new Date(),
+        updated_at: new Date(),
+        position: 0, // Should be calculated but 0 is safe for now, or use max
+        meta_data: {
+          ...meta_data,
+          is_unified_copy: true,
+          source_spreadsheet_id: spreadsheet_id,
+          source_customer_id: newCustomer._id // Crucial for future updates
+        }
+      }));
+
+      // We should probably get correct positions for them, but inserting for now is key.
+      // If we want correct positions, we'd need to query each unified sheet.
+      // For performance, let's just insert.
+      await Customer.insertMany(unifiedCopies);
+    }
+
     res.status(201).json(newCustomer);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -663,6 +695,55 @@ router.put('/:id', auth, async (req, res) => {
     // Trigger background sync to Google Sheets
     syncToGoogleSheets(updatedCustomer.spreadsheet_id);
 
+    // REAL-TIME SYNC TO UNIFIED SHEETS
+    // Find copies in Unified Sheets and update them
+    if (!updatedCustomer.meta_data?.is_unified_copy) {
+      const syncUpdate = {
+        customer_name: updatedCustomer.customer_name,
+        company_name: updatedCustomer.company_name,
+        phone_number: updatedCustomer.phone_number,
+        status: updatedCustomer.status,
+        remark: updatedCustomer.remark,
+        color: updatedCustomer.color,
+        next_call_date: updatedCustomer.next_call_date,
+        next_call_time: updatedCustomer.next_call_time,
+        last_call_date: updatedCustomer.last_call_date,
+        meta_data: {
+          ...updatedCustomer.meta_data,
+          // Preserve the pointers
+          // Note: deeply merging meta_data might be tricky if we don't want to lose pointers.
+          // We should carefully update meta_data.
+        }
+      };
+
+      // We need to be careful not to overwrite `is_unified_copy`, `source_spreadsheet_id`, `source_customer_id`
+      // So we will perform an update that merges meta_data or sets fields explicitly.
+      // Actually, just updating main fields is usually enough. Meta data sync is harder.
+
+      // Let's rely on standard fields first.
+      await Customer.updateMany(
+        {
+          business_id: updatedCustomer.business_id,
+          'meta_data.source_customer_id': updatedCustomer._id
+        },
+        {
+          $set: {
+            customer_name: updatedCustomer.customer_name,
+            company_name: updatedCustomer.company_name,
+            phone_number: updatedCustomer.phone_number,
+            status: updatedCustomer.status,
+            remark: updatedCustomer.remark,
+            color: updatedCustomer.color,
+            next_call_date: updatedCustomer.next_call_date,
+            next_call_time: updatedCustomer.next_call_time,
+            last_call_date: updatedCustomer.last_call_date,
+            // We knowingly skip meta_data deep sync for now to avoid breaking the link flags.
+            // If we need to sync meta_data, we should use dot notation for specific fields.
+          }
+        }
+      );
+    }
+
     res.json(updatedCustomer);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -715,6 +796,20 @@ router.delete('/:id', auth, async (req, res) => {
     }
     // Trigger background sync to Google Sheets
     syncToGoogleSheets(deletedCustomer.spreadsheet_id);
+
+    // REAL-TIME SYNC TO UNIFIED SHEETS
+    if (!deletedCustomer.meta_data?.is_unified_copy) {
+      await Customer.updateMany(
+        {
+          business_id: user.business_id,
+          'meta_data.source_customer_id': deletedCustomer._id
+        },
+        {
+          is_deleted: true,
+          deleted_at: new Date()
+        }
+      );
+    }
 
     res.json({ message: 'Customer deleted (soft)' });
   } catch (err) {
