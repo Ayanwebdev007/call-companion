@@ -146,6 +146,7 @@ const Index = () => {
     };
   }, [showSearch]);
   const [debouncedQuery, setDebouncedQuery] = useState<string>("");
+  const [selectedLinkedSheetId, setSelectedLinkedSheetId] = useState<string | null>(null);
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedQuery(searchQuery.trim());
@@ -225,6 +226,17 @@ const Index = () => {
     },
     enabled: !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null",
   });
+
+  const activeMetaHeaders = useMemo(() => {
+    if (selectedLinkedSheetId && spreadsheet?.linked_meta_sheets) {
+      // Cast to any to avoid TS errors
+      const linked = spreadsheet.linked_meta_sheets.find((s: any) => (s._id || s.id) === selectedLinkedSheetId) as any;
+      return linked?.meta_headers || [];
+    }
+    return spreadsheet?.meta_headers || [];
+  }, [selectedLinkedSheetId, spreadsheet]);
+
+  const shouldShowMetaHeaders = (spreadsheet?.is_meta || (spreadsheet?.is_unified && selectedLinkedSheetId)) && activeMetaHeaders.length > 0;
 
   // Add customer mutation
   const addMutation = useMutation({
@@ -348,8 +360,17 @@ const Index = () => {
       filtered = filtered.filter((c) => c.next_call_date === targetDateStr);
     }
 
+    // Filter by Selected Linked Sheet (Unified View)
+    if (selectedLinkedSheetId) {
+      filtered = filtered.filter(c => {
+        // Check both source_spreadsheet_id and spreadsheet_id (for imported cases)
+        const sourceId = (c.meta_data as any)?.source_spreadsheet_id;
+        return sourceId === selectedLinkedSheetId;
+      });
+    }
+
     return filtered;
-  }, [customers, viewMode, selectedDate, importDateRange]);
+  }, [customers, viewMode, selectedDate, importDateRange, selectedLinkedSheetId]);
 
   // Toggle customer selection
   const toggleCustomerSelection = (customerId: string) => {
@@ -957,8 +978,8 @@ const Index = () => {
               >
                 {/* Row numbers header */}
               </ResizableTableHead>
-              {spreadsheet?.is_meta && spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0 ? (
-                spreadsheet.meta_headers.map((header) => (
+              {shouldShowMetaHeaders ? (
+                activeMetaHeaders.map((header: string) => (
                   <ResizableTableHead key={header} className="border-b border-border/50 border-r border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-[150px] sticky top-0 bg-muted/50">
                     {header.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                   </ResizableTableHead>
@@ -1019,8 +1040,8 @@ const Index = () => {
               <ResizableTableCell className="border-b border-primary/20 px-1 py-0.5 text-xs text-primary font-bold text-center bg-primary/5 sticky left-0 h-6">
                 <Plus className="h-3 w-3 mx-auto" />
               </ResizableTableCell>
-              {spreadsheet?.is_meta && spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0 ? (
-                spreadsheet.meta_headers.map((header, idx) => (
+              {shouldShowMetaHeaders ? (
+                activeMetaHeaders.map((header: string, idx: number) => (
                   <ResizableTableCell key={header} className="border-b border-primary/20 p-0 h-6">
                     <div className="flex items-center h-full bg-background group-hover:bg-accent/5 transition-colors">
                       {idx === 0 && (
@@ -1312,8 +1333,8 @@ const Index = () => {
                         setIsDetailsDialogOpen(true);
                       }}
                       onCallClick={(c) => handleMobileCall(c)}
-                      is_meta={spreadsheet?.is_meta}
-                      meta_headers={spreadsheet?.meta_headers}
+                      is_meta={shouldShowMetaHeaders}
+                      meta_headers={activeMetaHeaders}
                     />
 
                     {/* Drop zone after last row */}
@@ -1450,6 +1471,7 @@ function SpreadsheetRow({
   setFocusedCell: React.Dispatch<React.SetStateAction<string | null>>;
   onWhatsAppClick: (customer: Customer) => void;
   onDetailsClick: (customer: Customer) => void;
+  onCallClick: (customer: Customer) => void; // Added missing prop
   is_meta?: boolean;
   meta_headers?: string[];
 }) {

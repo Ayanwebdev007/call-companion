@@ -67,14 +67,14 @@ router.get('/:id', auth, async (req, res) => {
       query.assigned_users = req.user.id;
     }
 
-    let spreadsheet = await Spreadsheet.findOne(query);
+    let spreadsheet = await Spreadsheet.findOne(query).populate('linked_meta_sheets', 'name is_meta meta_headers');
 
     if (!spreadsheet) {
       // Check if it's shared with the user
       const Sharing = (await import('../models/Sharing.js')).default;
       const sharing = await Sharing.findOne({ spreadsheet_id: req.params.id, shared_with_user_id: req.user.id });
       if (sharing) {
-        spreadsheet = await Spreadsheet.findById(req.params.id);
+        spreadsheet = await Spreadsheet.findById(req.params.id).populate('linked_meta_sheets', 'name is_meta meta_headers');
         if (spreadsheet) {
           const spreadObject = spreadsheet.toObject();
           spreadObject.permission_level = sharing.permission_level;
@@ -363,7 +363,8 @@ async function importLeads(sourceSheetIds, targetSheetId, businessId, userId) {
         meta_data: {
           ...c.meta_data,
           is_unified_copy: true,
-          source_spreadsheet_id: c.spreadsheet_id
+          source_spreadsheet_id: c.spreadsheet_id,
+          source_customer_id: c._id // Add this to enable sync
         }
       };
     });
