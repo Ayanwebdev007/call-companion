@@ -800,7 +800,8 @@ router.put('/:id', auth, async (req, res) => {
       // CASE 1: Source Lead Updated -> Update Copies
       console.log('[SYNC] Source Lead updated, syncing to Unified copies...');
 
-      const syncUpdate = {
+      // Prepare sync update with dynamic headers
+      let syncUpdate = {
         customer_name: updatedCustomer.customer_name,
         company_name: updatedCustomer.company_name,
         phone_number: updatedCustomer.phone_number,
@@ -811,6 +812,31 @@ router.put('/:id', auth, async (req, res) => {
         next_call_time: updatedCustomer.next_call_time,
         last_call_date: updatedCustomer.last_call_date
       };
+
+      // Add dynamic headers (meta_data)
+      if (updatedCustomer.meta_data) {
+        // Flatten standard Map/Object for Mongoose update
+        const rawMeta = updatedCustomer.toObject().meta_data || {};
+        // We need to use dot notation for updating fields within a Map in Mongoose if we want partial updates,
+        // BUT for 'meta_data' as a Map<String, String>, replacing the whole map might be cleaner IF we ensure preservation.
+        // However, 'updateMany' with $set: { meta_data: ... } replaces the whole map.
+        // We must ensure we don't overwrite 'is_unified_copy' and 'source_...' in the destination docs.
+
+        // Strategy: Use pipeline update or careful $set?
+        // Simplest: merge new meta keys into a flat Update object using dot notation "meta_data.key"
+        // This preserves other keys in the destination Map.
+
+        Object.keys(rawMeta).forEach(key => {
+          // Skip internal or source-specific keys that shouldn't override the copy's flags
+          if (!key.startsWith('$') &&
+            key !== 'is_unified_copy' &&
+            key !== 'source_spreadsheet_id' &&
+            key !== 'source_customer_id' &&
+            typeof rawMeta[key] === 'string') {
+            syncUpdate[`meta_data.${key}`] = rawMeta[key];
+          }
+        });
+      }
 
       const result = await Customer.updateMany(
         {
@@ -889,28 +915,41 @@ router.put('/:id', auth, async (req, res) => {
       // CASE 2: Unified Copy Updated -> Sync BACK to Source
       console.log(`[SYNC] Unified Copy updated, writing back to Source: ${sourceCustomerId}`);
 
-      // Prepare meta_data for sync (exclude internal flags)
-      let metaToSync = { ...customerObj.meta_data };
-      delete metaToSync.is_unified_copy;
-      delete metaToSync.source_spreadsheet_id;
-      delete metaToSync.source_customer_id;
+      // Prepare update payload
+      let syncBackUpdate = {
+        customer_name: updatedCustomer.customer_name,
+        company_name: updatedCustomer.company_name,
+        phone_number: updatedCustomer.phone_number,
+        status: updatedCustomer.status,
+        remark: updatedCustomer.remark,
+        color: updatedCustomer.color,
+        next_call_date: updatedCustomer.next_call_date,
+        next_call_time: updatedCustomer.next_call_time,
+        last_call_date: updatedCustomer.last_call_date
+      };
+
+      // Add dynamic headers (meta_data)
+      // Since we are writing back to Source, we should be careful. 
+      // The Source is the truth for its own structure. 
+      // But if we edited a dynamic field in Unified, we want it in Source.
+      if (updatedCustomer.meta_data) {
+        const rawMeta = updatedCustomer.toObject().meta_data || {};
+
+        Object.keys(rawMeta).forEach(key => {
+          // Exclude sync flags, they don't belong in source meta_data usually (or at least shouldn't be overwritten blindly)
+          if (!key.startsWith('$') &&
+            key !== 'is_unified_copy' &&
+            key !== 'source_spreadsheet_id' &&
+            key !== 'source_customer_id' &&
+            typeof rawMeta[key] === 'string') {
+            syncBackUpdate[`meta_data.${key}`] = rawMeta[key];
+          }
+        });
+      }
 
       const result = await Customer.updateOne(
         { _id: sourceCustomerId },
-        {
-          $set: {
-            customer_name: updatedCustomer.customer_name,
-            company_name: updatedCustomer.company_name,
-            phone_number: updatedCustomer.phone_number,
-            status: updatedCustomer.status,
-            remark: updatedCustomer.remark,
-            color: updatedCustomer.color,
-            next_call_date: updatedCustomer.next_call_date,
-            next_call_time: updatedCustomer.next_call_time,
-            last_call_date: updatedCustomer.last_call_date,
-            meta_data: metaToSync
-          }
-        }
+        { $set: syncBackUpdate }
       );
 
       console.log('[SYNC] Unified->Source update result:', result);
