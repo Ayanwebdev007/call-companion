@@ -236,6 +236,16 @@ const Index = () => {
     return spreadsheet?.meta_headers || [];
   }, [selectedLinkedSheetId, spreadsheet]);
 
+  // Auto-select first linked sheet when opening a Unified Sheet
+  useEffect(() => {
+    if (spreadsheet?.is_unified && spreadsheet.linked_meta_sheets && spreadsheet.linked_meta_sheets.length > 0) {
+      if (!selectedLinkedSheetId) {
+        const firstSheet = spreadsheet.linked_meta_sheets[0] as any;
+        setSelectedLinkedSheetId(firstSheet._id || firstSheet.id);
+      }
+    }
+  }, [spreadsheet, selectedLinkedSheetId]);
+
   const shouldShowMetaHeaders = (spreadsheet?.is_meta || (spreadsheet?.is_unified && selectedLinkedSheetId)) && activeMetaHeaders.length > 0;
 
   // Add customer mutation
@@ -907,14 +917,6 @@ const Index = () => {
         {/* Unified Sheet Sub-Sheet Selector */}
         {spreadsheet?.is_unified && spreadsheet.linked_meta_sheets && spreadsheet.linked_meta_sheets.length > 0 && (
           <div className="bg-background/95 border-b border-border/50 px-6 py-2 overflow-x-auto whitespace-nowrap scrollbar-hide flex gap-2">
-            <Button
-              variant={selectedLinkedSheetId === null ? "default" : "outline"}
-              size="sm"
-              className="rounded-full text-xs h-7"
-              onClick={() => setSelectedLinkedSheetId(null)}
-            >
-              All Leads
-            </Button>
             {spreadsheet.linked_meta_sheets.map((linkedSheet: any) => (
               <Button
                 key={linkedSheet._id || linkedSheet.id}
