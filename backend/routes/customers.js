@@ -765,7 +765,18 @@ router.put('/:id', auth, async (req, res) => {
 
     // REAL-TIME SYNC TO UNIFIED SHEETS
     // Find copies in Unified Sheets and update them
-    if (!updatedCustomer.meta_data?.is_unified_copy) {
+    // REAL-TIME SYNC TO UNIFIED SHEETS
+    // Find copies in Unified Sheets and update them
+
+    // Safely convert to POJO to access meta_data Map
+    const customerObj = updatedCustomer.toObject({ flattenMaps: true });
+    const isUnifiedCopy = customerObj.meta_data?.is_unified_copy === true || customerObj.meta_data?.is_unified_copy === 'true';
+    const sourceCustomerId = customerObj.meta_data?.source_customer_id;
+
+    if (!isUnifiedCopy) {
+      // CASE 1: Source Lead Updated -> Update Copies
+      // Prepare meta_data update: We want to sync NEW fields but keep Copies' flags
+
       const syncUpdate = {
         customer_name: updatedCustomer.customer_name,
         company_name: updatedCustomer.company_name,
@@ -775,60 +786,29 @@ router.put('/:id', auth, async (req, res) => {
         color: updatedCustomer.color,
         next_call_date: updatedCustomer.next_call_date,
         next_call_time: updatedCustomer.next_call_time,
-        last_call_date: updatedCustomer.last_call_date,
-        meta_data: {
-          ...updatedCustomer.meta_data,
-          // Preserve the pointers
-          // Note: deeply merging meta_data might be tricky if we don't want to lose pointers.
-          // We should carefully update meta_data.
-        }
+        last_call_date: updatedCustomer.last_call_date
+        // We skip meta_data deep sync for now to avoid overwriting distinct flags in copies.
       };
 
-      // We need to be careful not to overwrite `is_unified_copy`, `source_spreadsheet_id`, `source_customer_id`
-      // So we will perform an update that merges meta_data or sets fields explicitly.
-      // Actually, just updating main fields is usually enough. Meta data sync is harder.
-
-      // Let's rely on standard fields first.
       await Customer.updateMany(
         {
           business_id: updatedCustomer.business_id,
-          'meta_data.source_customer_id': updatedCustomer._id
+          'meta_data.source_customer_id': updatedCustomer._id.toString() // Ensure string match
         },
-        {
-          $set: {
-            customer_name: updatedCustomer.customer_name,
-            company_name: updatedCustomer.company_name,
-            phone_number: updatedCustomer.phone_number,
-            status: updatedCustomer.status,
-            remark: updatedCustomer.remark,
-            color: updatedCustomer.color,
-            next_call_date: updatedCustomer.next_call_date,
-            next_call_time: updatedCustomer.next_call_time,
-            last_call_date: updatedCustomer.last_call_date,
-            // We knowingly skip meta_data deep sync for now to avoid breaking the link flags.
-            // If we need to sync meta_data, we should use dot notation for specific fields.
-          }
-        }
+        { $set: syncUpdate }
       );
-    } else if (updatedCustomer.meta_data?.is_unified_copy && updatedCustomer.meta_data?.source_customer_id) {
+    } else if (isUnifiedCopy && sourceCustomerId) {
       // CASE 2: Unified Copy Updated -> Sync BACK to Source
-      console.log(`[SYNC] Writing back update from Unified to Source Lead: ${updatedCustomer.meta_data.source_customer_id}`);
+      console.log(`[SYNC] Writing back update from Unified to Source Lead: ${sourceCustomerId}`);
 
       // Prepare meta_data for sync (exclude internal flags)
-      let metaToSync = {};
-      if (updatedCustomer.meta_data) {
-        // Handle Map or Object
-        metaToSync = updatedCustomer.meta_data instanceof Map
-          ? Object.fromEntries(updatedCustomer.meta_data)
-          : { ...updatedCustomer.meta_data };
-
-        delete metaToSync.is_unified_copy;
-        delete metaToSync.source_spreadsheet_id;
-        delete metaToSync.source_customer_id;
-      }
+      let metaToSync = { ...customerObj.meta_data };
+      delete metaToSync.is_unified_copy;
+      delete metaToSync.source_spreadsheet_id;
+      delete metaToSync.source_customer_id;
 
       await Customer.updateOne(
-        { _id: updatedCustomer.meta_data.source_customer_id },
+        { _id: sourceCustomerId },
         {
           $set: {
             customer_name: updatedCustomer.customer_name,
@@ -844,7 +824,6 @@ router.put('/:id', auth, async (req, res) => {
           }
         }
       );
-
     }
 
     res.json(updatedCustomer);
@@ -901,19 +880,24 @@ router.delete('/:id', auth, async (req, res) => {
     syncToGoogleSheets(deletedCustomer.spreadsheet_id);
 
     // REAL-TIME SYNC TO UNIFIED SHEETS
+
+    // Safely convert to POJO to access meta_data Map
+    const customerObj = deletedCustomer.toObject({ flattenMaps: true });
+    const isUnifiedCopy = customerObj.meta_data?.is_unified_copy === true || customerObj.meta_data?.is_unified_copy === 'true';
+    const sourceCustomerId = customerObj.meta_data?.source_customer_id;
+
     // Case 1: Deleted Source Lead -> Delete Copies
-    if (!deletedCustomer.meta_data?.is_unified_copy) {
+    if (!isUnifiedCopy) {
       // Strategy A: Try to delete by source_customer_id (Best for new leads)
       const primaryResult = await Customer.updateMany(
         {
           business_id: user.business_id,
-          'meta_data.source_customer_id': deletedCustomer._id
+          'meta_data.source_customer_id': deletedCustomer._id.toString()
         },
         { is_deleted: true, deleted_at: new Date() }
       );
 
       // Strategy B: Fallback for older leads (Missing source_customer_id)
-      // If we didn't delete anything, try matching by content
       if (primaryResult.modifiedCount === 0) {
         console.log('[SYNC] No linked ID found, trying fallback matching for deletion...');
         await Customer.updateMany(
@@ -921,17 +905,17 @@ router.delete('/:id', auth, async (req, res) => {
             business_id: user.business_id,
             'meta_data.is_unified_copy': true,
             'meta_data.source_spreadsheet_id': deletedCustomer.spreadsheet_id,
-            phone_number: deletedCustomer.phone_number, // Assumption: Phone is unique-ish
-            customer_name: deletedCustomer.customer_name // Add Name for extra safety
+            phone_number: deletedCustomer.phone_number,
+            customer_name: deletedCustomer.customer_name
           },
           { is_deleted: true, deleted_at: new Date() }
         );
       }
-    } else if (deletedCustomer.meta_data?.is_unified_copy && deletedCustomer.meta_data?.source_customer_id) {
+    } else if (isUnifiedCopy && sourceCustomerId) {
       // CASE 2: Unified Copy Deleted -> Delete Source
-      console.log(`[SYNC] Deleting Source Lead because Unified Copy was deleted: ${deletedCustomer.meta_data.source_customer_id}`);
+      console.log(`[SYNC] Deleting Source Lead because Unified Copy was deleted: ${sourceCustomerId}`);
       await Customer.updateOne(
-        { _id: deletedCustomer.meta_data.source_customer_id },
+        { _id: sourceCustomerId },
         {
           is_deleted: true,
           deleted_at: new Date()
