@@ -911,8 +911,21 @@ router.delete('/:id', auth, async (req, res) => {
 
     // Safely convert to POJO to access meta_data Map
     const customerObj = deletedCustomer.toObject({ flattenMaps: true });
-    const isUnifiedCopy = customerObj.meta_data?.is_unified_copy === true || customerObj.meta_data?.is_unified_copy === 'true';
-    const sourceCustomerId = customerObj.meta_data?.source_customer_id;
+
+    // Direct Map access attempt
+    let isUnifiedMap = false;
+    let rankSourceId = undefined;
+    if (deletedCustomer.meta_data && typeof deletedCustomer.meta_data.get === 'function') {
+      const val = deletedCustomer.meta_data.get('is_unified_copy');
+      isUnifiedMap = val === 'true' || val === true;
+      rankSourceId = deletedCustomer.meta_data.get('source_customer_id');
+    }
+
+    const isUnifiedFlat = customerObj.meta_data?.is_unified_copy === true || customerObj.meta_data?.is_unified_copy === 'true';
+    const sourceCustomerId = customerObj.meta_data?.source_customer_id || rankSourceId;
+    const sourceSpreadsheetId = customerObj.meta_data?.source_spreadsheet_id;
+
+    const isUnifiedCopy = isUnifiedMap || isUnifiedFlat || (!!sourceCustomerId) || (!!sourceSpreadsheetId);
 
     // Case 1: Deleted Source Lead -> Delete Copies
     if (!isUnifiedCopy) {
