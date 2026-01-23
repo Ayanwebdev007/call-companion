@@ -824,13 +824,16 @@ router.put('/:id', auth, async (req, res) => {
 
       // SELF-HEALING: Check if any Unified Sheets are MISSING this lead
       try {
+        const mongoose = await import('mongoose');
+        const sourceSpreadsheetId = new mongoose.Types.ObjectId(updatedCustomer.spreadsheet_id);
+
         const linkedUnifiedSheets = await Spreadsheet.find({
           business_id: user.business_id,
           is_unified: true,
-          linked_meta_sheets: updatedCustomer.spreadsheet_id
+          linked_meta_sheets: sourceSpreadsheetId
         });
 
-        console.log(`[SYNC SELF-HEAL] Checking ${linkedUnifiedSheets.length} linked Unified Sheets...`);
+        console.log(`[SYNC SELF-HEAL] Checking ${linkedUnifiedSheets.length} linked Unified Sheets for SourceID: ${sourceSpreadsheetId}`);
 
         for (const unifiedSheet of linkedUnifiedSheets) {
           const exists = await Customer.findOne({
@@ -841,23 +844,42 @@ router.put('/:id', auth, async (req, res) => {
           if (!exists) {
             console.log(`[SYNC SELF-HEAL] Copy missing in "${unifiedSheet.name}". Creating...`);
 
+            // SANITIZE meta_data: Convert to plain object, remove internal keys
+            let cleanMetaData = {};
+            if (updatedCustomer.meta_data) {
+              if (updatedCustomer.meta_data instanceof Map) {
+                cleanMetaData = Object.fromEntries(updatedCustomer.meta_data);
+              } else if (typeof updatedCustomer.meta_data === 'object') {
+                // Avoid spreading Mongoose document internals
+                const rawMeta = updatedCustomer.toObject().meta_data || {};
+                // Filter out keys starting with $ (Mongoose internals)
+                Object.keys(rawMeta).forEach(key => {
+                  if (!key.startsWith('$') && typeof rawMeta[key] === 'string') {
+                    cleanMetaData[key] = rawMeta[key];
+                  }
+                });
+              }
+            }
+
+            // Add required sync fields
+            cleanMetaData.is_unified_copy = 'true';
+            cleanMetaData.source_spreadsheet_id = updatedCustomer.spreadsheet_id.toString();
+            cleanMetaData.source_customer_id = updatedCustomer._id.toString();
+
             const newCopy = new Customer({
               ...updatedCustomer.toObject(),
               _id: undefined,
               spreadsheet_id: unifiedSheet._id,
               position: 0,
-              meta_data: {
-                ...updatedCustomer.meta_data,
-                is_unified_copy: true,
-                source_spreadsheet_id: updatedCustomer.spreadsheet_id,
-                source_customer_id: updatedCustomer._id
-              }
+              meta_data: cleanMetaData
             });
 
+            // Remove ID fields to let Mongoose generate new ones
             delete newCopy._id;
             delete newCopy.id;
 
             await newCopy.save();
+            console.log(`[SYNC SELF-HEAL] Successfully created copy in ${unifiedSheet.name}`);
           }
         }
       } catch (shErr) {
@@ -1073,12 +1095,13 @@ router.post('/bulk-delete', auth, async (req, res) => {
       }
     }
 
-    // First, let's check if we can find the customers
+    // Capture customers for sync before deletion
+    let customersToSync = [];
     try {
-      const customersToCheck = await Customer.find({
+      customersToSync = await Customer.find({
         _id: { $in: validIds }
       });
-      console.log('Customers to delete (before deletion):', customersToCheck.length);
+      console.log('Customers to delete (before deletion):', customersToSync.length);
     } catch (checkErr) {
       console.error('Error checking customers before deletion:', checkErr);
     }
@@ -1094,6 +1117,44 @@ router.post('/bulk-delete', auth, async (req, res) => {
     );
 
     console.log('Delete result:', result);
+
+    // SYNC DELETION: Propagate to Linked Copies/Sources
+    try {
+      console.log('[SYNC BULK DELETE] Propagating deletions...');
+      for (const deletedCustomer of customersToSync) {
+        const customerObj = deletedCustomer.toObject({ flattenMaps: true });
+
+        // Check if Unified Copy
+        let isUnifiedCopy = false;
+        let sourceCustomerId = undefined;
+
+        if (customerObj.meta_data) {
+          // Handle Map or Object safely
+          let meta = customerObj.meta_data;
+          if (customerObj.meta_data instanceof Map) {
+            meta = Object.fromEntries(customerObj.meta_data);
+          }
+
+          isUnifiedCopy = meta.is_unified_copy === 'true' || meta.is_unified_copy === true;
+          sourceCustomerId = meta.source_customer_id;
+        }
+
+        if (isUnifiedCopy && sourceCustomerId) {
+          // Case A: Unified Copy Deleted -> Delete Source
+          console.log(`[SYNC BULK DELETE] Deleting Source Lead ${sourceCustomerId}`);
+          await Customer.updateOne({ _id: sourceCustomerId }, { $set: { is_deleted: true, deleted_at: new Date() } });
+        } else {
+          // Case B: Source Lead Deleted -> Delete Copies
+          console.log(`[SYNC BULK DELETE] Deleting Unified Copies for Source ${deletedCustomer._id}`);
+          await Customer.updateMany(
+            { 'meta_data.source_customer_id': deletedCustomer._id.toString() },
+            { $set: { is_deleted: true, deleted_at: new Date() } }
+          );
+        }
+      }
+    } catch (syncErr) {
+      console.error('Bulk Delete Sync Error:', syncErr);
+    }
 
     // Trigger background sync for affected spreadsheets
     spreadsheetIds.forEach(sid => syncToGoogleSheets(sid));
