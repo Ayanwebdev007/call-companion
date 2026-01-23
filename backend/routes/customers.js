@@ -198,10 +198,19 @@ router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
     }
 
     // REAL-TIME SYNC TO META SHEETS (WRITE-BACK)
-    // If adding to a Unified Sheet, assume we want to write back to the first linked Source Sheet
+    // If adding to a Unified Sheet, write back to the specific linked Source Sheet if requested, or the first one
     if (spreadsheet.is_unified && spreadsheet.linked_meta_sheets && spreadsheet.linked_meta_sheets.length > 0) {
       try {
-        const targetSourceId = spreadsheet.linked_meta_sheets[0];
+        let targetSourceId = spreadsheet.linked_meta_sheets[0];
+
+        // If specific source sheet requested (e.g. from UI selector), use that
+        if (meta_data && meta_data.source_spreadsheet_id) {
+          const requestedId = meta_data.source_spreadsheet_id.toString();
+          if (spreadsheet.linked_meta_sheets.map(id => id.toString()).includes(requestedId)) {
+            targetSourceId = requestedId;
+          }
+        }
+
         console.log(`[SYNC] Writing back new Unified lead to Source Sheet: ${targetSourceId}`);
 
         // Calculate position for the source sheet

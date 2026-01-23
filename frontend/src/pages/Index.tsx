@@ -491,14 +491,16 @@ const Index = () => {
 
   const handleAddRow = () => {
     const isMeta = spreadsheet?.is_meta;
+    const isUnifiedSubView = spreadsheet?.is_unified && selectedLinkedSheetId;
 
-    if (!isMeta) {
+    if (!isMeta && !isUnifiedSubView) {
       if (!newRow.customer_name.trim() || !newRow.company_name.trim() || !newRow.phone_number.trim()) {
         toast({ title: "Please fill Customer Name, Company Name, and Phone No.", variant: "destructive" });
         return;
       }
     } else {
-      // For Meta sheets, we need at least one field filled in meta_data or the standard fields
+      // For Meta sheets or Unified Sub-views with dynamic headers
+      // We need at least one field filled in meta_data or the standard fields
       const hasMetaData = Object.values(newRow.meta_data).some(v => v.trim().length > 0);
       if (!hasMetaData && !newRow.customer_name.trim()) {
         toast({ title: "Please fill at least one field", variant: "destructive" });
@@ -512,13 +514,31 @@ const Index = () => {
       spreadsheet_id: spreadsheetId!
     };
 
-    // If meta, we must still satisfy the backend's required fields
-    if (isMeta) {
+    // Inject source spreadsheet ID if in sub-view
+    if (isUnifiedSubView) {
+      rowData.meta_data = {
+        ...rowData.meta_data,
+        source_spreadsheet_id: selectedLinkedSheetId
+      };
+    }
+
+    // If meta or unified sub-view, we must still satisfy the backend's required fields
+    if (isMeta || isUnifiedSubView) {
       // Use the first few meta fields as defaults for the required fields if they are empty
-      const metaValues = Object.values(newRow.meta_data);
-      if (!rowData.customer_name) rowData.customer_name = metaValues[0] || 'Meta Lead';
-      if (!rowData.company_name) rowData.company_name = metaValues[1] || 'Meta Ads';
-      if (!rowData.phone_number) rowData.phone_number = metaValues[2] || 'N/A';
+      // We prioritize active headers for predictable mapping
+      let metaValues: string[] = [];
+      if (activeMetaHeaders.length > 0) {
+        metaValues = activeMetaHeaders.map(h => newRow.meta_data[h] || '');
+      } else {
+        metaValues = Object.values(newRow.meta_data);
+      }
+
+      // Filter out empty values to find candidates
+      const filledValues = metaValues.filter(v => v && v.trim().length > 0);
+
+      if (!rowData.customer_name) rowData.customer_name = filledValues[0] || 'New Lead';
+      if (!rowData.company_name) rowData.company_name = filledValues[1] || 'Pending Info';
+      if (!rowData.phone_number) rowData.phone_number = filledValues[2] || 'N/A';
     }
 
     // Remove color field if it's null to avoid sending unnecessary data
