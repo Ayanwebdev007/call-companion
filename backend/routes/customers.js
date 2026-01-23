@@ -717,9 +717,36 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(403).json({ message: 'You do not have write access to this spreadsheet' });
     }
 
+    // Prevent overwriting of 'meta_data' hidden flags (source_customer_id, etc.) if frontend sends partial meta_data
+    let updatePayload = { ...req.body };
+
+    if (updatePayload.meta_data) {
+      const existingDoc = await Customer.findOne({ _id: req.params.id, business_id: user.business_id });
+      if (existingDoc && existingDoc.meta_data) {
+        // Merge existing hidden flags into the payload's meta_data
+        const existingMeta = existingDoc.meta_data instanceof Map ? Object.fromEntries(existingDoc.meta_data) : existingDoc.meta_data;
+        const newMeta = { ...existingMeta, ...updatePayload.meta_data };
+
+        // Ensure we keep the flags if they existed
+        if (existingDoc.meta_data instanceof Map) {
+          if (existingDoc.meta_data.has('is_unified_copy')) newMeta.is_unified_copy = existingDoc.meta_data.get('is_unified_copy');
+          if (existingDoc.meta_data.has('source_customer_id')) newMeta.source_customer_id = existingDoc.meta_data.get('source_customer_id');
+          if (existingDoc.meta_data.has('source_spreadsheet_id')) newMeta.source_spreadsheet_id = existingDoc.meta_data.get('source_spreadsheet_id');
+          if (existingDoc.meta_data.has('meta_lead_id')) newMeta.meta_lead_id = existingDoc.meta_data.get('meta_lead_id');
+        } else {
+          if (existingMeta.is_unified_copy) newMeta.is_unified_copy = existingMeta.is_unified_copy;
+          if (existingMeta.source_customer_id) newMeta.source_customer_id = existingMeta.source_customer_id;
+          if (existingMeta.source_spreadsheet_id) newMeta.source_spreadsheet_id = existingMeta.source_spreadsheet_id;
+          if (existingMeta.meta_lead_id) newMeta.meta_lead_id = existingMeta.meta_lead_id;
+        }
+
+        updatePayload.meta_data = newMeta;
+      }
+    }
+
     const updatedCustomer = await Customer.findOneAndUpdate(
       { _id: req.params.id, business_id: user.business_id },
-      req.body,
+      updatePayload,
       { new: true }
     );
 
