@@ -170,21 +170,31 @@ router.post('/:id/link', auth, async (req, res) => {
     let currentLinks = spreadsheet.linked_meta_sheets.map(id => id.toString());
     const newIds = metaSheetIds.map(id => id.toString());
 
+    let finalSheetIds = [];
+
     if (action === 'add') {
       const unique = new Set([...currentLinks, ...newIds]);
-      spreadsheet.linked_meta_sheets = Array.from(unique);
-
-      // Import historical leads
-      await importLeads(newIds, spreadsheet._id, user.business_id, req.user.id);
-
+      finalSheetIds = Array.from(unique);
     } else if (action === 'remove') {
-      spreadsheet.linked_meta_sheets = currentLinks.filter(id => !newIds.includes(id));
-      // Optional: Remove leads from unified sheet? Usually we keep them or ask user. 
-      // For now, let's keep them to avoid data loss.
+      finalSheetIds = currentLinks.filter(id => !newIds.includes(id));
     } else if (action === 'set') {
-      spreadsheet.linked_meta_sheets = newIds;
-      // Import historical leads for all new IDs
-      await importLeads(newIds, spreadsheet._id, user.business_id, req.user.id);
+      finalSheetIds = newIds;
+    }
+
+    // Determine added and removed IDs to sync leads
+    const addedIds = finalSheetIds.filter(id => !currentLinks.includes(id));
+    const removedIds = currentLinks.filter(id => !finalSheetIds.includes(id));
+
+    spreadsheet.linked_meta_sheets = finalSheetIds;
+    await spreadsheet.save();
+
+    // Sync Leads
+    if (addedIds.length > 0) {
+      await importLeads(addedIds, spreadsheet._id, user.business_id, req.user.id);
+    }
+
+    if (removedIds.length > 0) {
+      await removeLeads(removedIds, spreadsheet._id, user.business_id);
     }
 
     await spreadsheet.save();
@@ -363,5 +373,22 @@ async function importLeads(sourceSheetIds, targetSheetId, businessId, userId) {
 
   } catch (error) {
     console.error('Error importing leads:', error);
+  }
+}
+
+// Helper function to remove leads when unlinked
+async function removeLeads(sourceSheetIds, targetSheetId, businessId) {
+  try {
+    // Delete customers in the unified sheet (targetSheetId) that are "copies" from the removed source sheets
+    const result = await Customer.deleteMany({
+      spreadsheet_id: targetSheetId,
+      business_id: businessId,
+      'meta_data.is_unified_copy': true,
+      'meta_data.source_spreadsheet_id': { $in: sourceSheetIds }
+    });
+
+    console.log(`Removed ${result.deletedCount} leads from Unified Sheet ${targetSheetId} originating from sources: ${sourceSheetIds.join(', ')}`);
+  } catch (error) {
+    console.error('Error removing leads:', error);
   }
 }
