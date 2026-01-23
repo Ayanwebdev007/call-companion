@@ -876,17 +876,32 @@ router.delete('/:id', auth, async (req, res) => {
     syncToGoogleSheets(deletedCustomer.spreadsheet_id);
 
     // REAL-TIME SYNC TO UNIFIED SHEETS
+    // Case 1: Deleted Source Lead -> Delete Copies
     if (!deletedCustomer.meta_data?.is_unified_copy) {
-      await Customer.updateMany(
+      // Strategy A: Try to delete by source_customer_id (Best for new leads)
+      const primaryResult = await Customer.updateMany(
         {
           business_id: user.business_id,
           'meta_data.source_customer_id': deletedCustomer._id
         },
-        {
-          is_deleted: true,
-          deleted_at: new Date()
-        }
+        { is_deleted: true, deleted_at: new Date() }
       );
+
+      // Strategy B: Fallback for older leads (Missing source_customer_id)
+      // If we didn't delete anything, try matching by content
+      if (primaryResult.modifiedCount === 0) {
+        console.log('[SYNC] No linked ID found, trying fallback matching for deletion...');
+        await Customer.updateMany(
+          {
+            business_id: user.business_id,
+            'meta_data.is_unified_copy': true,
+            'meta_data.source_spreadsheet_id': deletedCustomer.spreadsheet_id,
+            phone_number: deletedCustomer.phone_number, // Assumption: Phone is unique-ish
+            customer_name: deletedCustomer.customer_name // Add Name for extra safety
+          },
+          { is_deleted: true, deleted_at: new Date() }
+        );
+      }
     } else if (deletedCustomer.meta_data?.is_unified_copy && deletedCustomer.meta_data?.source_customer_id) {
       // CASE 2: Unified Copy Deleted -> Delete Source
       console.log(`[SYNC] Deleting Source Lead because Unified Copy was deleted: ${deletedCustomer.meta_data.source_customer_id}`);
