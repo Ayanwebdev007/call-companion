@@ -813,6 +813,20 @@ router.put('/:id', auth, async (req, res) => {
     } else if (updatedCustomer.meta_data?.is_unified_copy && updatedCustomer.meta_data?.source_customer_id) {
       // CASE 2: Unified Copy Updated -> Sync BACK to Source
       console.log(`[SYNC] Writing back update from Unified to Source Lead: ${updatedCustomer.meta_data.source_customer_id}`);
+
+      // Prepare meta_data for sync (exclude internal flags)
+      let metaToSync = {};
+      if (updatedCustomer.meta_data) {
+        // Handle Map or Object
+        metaToSync = updatedCustomer.meta_data instanceof Map
+          ? Object.fromEntries(updatedCustomer.meta_data)
+          : { ...updatedCustomer.meta_data };
+
+        delete metaToSync.is_unified_copy;
+        delete metaToSync.source_spreadsheet_id;
+        delete metaToSync.source_customer_id;
+      }
+
       await Customer.updateOne(
         { _id: updatedCustomer.meta_data.source_customer_id },
         {
@@ -825,10 +839,12 @@ router.put('/:id', auth, async (req, res) => {
             color: updatedCustomer.color,
             next_call_date: updatedCustomer.next_call_date,
             next_call_time: updatedCustomer.next_call_time,
-            last_call_date: updatedCustomer.last_call_date
+            last_call_date: updatedCustomer.last_call_date,
+            meta_data: metaToSync // Sync the full meta_data (minus flags)
           }
         }
       );
+
     }
 
     res.json(updatedCustomer);
