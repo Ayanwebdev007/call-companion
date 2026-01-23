@@ -70,7 +70,7 @@ export function UnifiedSheetDialog({ isOpen, onClose }: UnifiedSheetDialogProps)
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="description">Description (Optional)</Label>
-                        <Textarea
+                        <AutoResizeTextarea
                             id="description"
                             placeholder="Describe the purpose of this list..."
                             value={description}
