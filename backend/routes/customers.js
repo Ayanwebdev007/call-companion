@@ -773,9 +773,16 @@ router.put('/:id', auth, async (req, res) => {
     const isUnifiedCopy = customerObj.meta_data?.is_unified_copy === true || customerObj.meta_data?.is_unified_copy === 'true';
     const sourceCustomerId = customerObj.meta_data?.source_customer_id;
 
+    console.log('[SYNC DEBUG] Update Event:', {
+      customerId: updatedCustomer._id,
+      meta_data: customerObj.meta_data,
+      isUnifiedCopy,
+      sourceCustomerId
+    });
+
     if (!isUnifiedCopy) {
       // CASE 1: Source Lead Updated -> Update Copies
-      // Prepare meta_data update: We want to sync NEW fields but keep Copies' flags
+      console.log('[SYNC] Source Lead updated, syncing to Unified copies...');
 
       const syncUpdate = {
         customer_name: updatedCustomer.customer_name,
@@ -787,19 +794,20 @@ router.put('/:id', auth, async (req, res) => {
         next_call_date: updatedCustomer.next_call_date,
         next_call_time: updatedCustomer.next_call_time,
         last_call_date: updatedCustomer.last_call_date
-        // We skip meta_data deep sync for now to avoid overwriting distinct flags in copies.
       };
 
-      await Customer.updateMany(
+      const result = await Customer.updateMany(
         {
           business_id: updatedCustomer.business_id,
-          'meta_data.source_customer_id': updatedCustomer._id.toString() // Ensure string match
+          'meta_data.source_customer_id': updatedCustomer._id.toString()
         },
         { $set: syncUpdate }
       );
+
+      console.log('[SYNC] Source->Unified update result:', result);
     } else if (isUnifiedCopy && sourceCustomerId) {
       // CASE 2: Unified Copy Updated -> Sync BACK to Source
-      console.log(`[SYNC] Writing back update from Unified to Source Lead: ${sourceCustomerId}`);
+      console.log(`[SYNC] Unified Copy updated, writing back to Source: ${sourceCustomerId}`);
 
       // Prepare meta_data for sync (exclude internal flags)
       let metaToSync = { ...customerObj.meta_data };
@@ -807,7 +815,7 @@ router.put('/:id', auth, async (req, res) => {
       delete metaToSync.source_spreadsheet_id;
       delete metaToSync.source_customer_id;
 
-      await Customer.updateOne(
+      const result = await Customer.updateOne(
         { _id: sourceCustomerId },
         {
           $set: {
@@ -820,10 +828,14 @@ router.put('/:id', auth, async (req, res) => {
             next_call_date: updatedCustomer.next_call_date,
             next_call_time: updatedCustomer.next_call_time,
             last_call_date: updatedCustomer.last_call_date,
-            meta_data: metaToSync // Sync the full meta_data (minus flags)
+            meta_data: metaToSync
           }
         }
       );
+
+      console.log('[SYNC] Unified->Source update result:', result);
+    } else {
+      console.log('[SYNC] No sync action taken - neither source nor unified copy detected');
     }
 
     res.json(updatedCustomer);
