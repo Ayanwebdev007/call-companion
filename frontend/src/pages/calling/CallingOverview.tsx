@@ -5,6 +5,12 @@ import { FileSpreadsheet, Users, Activity, PhoneCall, ArrowRight, Sparkles, Face
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { LinkSheetsDialog } from "@/components/LinkSheetsDialog";
+import { UnifiedSheetDialog } from "@/components/UnifiedSheetDialog";
+import { useState } from "react";
+import { Link2, Layers, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Spreadsheet } from "@/lib/api";
 
 export default function CallingOverview() {
     const navigate = useNavigate();
@@ -21,7 +27,14 @@ export default function CallingOverview() {
     const totalSpreadsheets = spreadsheets.length;
     const sharedSpreadsheets = spreadsheets.filter(s => s.is_shared).length;
     const metaSpreadsheets = spreadsheets.filter(s => s.is_meta).length;
-    const manualSpreadsheets = totalSpreadsheets - metaSpreadsheets;
+
+    const unifiedSpreadsheets = spreadsheets.filter(s => s.is_unified).length;
+    const manualSpreadsheets = totalSpreadsheets - metaSpreadsheets - unifiedSpreadsheets;
+    const unifiedSheets = spreadsheets.filter(s => s.is_unified);
+
+    const [isUnifiedDialogOpen, setIsUnifiedDialogOpen] = useState(false);
+    const [linkingSheet, setLinkingSheet] = useState<Spreadsheet | null>(null);
+
     const recentMetaLeads = (analytics?.recentLeads || []).filter(lead => {
         const metaId = lead.meta_data instanceof Map
             ? lead.meta_data.get('meta_lead_id')
@@ -195,7 +208,7 @@ export default function CallingOverview() {
                 </Card>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-3">
                 <Card className="hover:border-primary/50 transition-colors cursor-pointer group" onClick={() => navigate("/calling/manual")}>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-xl font-bold">Manual Sheet Dashboard</CardTitle>
@@ -220,7 +233,85 @@ export default function CallingOverview() {
                         </div>
                     </CardContent>
                 </Card>
+                {/* Unified Smart Lists Card */}
+                <Card className="hover:border-purple-500/50 transition-colors cursor-pointer group relative overflow-hidden bg-gradient-to-br from-card to-purple-500/5" onClick={() => setIsUnifiedDialogOpen(true)}>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-xl font-bold">Unified Smart Lists</CardTitle>
+                        <Layers className="h-6 w-6 text-purple-500 group-hover:scale-110 transition-transform" />
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-4">Create master lists that automatically aggregate leads from multiple Meta campaigns.</p>
+                        <div className="flex items-center text-sm font-semibold text-purple-500">
+                            Create Smart List <Plus className="h-4 w-4 ml-2 group-hover:rotate-90 transition-transform" />
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
+
+            {/* Unified Sheets List Section */}
+            {unifiedSheets.length > 0 && (
+                <div className="animate-fade-in space-y-4">
+                    <h2 className="text-xl font-semibold flex items-center gap-2">
+                        <Layers className="h-5 w-5 text-purple-500" />
+                        Your Smart Lists
+                    </h2>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        {unifiedSheets.map(sheet => (
+                            <Card key={sheet.id} className="border-purple-200/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors">
+                                <CardHeader className="pb-2">
+                                    <div className="flex justify-between items-start">
+                                        <CardTitle className="text-base font-bold truncate pr-4">{sheet.name}</CardTitle>
+                                        {(sheet.user_id as any)?.username && (
+                                            <Badge variant="outline" className="text-[10px] bg-background">
+                                                By {(sheet.user_id as any).username}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    <CardDescription className="line-clamp-1">{sheet.description || 'No description'}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="pb-3">
+                                    <div className="flex flex-wrap gap-1 mb-4">
+                                        <Badge variant="secondary" className="text-xs">
+                                            {Array.isArray(sheet.linked_meta_sheets) ? sheet.linked_meta_sheets.length : 0} Linked Sources
+                                        </Badge>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="w-full text-xs"
+                                            onClick={(e) => { e.stopPropagation(); navigate(`/spreadsheet/${sheet.id}`); }}
+                                        >
+                                            <ArrowRight className="w-3 h-3 mr-1" /> View Leads
+                                        </Button>
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="w-full text-xs"
+                                            onClick={(e) => { e.stopPropagation(); setLinkingSheet(sheet); }}
+                                        >
+                                            <Link2 className="w-3 h-3 mr-1" /> Link Sources
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <UnifiedSheetDialog
+                isOpen={isUnifiedDialogOpen}
+                onClose={() => setIsUnifiedDialogOpen(false)}
+            />
+
+            {linkingSheet && (
+                <LinkSheetsDialog
+                    isOpen={!!linkingSheet}
+                    onClose={() => setLinkingSheet(null)}
+                    unifiedSheet={linkingSheet}
+                />
+            )}
 
             <Card>
                 <CardHeader>

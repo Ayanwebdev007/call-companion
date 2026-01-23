@@ -38,6 +38,8 @@ export interface Spreadsheet {
   is_master?: boolean;
   linked_google_sheet_url?: string;
   linked_sheet_name?: string;
+  linked_meta_sheets?: string[] | { _id: string, name: string, is_meta: boolean }[];
+  is_unified?: boolean;
   column_mapping?: Record<string, string>;
   realtime_sync?: boolean;
   created_at: string;
@@ -206,6 +208,11 @@ export const deleteSpreadsheet = async (id: string): Promise<void> => {
 
 export const mergeSpreadsheets = async (spreadsheetIds: string[], name?: string): Promise<Spreadsheet> => {
   const response = await api.post(`${SPREADSHEETS_API_URL}/merge`, { spreadsheetIds, name });
+  return response.data;
+};
+
+export const linkSheets = async (unifiedSheetId: string, metaSheetIds: string[], action: 'add' | 'remove' | 'set'): Promise<Spreadsheet> => {
+  const response = await api.post(`${SPREADSHEETS_API_URL}/${unifiedSheetId}/link`, { metaSheetIds, action });
   return response.data;
 };
 

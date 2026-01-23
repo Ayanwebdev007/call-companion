@@ -234,6 +234,23 @@ router.post('/webhook', async (req, res) => {
                                 saveLeadToSpreadsheet(adSpreadsheet),
                                 saveLeadToSpreadsheet(masterSpreadsheet)
                             ]);
+
+                            // PROPAGATION: Find all Unified Sheets linked to this Ad Sheet
+                            try {
+                                const unifiedSheets = await mongoose.model('Spreadsheet').find({
+                                    business_id: business._id,
+                                    is_unified: true,
+                                    linked_meta_sheets: adSpreadsheet._id
+                                });
+
+                                if (unifiedSheets.length > 0) {
+                                    console.log(`[META-WEBHOOK] Propagating lead to ${unifiedSheets.length} Unified Sheets`);
+                                    await Promise.all(unifiedSheets.map(sheet => saveLeadToSpreadsheet(sheet)));
+                                }
+                            } catch (propError) {
+                                console.error('[META-WEBHOOK] Propagation error:', propError);
+                            }
+
                         } catch (leadError) {
                             console.error(`[META-WEBHOOK] Error processing lead ${leadId}:`, leadError.message);
                         }

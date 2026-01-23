@@ -14,6 +14,8 @@ const spreadsheetSchema = new mongoose.Schema({
   meta_headers: { type: [String], default: [] },
   is_meta: { type: Boolean, default: false },
   is_master: { type: Boolean, default: false },
+  is_unified: { type: Boolean, default: false }, // New: Unified Lead Sheet (Smart List)
+  linked_meta_sheets: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Spreadsheet' }], // New: List of Meta Sheets this sheet subscribes to
   linked_google_sheet_url: { type: String, default: '' },
   linked_sheet_name: { type: String, default: '' },
   column_mapping: { type: Object, default: null },

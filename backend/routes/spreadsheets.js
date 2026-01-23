@@ -21,7 +21,9 @@ router.get('/', auth, checkPermission('dashboard'), async (req, res) => {
     }
 
     // Get spreadsheets
-    const spreadsheets = await Spreadsheet.find(query).sort({ created_at: -1 });
+    const spreadsheets = await Spreadsheet.find(query)
+      .sort({ created_at: -1 })
+      .populate('user_id', 'username');
 
     res.json(spreadsheets);
   } catch (err) {
@@ -43,7 +45,9 @@ router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
       business_id: user.business_id,
       name: req.body.name,
       description: req.body.description || '',
-      assigned_users: userIds
+      assigned_users: userIds,
+      is_unified: req.body.is_unified || false,
+      linked_meta_sheets: req.body.linked_meta_sheets || []
     });
 
     const newSpreadsheet = await spreadsheet.save();
@@ -137,6 +141,51 @@ router.delete('/:id', auth, async (req, res) => {
     await Spreadsheet.deleteOne({ _id: req.params.id });
 
     res.json({ message: 'Spreadsheet and associated customers deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// LINK/UNLINK Meta Sheets to Unified Sheet
+router.post('/:id/link', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const { metaSheetIds, action } = req.body; // action: 'add' | 'remove' | 'set'
+
+    const spreadsheet = await Spreadsheet.findOne({
+      _id: req.params.id,
+      business_id: user.business_id,
+      is_unified: true
+    });
+
+    if (!spreadsheet) {
+      return res.status(404).json({ message: 'Unified Spreadsheet not found' });
+    }
+
+    // Check permissions
+    if (user.role !== 'admin' && spreadsheet.user_id.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Permission denied' });
+    }
+
+    let currentLinks = spreadsheet.linked_meta_sheets.map(id => id.toString());
+    const newIds = metaSheetIds.map(id => id.toString());
+
+    if (action === 'add') {
+      const unique = new Set([...currentLinks, ...newIds]);
+      spreadsheet.linked_meta_sheets = Array.from(unique);
+    } else if (action === 'remove') {
+      spreadsheet.linked_meta_sheets = currentLinks.filter(id => !newIds.includes(id));
+    } else if (action === 'set') {
+      spreadsheet.linked_meta_sheets = newIds;
+    }
+
+    await spreadsheet.save();
+
+    // Population for response
+    await spreadsheet.populate('linked_meta_sheets', 'name is_meta');
+
+    res.json(spreadsheet);
+
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
