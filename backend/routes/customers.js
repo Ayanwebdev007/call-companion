@@ -170,7 +170,7 @@ router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
     syncToGoogleSheets(spreadsheet_id);
 
     // REAL-TIME SYNC TO UNIFIED SHEETS
-    // Check if this spreadsheet is part of any Unified Sheet
+    // ... (existing code for Meta -> Unified) ...
     const unifiedSheets = await Spreadsheet.find({
       business_id: user.business_id,
       is_unified: true,
@@ -181,24 +181,57 @@ router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
       console.log(`[SYNC] Propagating new lead to ${unifiedSheets.length} Unified Sheets`);
       const unifiedCopies = unifiedSheets.map(unifiedSheet => ({
         ...req.body,
-        user_id: req.user.id, // Or unify ownership logic? For now strict copy.
+        user_id: req.user.id,
         business_id: user.business_id,
         spreadsheet_id: unifiedSheet._id,
         created_at: new Date(),
         updated_at: new Date(),
-        position: 0, // Should be calculated but 0 is safe for now, or use max
+        position: 0,
         meta_data: {
           ...meta_data,
           is_unified_copy: true,
           source_spreadsheet_id: spreadsheet_id,
-          source_customer_id: newCustomer._id // Crucial for future updates
+          source_customer_id: newCustomer._id
         }
       }));
-
-      // We should probably get correct positions for them, but inserting for now is key.
-      // If we want correct positions, we'd need to query each unified sheet.
-      // For performance, let's just insert.
       await Customer.insertMany(unifiedCopies);
+    }
+
+    // REAL-TIME SYNC TO META SHEETS (WRITE-BACK)
+    // If adding to a Unified Sheet, assume we want to write back to the first linked Source Sheet
+    if (spreadsheet.is_unified && spreadsheet.linked_meta_sheets && spreadsheet.linked_meta_sheets.length > 0) {
+      const targetSourceId = spreadsheet.linked_meta_sheets[0];
+      console.log(`[SYNC] Writing back new Unified lead to Source Sheet: ${targetSourceId}`);
+
+      // Create the source lead
+      const sourceCustomer = new Customer({
+        ...req.body,
+        user_id: req.user.id,
+        business_id: user.business_id,
+        spreadsheet_id: targetSourceId,
+        created_at: new Date(),
+        updated_at: new Date(),
+        // Ensure we don't accidentally mark it as a unified copy
+        meta_data: {
+          ...meta_data,
+          is_unified_copy: false
+        }
+      });
+
+      const savedSourceCustomer = await sourceCustomer.save();
+
+      // LINK the Unified Lead to this new Source Lead
+      // We must update the lead we just responded with
+      newCustomer.meta_data = {
+        ...newCustomer.meta_data,
+        is_unified_copy: true,
+        source_spreadsheet_id: targetSourceId,
+        source_customer_id: savedSourceCustomer._id
+      };
+      await newCustomer.save();
+
+      // Trigger sync for the source sheet
+      syncToGoogleSheets(targetSourceId);
     }
 
     res.status(201).json(newCustomer);
@@ -742,6 +775,25 @@ router.put('/:id', auth, async (req, res) => {
           }
         }
       );
+    } else if (updatedCustomer.meta_data?.is_unified_copy && updatedCustomer.meta_data?.source_customer_id) {
+      // CASE 2: Unified Copy Updated -> Sync BACK to Source
+      console.log(`[SYNC] Writing back update from Unified to Source Lead: ${updatedCustomer.meta_data.source_customer_id}`);
+      await Customer.updateOne(
+        { _id: updatedCustomer.meta_data.source_customer_id },
+        {
+          $set: {
+            customer_name: updatedCustomer.customer_name,
+            company_name: updatedCustomer.company_name,
+            phone_number: updatedCustomer.phone_number,
+            status: updatedCustomer.status,
+            remark: updatedCustomer.remark,
+            color: updatedCustomer.color,
+            next_call_date: updatedCustomer.next_call_date,
+            next_call_time: updatedCustomer.next_call_time,
+            last_call_date: updatedCustomer.last_call_date
+          }
+        }
+      );
     }
 
     res.json(updatedCustomer);
@@ -804,6 +856,16 @@ router.delete('/:id', auth, async (req, res) => {
           business_id: user.business_id,
           'meta_data.source_customer_id': deletedCustomer._id
         },
+        {
+          is_deleted: true,
+          deleted_at: new Date()
+        }
+      );
+    } else if (deletedCustomer.meta_data?.is_unified_copy && deletedCustomer.meta_data?.source_customer_id) {
+      // CASE 2: Unified Copy Deleted -> Delete Source
+      console.log(`[SYNC] Deleting Source Lead because Unified Copy was deleted: ${deletedCustomer.meta_data.source_customer_id}`);
+      await Customer.updateOne(
+        { _id: deletedCustomer.meta_data.source_customer_id },
         {
           is_deleted: true,
           deleted_at: new Date()
