@@ -770,8 +770,24 @@ router.put('/:id', auth, async (req, res) => {
 
     // Safely convert to POJO to access meta_data Map
     const customerObj = updatedCustomer.toObject({ flattenMaps: true });
-    const isUnifiedCopy = customerObj.meta_data?.is_unified_copy === true || customerObj.meta_data?.is_unified_copy === 'true';
-    const sourceCustomerId = customerObj.meta_data?.source_customer_id;
+
+    // Direct Map access attempt (most reliable if Document is active)
+    let isUnifiedMap = false;
+    let rankSourceId = undefined;
+    if (updatedCustomer.meta_data && typeof updatedCustomer.meta_data.get === 'function') {
+      const val = updatedCustomer.meta_data.get('is_unified_copy');
+      isUnifiedMap = val === 'true' || val === true;
+      rankSourceId = updatedCustomer.meta_data.get('source_customer_id');
+    }
+
+    // Flatten access attempt
+    const isUnifiedFlat = customerObj.meta_data?.is_unified_copy === true || customerObj.meta_data?.is_unified_copy === 'true';
+
+    // Source ID presence check (Strong signal)
+    const sourceCustomerId = customerObj.meta_data?.source_customer_id || rankSourceId;
+
+    // If we have a source_customer_id, we are definitely a copy, or at least linked to one
+    const isUnifiedCopy = isUnifiedMap || isUnifiedFlat || (!!sourceCustomerId);
 
     console.log('[SYNC DEBUG] Update Event:', {
       customerId: updatedCustomer._id,
