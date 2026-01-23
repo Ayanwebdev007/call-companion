@@ -742,6 +742,15 @@ router.put('/:id', auth, async (req, res) => {
 
         updatePayload.meta_data = newMeta;
       }
+
+      // AUTO-MAPPING: Sync meta_data dynamic fields to top-level standard fields
+      if (spreadsheet.column_mapping) {
+        Object.entries(spreadsheet.column_mapping).forEach(([header, field]) => {
+          if (updatePayload.meta_data[header] !== undefined) {
+            updatePayload[field] = updatePayload.meta_data[header];
+          }
+        });
+      }
     }
 
     const updatedCustomer = await Customer.findOneAndUpdate(
