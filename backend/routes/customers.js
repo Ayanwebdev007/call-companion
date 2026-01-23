@@ -200,38 +200,64 @@ router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
     // REAL-TIME SYNC TO META SHEETS (WRITE-BACK)
     // If adding to a Unified Sheet, assume we want to write back to the first linked Source Sheet
     if (spreadsheet.is_unified && spreadsheet.linked_meta_sheets && spreadsheet.linked_meta_sheets.length > 0) {
-      const targetSourceId = spreadsheet.linked_meta_sheets[0];
-      console.log(`[SYNC] Writing back new Unified lead to Source Sheet: ${targetSourceId}`);
+      try {
+        const targetSourceId = spreadsheet.linked_meta_sheets[0];
+        console.log(`[SYNC] Writing back new Unified lead to Source Sheet: ${targetSourceId}`);
 
-      // Create the source lead
-      const sourceCustomer = new Customer({
-        ...req.body,
-        user_id: req.user.id,
-        business_id: user.business_id,
-        spreadsheet_id: targetSourceId,
-        created_at: new Date(),
-        updated_at: new Date(),
-        // Ensure we don't accidentally mark it as a unified copy
-        meta_data: {
-          ...meta_data,
-          is_unified_copy: false
+        // Calculate position for the source sheet
+        const sourceMaxPos = await Customer.findOne({ spreadsheet_id: targetSourceId }).sort({ position: -1 });
+        const sourcePosition = sourceMaxPos ? sourceMaxPos.position + 1 : 0;
+
+        // Create the source lead using VALIDATED variables from scope, NOT raw req.body
+        const sourceCustomer = new Customer({
+          user_id: req.user.id,
+          business_id: user.business_id,
+          spreadsheet_id: targetSourceId,
+          customer_name,
+          company_name,
+          phone_number,
+          next_call_date,
+          next_call_time,
+          last_call_date: last_call_date || '',
+          remark: remark || '',
+          color: color || null,
+          status: status || 'New',
+          position: sourcePosition,
+          created_at: new Date(),
+          updated_at: new Date(),
+          // Ensure we don't accidentally mark it as a unified copy
+          meta_data: {
+            ...meta_data,
+            is_unified_copy: false
+          }
+        });
+
+        const savedSourceCustomer = await sourceCustomer.save();
+
+        // LINK the Unified Lead to this new Source Lead
+        // We must update the lead we just responded with
+        newCustomer.meta_data = {
+          ...newCustomer.meta_data,
+          is_unified_copy: true,
+          source_spreadsheet_id: targetSourceId,
+          source_customer_id: savedSourceCustomer._id
+        };
+
+        // Handle Map type if necessary (though usually simple assignment works in Mongoose setters)
+        if (newCustomer.meta_data instanceof Map) {
+          newCustomer.meta_data.set('is_unified_copy', 'true');
+          newCustomer.meta_data.set('source_spreadsheet_id', targetSourceId.toString());
+          newCustomer.meta_data.set('source_customer_id', savedSourceCustomer._id.toString());
         }
-      });
 
-      const savedSourceCustomer = await sourceCustomer.save();
+        await newCustomer.save();
 
-      // LINK the Unified Lead to this new Source Lead
-      // We must update the lead we just responded with
-      newCustomer.meta_data = {
-        ...newCustomer.meta_data,
-        is_unified_copy: true,
-        source_spreadsheet_id: targetSourceId,
-        source_customer_id: savedSourceCustomer._id
-      };
-      await newCustomer.save();
-
-      // Trigger sync for the source sheet
-      syncToGoogleSheets(targetSourceId);
+        // Trigger sync for the source sheet
+        syncToGoogleSheets(targetSourceId);
+      } catch (syncErr) {
+        console.error('[SYNC ERROR] Failed to write back to source sheet:', syncErr);
+        // Do not fail the request, just log
+      }
     }
 
     res.status(201).json(newCustomer);
