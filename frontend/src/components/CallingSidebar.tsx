@@ -18,7 +18,8 @@ import {
     LineChart,
     LogOut,
     ArrowLeft,
-    Facebook
+    Facebook,
+    Layers
 } from "lucide-react";
 
 export function CallingSidebar() {
@@ -86,6 +87,17 @@ export function CallingSidebar() {
                             >
                                 <Facebook />
                                 <span>Meta Sheets</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+
+                        <SidebarMenuItem>
+                            <SidebarMenuButton
+                                onClick={() => navigate("/calling/unified")}
+                                isActive={location.pathname === "/calling/unified"}
+                                tooltip="Unified Smart Lists"
+                            >
+                                <Layers />
+                                <span>Unified Smart Lists</span>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
 

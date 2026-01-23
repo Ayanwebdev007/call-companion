@@ -55,6 +55,7 @@ const App = () => (
                         <Route index element={<CallingOverview />} />
                         <Route path="manual" element={<Dashboard key="manual" filterType="manual" />} />
                         <Route path="meta" element={<Dashboard key="meta" filterType="meta" />} />
+                        <Route path="unified" element={<Dashboard key="unified" filterType="unified" />} />
                         <Route path="insights" element={<MetaInsights />} />
 
                         {/* Webhook Settings - Requires 'webhooks' permission */}

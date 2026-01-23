@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MergeDialog } from "@/components/MergeDialog";
 
 interface DashboardProps {
-  filterType?: "manual" | "meta";
+  filterType?: "manual" | "meta" | "unified";
 }
 
 const Dashboard = ({ filterType }: DashboardProps) => {
@@ -35,7 +35,7 @@ const Dashboard = ({ filterType }: DashboardProps) => {
   const [newSpreadsheetDescription, setNewSpreadsheetDescription] = useState("");
   const [isGoogleSheetsDialogOpen, setIsGoogleSheetsDialogOpen] = useState(false);
   const [selectedSpreadsheetForImport, setSelectedSpreadsheetForImport] = useState("");
-  const [filterMode, setFilterMode] = useState<"manual" | "meta">(initialPage !== "all" || initialForm !== "all" ? "meta" : (filterType || "manual"));
+  const [filterMode, setFilterMode] = useState<"manual" | "meta" | "unified">(initialPage !== "all" || initialForm !== "all" ? "meta" : (filterType || "manual"));
   const [metaViewMode, setMetaViewMode] = useState<"ad" | "form">("ad"); // Segment state
   const [selectedMetaPage, setSelectedMetaPage] = useState<string>(initialPage);
   const [selectedMetaForm, setSelectedMetaForm] = useState<string>(initialForm);
@@ -129,6 +129,10 @@ const Dashboard = ({ filterType }: DashboardProps) => {
       }
 
       return metaSheets;
+    }
+
+    if (filterMode === "unified") {
+      return spreadsheets.filter((s: Spreadsheet) => s.is_unified);
     }
 
     return spreadsheets;
