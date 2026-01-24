@@ -45,14 +45,6 @@ jobs:
             echo 'VITE_API_URL=${{ secrets.FRONTEND_URL }}' >> .env
             echo 'VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}' >> .env
 
-            # Stop conflicting services on host (if any)
-            systemctl stop nginx || true
-            systemctl stop apache2 || true
-
-            # Setup SSL
-            chmod +x setup-ssl.sh
-            ./setup-ssl.sh
-
             # Docker Compose
             docker compose down
             docker compose up -d --build
