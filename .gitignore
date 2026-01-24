@@ -33,3 +33,4 @@ dist-ssr
 
 vps_key
 vps_key.pub
+server.env

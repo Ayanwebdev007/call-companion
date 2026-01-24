@@ -11,6 +11,7 @@ import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Clock } from "lucide-
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL } from '../lib/api';
 
 interface CallLog {
     _id: string;
@@ -32,9 +33,7 @@ export function CallHistoryDialog({ isOpen, onClose, customerName, phoneNumber }
     const [loading, setLoading] = useState(false);
     const { token, user } = useAuth(); // Assuming 'user' might be needed later, simplifying for now
 
-    // Fixed: Use the correct backend URL (localhost:5000)
-    // In a real app, use an env var or a configured axios instance
-    const API_URL = 'http://localhost:5000/api/mobile';
+    const API_URL = `${API_BASE_URL}/api/mobile`;
 
     useEffect(() => {
         if (isOpen && phoneNumber && token) {

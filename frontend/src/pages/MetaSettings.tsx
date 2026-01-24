@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/lib/api";
+import { api, API_BASE_URL } from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info, ExternalLink, ShieldCheck, Webhook } from "lucide-react";
 
@@ -154,7 +154,7 @@ const MetaSettings = () => {
                             <div className="flex gap-2">
                                 <Input
                                     value={(() => {
-                                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+                                        const apiUrl = API_BASE_URL;
                                         const baseUrl = apiUrl.replace(/\/api$/, '');
                                         return `${baseUrl}/api/meta/webhook`;
                                     })()}
