@@ -25,6 +25,7 @@ customerSchema.index({ spreadsheet_id: 1, company_name: 1 });
 customerSchema.index({ spreadsheet_id: 1, phone_number: 1 });
 
 // Index for positioning and sorting
+customerSchema.index({ spreadsheet_id: 1, position: 1, next_call_date: 1, next_call_time: 1 });
 customerSchema.index({ spreadsheet_id: 1, position: -1 });
 
 // Index for Meta deduplication and syncing
