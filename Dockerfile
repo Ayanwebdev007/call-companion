@@ -11,13 +11,25 @@ ARG VITE_GOOGLE_CLIENT_ID
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
+# Copy root package files
 COPY package*.json ./
+
+# Copy backend package files (if any needed, good practice)
 COPY backend/package*.json ./backend/
 
+# Copy frontend package files explicitly
+COPY frontend/package*.json ./frontend/
+
+# Install root dependencies
 RUN npm ci
 
+# Install frontend dependencies
+RUN cd frontend && npm ci
+
+# Copy all source code
 COPY . .
 
+# Build frontend
 RUN npm run build
 
 # Stage 2: Serve

@@ -9,3 +9,5 @@ Dockerfile
 backend/node_modules
 backend/.env
 backend/.git
+frontend/node_modules
+frontend/dist
