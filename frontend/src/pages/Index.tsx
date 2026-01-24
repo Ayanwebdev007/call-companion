@@ -631,12 +631,7 @@ const Index = () => {
                     </Button>
                   </div>
                 </div>
-                <span className="text-xs text-muted-foreground font-medium flex items-center gap-2">
-                  Welcome back, {user?.username}
-                  <span className="bg-green-500/10 text-green-500 px-1.5 py-0.5 rounded-full text-[10px] border border-green-500/20 animate-pulse">
-                    v1.2 Live
-                  </span>
-                </span>
+                <span className="text-xs text-muted-foreground font-medium">Welcome back, {user?.username}</span>
               </div>
             </div>
             <div className="flex items-center gap-3">
