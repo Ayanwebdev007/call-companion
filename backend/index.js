@@ -31,7 +31,8 @@ const allowedOrigins = [
   'http://localhost:8081',
   'http://localhost:5173',
   'http://192.168.31.210:8081',
-  'https://call-companion-frontend.onrender.com'
+  'https://call-companion-frontend.onrender.com',
+  process.env.FRONTEND_URL
 ];
 
 app.use(cors({
@@ -58,6 +59,7 @@ app.use((req, res, next) => {
 console.log('=========================================');
 console.log('SERVER STARTING - VERSION 3.3 (WebSocket)');
 console.log('=========================================');
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'NOT SET');
 
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'SET' : 'NOT SET');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');

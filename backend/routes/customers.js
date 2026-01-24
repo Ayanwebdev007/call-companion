@@ -763,241 +763,112 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
-    // Sync status/remark/etc across spreadsheets for Meta Leads
-    // Be robust: check if meta_data is a Map or a plain object
-    let leadId = null;
+    // SYNC: Comprehensive Synchronization Logic
+    // 1. Sync across Meta Sheets (based on meta_lead_id)
+    // 2. Sync Downstream: Source -> Unified (based on source_customer_id)
+    // 3. Sync Upstream: Unified -> Source (based on source_customer_id)
+
+    const syncUpdate = {
+      customer_name: updatedCustomer.customer_name,
+      company_name: updatedCustomer.company_name,
+      phone_number: updatedCustomer.phone_number,
+      status: updatedCustomer.status,
+      remark: updatedCustomer.remark,
+      color: updatedCustomer.color,
+      next_call_date: updatedCustomer.next_call_date,
+      next_call_time: updatedCustomer.next_call_time,
+      last_call_date: updatedCustomer.last_call_date
+    };
+
+    console.log(`[SYNC] Propagating update for Customer ${updatedCustomer._id} (${updatedCustomer.customer_name})`);
+
+    const syncPromises = [];
+
+    // Case 1: Meta Lead Sync (for duplicates across sheets with same Meta ID)
+    let metaLeadId = null;
     if (updatedCustomer.meta_data) {
       if (updatedCustomer.meta_data instanceof Map) {
-        leadId = updatedCustomer.meta_data.get('meta_lead_id');
-      } else if (typeof updatedCustomer.meta_data === 'object') {
-        leadId = updatedCustomer.meta_data.meta_lead_id;
+        metaLeadId = updatedCustomer.meta_data.get('meta_lead_id') || updatedCustomer.meta_data.get('meta_id');
+      } else {
+        metaLeadId = updatedCustomer.meta_data.meta_lead_id || updatedCustomer.meta_data.meta_id;
       }
     }
 
-    if (leadId) {
-      console.log(`[SYNC] Syncing Meta Lead ${leadId} across spreadsheets...`);
-      // Update all other documents for this user with same meta_lead_id
-      const syncUpdate = {
-        status: updatedCustomer.status,
-        remark: updatedCustomer.remark,
-        color: updatedCustomer.color,
-        next_call_date: updatedCustomer.next_call_date,
-        next_call_time: updatedCustomer.next_call_time,
-        last_call_date: updatedCustomer.last_call_date
-      };
-
-      await Customer.updateMany(
-        {
-          business_id: updatedCustomer.business_id,
-          'meta_data.meta_lead_id': leadId,
-          _id: { $ne: updatedCustomer._id }
-        },
-        { $set: syncUpdate }
+    if (metaLeadId) {
+      console.log(`[SYNC] .. matching Meta Lead ID: ${metaLeadId}`);
+      syncPromises.push(
+        Customer.updateMany(
+          {
+            business_id: updatedCustomer.business_id,
+            'meta_data.meta_lead_id': metaLeadId,
+            _id: { $ne: updatedCustomer._id }
+          },
+          { $set: syncUpdate }
+        )
       );
     }
 
-    // Trigger background sync to Google Sheets
-    syncToGoogleSheets(updatedCustomer.spreadsheet_id);
-
-    // REAL-TIME SYNC TO UNIFIED SHEETS
-    // Find copies in Unified Sheets and update them
-    // REAL-TIME SYNC TO UNIFIED SHEETS
-    // Find copies in Unified Sheets and update them
-
-    // Safely convert to POJO to access meta_data Map
-    const customerObj = updatedCustomer.toObject({ flattenMaps: true });
-
-    // Direct Map access attempt (most reliable if Document is active)
-    let isUnifiedMap = false;
-    let rankSourceId = undefined;
-    if (updatedCustomer.meta_data && typeof updatedCustomer.meta_data.get === 'function') {
-      const val = updatedCustomer.meta_data.get('is_unified_copy');
-      isUnifiedMap = val === 'true' || val === true;
-      rankSourceId = updatedCustomer.meta_data.get('source_customer_id');
-    }
-
-    // Flatten access attempt
-    const isUnifiedFlat = customerObj.meta_data?.is_unified_copy === true || customerObj.meta_data?.is_unified_copy === 'true';
-
-    // Source ID presence check (Strong signal)
-    const sourceCustomerId = customerObj.meta_data?.source_customer_id || rankSourceId;
-
-    // If we have a source_customer_id, we are definitely a copy, or at least linked to one
-    const isUnifiedCopy = isUnifiedMap || isUnifiedFlat || (!!sourceCustomerId);
-
-    console.log('[SYNC DEBUG] Update Event:', {
-      customerId: updatedCustomer._id,
-      meta_data: customerObj.meta_data,
-      isUnifiedCopy,
-      sourceCustomerId
-    });
-
-    if (!isUnifiedCopy) {
-      // CASE 1: Source Lead Updated -> Update Copies
-      console.log('[SYNC] Source Lead updated, syncing to Unified copies...');
-
-      // Prepare sync update with dynamic headers
-      let syncUpdate = {
-        customer_name: updatedCustomer.customer_name,
-        company_name: updatedCustomer.company_name,
-        phone_number: updatedCustomer.phone_number,
-        status: updatedCustomer.status,
-        remark: updatedCustomer.remark,
-        color: updatedCustomer.color,
-        next_call_date: updatedCustomer.next_call_date,
-        next_call_time: updatedCustomer.next_call_time,
-        last_call_date: updatedCustomer.last_call_date
-      };
-
-      // Add dynamic headers (meta_data)
-      if (updatedCustomer.meta_data) {
-        // Flatten standard Map/Object for Mongoose update
-        const rawMeta = updatedCustomer.toObject().meta_data || {};
-        // We need to use dot notation for updating fields within a Map in Mongoose if we want partial updates,
-        // BUT for 'meta_data' as a Map<String, String>, replacing the whole map might be cleaner IF we ensure preservation.
-        // However, 'updateMany' with $set: { meta_data: ... } replaces the whole map.
-        // We must ensure we don't overwrite 'is_unified_copy' and 'source_...' in the destination docs.
-
-        // Strategy: Use pipeline update or careful $set?
-        // Simplest: merge new meta keys into a flat Update object using dot notation "meta_data.key"
-        // This preserves other keys in the destination Map.
-
-        Object.keys(rawMeta).forEach(key => {
-          // Skip internal or source-specific keys that shouldn't override the copy's flags
-          if (!key.startsWith('$') &&
-            key !== 'is_unified_copy' &&
-            key !== 'source_spreadsheet_id' &&
-            key !== 'source_customer_id' &&
-            typeof rawMeta[key] === 'string') {
-            syncUpdate[`meta_data.${key}`] = rawMeta[key];
-          }
-        });
-      }
-
-      const result = await Customer.updateMany(
+    // Case 2: Downstream Sync (This is a Source Lead, update its Unified copies)
+    // Find all customers where source_customer_id == this customer's ID
+    syncPromises.push(
+      Customer.updateMany(
         {
           business_id: updatedCustomer.business_id,
           'meta_data.source_customer_id': updatedCustomer._id.toString()
         },
         { $set: syncUpdate }
-      );
+      ).then(res => {
+        if (res.modifiedCount > 0) console.log(`[SYNC] .. updated ${res.modifiedCount} downstream Unified copies.`);
+      })
+    );
+    // Also try with ObjectId helper just in case it was stored as ObjectId
+    syncPromises.push(
+      Customer.updateMany(
+        {
+          business_id: updatedCustomer.business_id,
+          'meta_data.source_customer_id': updatedCustomer._id
+        },
+        { $set: syncUpdate }
+      )
+    );
 
-      console.log('[SYNC] Source->Unified update result:', result);
 
-      // SELF-HEALING: Check if any Unified Sheets are MISSING this lead
-      try {
-        const mongoose = await import('mongoose');
-        const sourceSpreadsheetId = new mongoose.Types.ObjectId(updatedCustomer.spreadsheet_id);
-
-        const linkedUnifiedSheets = await Spreadsheet.find({
-          business_id: user.business_id,
-          is_unified: true,
-          linked_meta_sheets: sourceSpreadsheetId
-        });
-
-        console.log(`[SYNC SELF-HEAL] Checking ${linkedUnifiedSheets.length} linked Unified Sheets for SourceID: ${sourceSpreadsheetId}`);
-
-        for (const unifiedSheet of linkedUnifiedSheets) {
-          const exists = await Customer.findOne({
-            spreadsheet_id: unifiedSheet._id,
-            'meta_data.source_customer_id': updatedCustomer._id.toString()
-          });
-
-          if (!exists) {
-            console.log(`[SYNC SELF-HEAL] Copy missing in "${unifiedSheet.name}". Creating...`);
-
-            // SANITIZE meta_data: Convert to plain object, remove internal keys
-            let cleanMetaData = {};
-            if (updatedCustomer.meta_data) {
-              if (updatedCustomer.meta_data instanceof Map) {
-                cleanMetaData = Object.fromEntries(updatedCustomer.meta_data);
-              } else if (typeof updatedCustomer.meta_data === 'object') {
-                // Avoid spreading Mongoose document internals
-                const rawMeta = updatedCustomer.toObject().meta_data || {};
-                // Filter out keys starting with $ (Mongoose internals)
-                Object.keys(rawMeta).forEach(key => {
-                  if (!key.startsWith('$') && typeof rawMeta[key] === 'string') {
-                    cleanMetaData[key] = rawMeta[key];
-                  }
-                });
-              }
-            }
-
-            // Add required sync fields
-            cleanMetaData.is_unified_copy = 'true';
-            cleanMetaData.source_spreadsheet_id = updatedCustomer.spreadsheet_id.toString();
-            cleanMetaData.source_customer_id = updatedCustomer._id.toString();
-
-            const newCopy = new Customer({
-              ...updatedCustomer.toObject(),
-              _id: undefined,
-              spreadsheet_id: unifiedSheet._id,
-              position: 0,
-              meta_data: cleanMetaData
-            });
-
-            // Remove ID fields to let Mongoose generate new ones
-            delete newCopy._id;
-            delete newCopy.id;
-
-            await newCopy.save();
-            console.log(`[SYNC SELF-HEAL] Successfully created copy in ${unifiedSheet.name}`);
-          }
-        }
-      } catch (shErr) {
-        console.error('[SYNC SELF-HEAL ERROR]', shErr);
+    // Case 3: Upstream Sync (This is a Unified Copy, update its Source Original)
+    let sourceCustomerId = null;
+    if (updatedCustomer.meta_data) {
+      if (updatedCustomer.meta_data instanceof Map) {
+        sourceCustomerId = updatedCustomer.meta_data.get('source_customer_id');
+      } else {
+        sourceCustomerId = updatedCustomer.meta_data.source_customer_id;
       }
-    } else if (isUnifiedCopy && sourceCustomerId) {
-      // CASE 2: Unified Copy Updated -> Sync BACK to Source
-      console.log(`[SYNC] Unified Copy updated, writing back to Source: ${sourceCustomerId}`);
-
-      // Prepare update payload
-      let syncBackUpdate = {
-        customer_name: updatedCustomer.customer_name,
-        company_name: updatedCustomer.company_name,
-        phone_number: updatedCustomer.phone_number,
-        status: updatedCustomer.status,
-        remark: updatedCustomer.remark,
-        color: updatedCustomer.color,
-        next_call_date: updatedCustomer.next_call_date,
-        next_call_time: updatedCustomer.next_call_time,
-        last_call_date: updatedCustomer.last_call_date
-      };
-
-      // Add dynamic headers (meta_data)
-      // Since we are writing back to Source, we should be careful. 
-      // The Source is the truth for its own structure. 
-      // But if we edited a dynamic field in Unified, we want it in Source.
-      if (updatedCustomer.meta_data) {
-        const rawMeta = updatedCustomer.toObject().meta_data || {};
-
-        Object.keys(rawMeta).forEach(key => {
-          // Exclude sync flags, they don't belong in source meta_data usually (or at least shouldn't be overwritten blindly)
-          if (!key.startsWith('$') &&
-            key !== 'is_unified_copy' &&
-            key !== 'source_spreadsheet_id' &&
-            key !== 'source_customer_id' &&
-            typeof rawMeta[key] === 'string') {
-            syncBackUpdate[`meta_data.${key}`] = rawMeta[key];
-          }
-        });
-      }
-
-      const result = await Customer.updateOne(
-        { _id: sourceCustomerId },
-        { $set: syncBackUpdate }
-      );
-
-      console.log('[SYNC] Unified->Source update result:', result);
-    } else if (isUnifiedCopy && sourceCustomerId) {
-      console.log('[SYNC] No sync action taken - neither source nor unified copy detected');
     }
+
+    if (sourceCustomerId) {
+      console.log(`[SYNC] .. matching Source Customer ID: ${sourceCustomerId}`);
+      syncPromises.push(
+        Customer.updateOne(
+          {
+            _id: sourceCustomerId, // It's a direct ID lookup
+            business_id: updatedCustomer.business_id
+          },
+          { $set: syncUpdate }
+        ).then(res => {
+          if (res.modifiedCount > 0) console.log(`[SYNC] .. updated Source Original.`);
+        })
+      );
+    }
+
+    await Promise.all(syncPromises);
+
+    // Trigger background sync to Google Sheets
+    syncToGoogleSheets(updatedCustomer.spreadsheet_id);
 
     res.json(updatedCustomer);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 });
+
 
 // DELETE customer
 router.delete('/:id', auth, async (req, res) => {

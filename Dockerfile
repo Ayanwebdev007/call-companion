@@ -1,7 +1,15 @@
 # Stage 1: Build
-FROM node:18-alpine as build
+FROM node:20-alpine as build
 
 WORKDIR /app
+
+# Define build arguments for frontend
+ARG VITE_API_URL
+ARG VITE_GOOGLE_CLIENT_ID
+
+# Set environment variables from build args
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 
 COPY package*.json ./
 COPY backend/package*.json ./backend/
