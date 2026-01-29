@@ -817,8 +817,8 @@ router.put('/:id', auth, async (req, res) => {
 
     const updatedCustomer = await Customer.findOneAndUpdate(
       { _id: req.params.id, business_id: user.business_id },
-      updatePayload,
-      { new: true }
+      { $set: updatePayload },
+      { new: true, runValidators: true }
     );
 
     if (!updatedCustomer) {
@@ -910,6 +910,15 @@ router.put('/:id', auth, async (req, res) => {
 
     // Case 2: Downstream Sync
     console.log(`[SYNC DEBUG] Checking Downstream (Source ID matching this ID)...`);
+    console.log(`[SYNC DEBUG] Downstream query:`, JSON.stringify({
+      business_id: updatedCustomer.business_id,
+      $or: [
+        { 'meta_data.source_customer_id': updatedCustomer._id.toString() },
+        { 'meta_data.source_customer_id': updatedCustomer._id }
+      ]
+    }));
+    console.log(`[SYNC DEBUG] Downstream update payload:`, JSON.stringify({ $set: syncUpdate }, null, 2));
+
     syncPromises.push(
       Customer.updateMany(
         {
