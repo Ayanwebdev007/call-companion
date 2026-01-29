@@ -9,12 +9,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchSpreadsheets, fetchSharedSpreadsheets, createSpreadsheet, deleteSpreadsheet, shareSpreadsheet, Spreadsheet } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft, ArrowRight, Download, Webhook, LayoutDashboard, Filter, X } from "lucide-react";
+import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft, ArrowRight, Download, Webhook, LayoutDashboard, Filter, X, Link2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import GoogleSheetsDialog from "@/components/GoogleSheetsDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MergeDialog } from "@/components/MergeDialog";
+import { LinkSheetsDialog } from "@/components/LinkSheetsDialog";
 
 interface DashboardProps {
   filterType?: "manual" | "meta" | "unified";
@@ -57,6 +58,8 @@ const Dashboard = ({ filterType }: DashboardProps) => {
   const [selectedMetaAdSet, setSelectedMetaAdSet] = useState<string>("all");
   const [selectedMetaAd, setSelectedMetaAd] = useState<string>("all");
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
+  const [isLinkSheetsDialogOpen, setIsLinkSheetsDialogOpen] = useState(false);
+  const [selectedUnifiedSheet, setSelectedUnifiedSheet] = useState<Spreadsheet | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
@@ -656,6 +659,21 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                   <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 sm:translate-x-2 sm:group-hover:translate-x-0" onClick={(e) => e.stopPropagation()}>
                     {!spreadsheet.is_shared && (
                       <>
+                        {spreadsheet.is_unified && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-900/20 dark:hover:text-purple-400 hover:shadow-sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedUnifiedSheet(spreadsheet);
+                              setIsLinkSheetsDialogOpen(true);
+                            }}
+                            title="Manage Linked Sources"
+                          >
+                            <Link2 className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -830,11 +848,23 @@ const Dashboard = ({ filterType }: DashboardProps) => {
         spreadsheets={spreadsheets}
       />
 
+
       <GoogleSheetsDialog
         open={isGoogleSheetsDialogOpen}
         onOpenChange={setIsGoogleSheetsDialogOpen}
         spreadsheetId={selectedSpreadsheetForImport}
       />
+
+      {selectedUnifiedSheet && (
+        <LinkSheetsDialog
+          isOpen={isLinkSheetsDialogOpen}
+          onClose={() => {
+            setIsLinkSheetsDialogOpen(false);
+            setSelectedUnifiedSheet(null);
+          }}
+          unifiedSheet={selectedUnifiedSheet}
+        />
+      )}
     </div>
   );
 };
