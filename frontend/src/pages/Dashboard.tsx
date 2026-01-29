@@ -614,6 +614,11 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                     <h3 className="font-semibold text-base text-foreground/90 group-hover:text-foreground transition-colors truncate">
                       {spreadsheet.name}
                     </h3>
+                    {!spreadsheet.is_shared && (spreadsheet.user_id as any)?.username && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary/50 text-muted-foreground ring-1 ring-border/30">
+                        By {(spreadsheet.user_id as any).username}
+                      </span>
+                    )}
                     {spreadsheet.is_shared && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/20">
                         Shared by {spreadsheet.owner} ({spreadsheet.permission_level === 'read-write' ? 'Edit' : 'View'})
