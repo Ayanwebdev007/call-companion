@@ -23,7 +23,7 @@ router.get('/', auth, checkPermission('dashboard'), async (req, res) => {
     // Get spreadsheets
     const spreadsheets = await Spreadsheet.find(query)
       .sort({ created_at: -1 })
-      .populate('user_id', 'username');
+      .populate('user_id', 'username name');
 
     res.json(spreadsheets);
   } catch (err) {
@@ -35,6 +35,7 @@ router.get('/', auth, checkPermission('dashboard'), async (req, res) => {
 router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
+    console.log(`[SPREADSHEET] Creating new sheet "${req.body.name}" for User: ${user.username} (${user.name}) ID: ${user._id}`);
 
     // AUTO-ASSIGN: Get all users in the business
     const businessUsers = await User.find({ business_id: user.business_id });

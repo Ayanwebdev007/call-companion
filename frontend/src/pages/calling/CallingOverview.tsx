@@ -261,9 +261,9 @@ export default function CallingOverview() {
                                 <CardHeader className="pb-2">
                                     <div className="flex justify-between items-start">
                                         <CardTitle className="text-base font-bold truncate pr-4">{sheet.name}</CardTitle>
-                                        {(sheet.user_id as any)?.username && (
+                                        {((sheet.user_id as any)?.name || (sheet.user_id as any)?.username) && (
                                             <Badge variant="outline" className="text-[10px] bg-background">
-                                                By {(sheet.user_id as any).username}
+                                                By {(sheet.user_id as any).name || (sheet.user_id as any).username}
                                             </Badge>
                                         )}
                                     </div>
