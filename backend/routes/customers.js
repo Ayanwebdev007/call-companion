@@ -738,16 +738,28 @@ router.put('/:id', auth, async (req, res) => {
     // Prevent overwriting of 'meta_data' hidden flags (source_customer_id, etc.) if frontend sends partial meta_data
     let updatePayload = { ...req.body };
 
-    if (updatePayload.meta_data) {
-      // SANITIZATION: Remove keys starting with '$' or containing '.' (Mongoose forbidden in Maps)
-      if (typeof updatePayload.meta_data === 'object') {
-        Object.keys(updatePayload.meta_data).forEach(key => {
-          if (key.startsWith('$') || key.includes('.')) {
-            console.log(`[DEBUG] Dropping forbidden key: ${key}`);
-            delete updatePayload.meta_data[key];
+    // SANITIZATION: Remove keys starting with '$' or containing '.' (Mongoose forbidden in Maps)
+    Object.keys(updatePayload).forEach(key => {
+      // Case A: Nested Object (e.g., meta_data: { $bad: 1 })
+      if (key === 'meta_data' && typeof updatePayload[key] === 'object' && updatePayload[key] !== null) {
+        Object.keys(updatePayload[key]).forEach(subKey => {
+          if (subKey.startsWith('$') || subKey.includes('.')) {
+            console.log(`[DEBUG] Dropping forbidden nested key: ${subKey}`);
+            delete updatePayload[key][subKey];
           }
         });
       }
+      // Case B: Dot Notation (e.g., meta_data.$bad: 1)
+      else if (key.startsWith('meta_data.')) {
+        const subKey = key.substring('meta_data.'.length);
+        if (subKey.startsWith('$')) {
+          console.log(`[DEBUG] Dropping forbidden dot-notation key: ${key}`);
+          delete updatePayload[key];
+        }
+      }
+    });
+
+    if (updatePayload.meta_data || Object.keys(updatePayload).some(k => k.startsWith('meta_data.'))) {
 
       const existingDoc = await Customer.findOne({ _id: req.params.id, business_id: user.business_id });
       if (existingDoc && existingDoc.meta_data) {
