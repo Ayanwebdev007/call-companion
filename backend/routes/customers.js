@@ -984,6 +984,22 @@ router.put('/:id', auth, async (req, res) => {
           console.log(`[SYNC] Upstream Source updated: ${res.modifiedCount}`);
         })
       );
+
+      // Case 4: Cross-Unified Sync (Sibling Copies)
+      // When updating a Unified copy, also sync to OTHER Unified sheets with the same source
+      console.log(`[SYNC DEBUG] Syncing to sibling Unified copies with same source...`);
+      syncPromises.push(
+        Customer.updateMany(
+          {
+            business_id: updatedCustomer.business_id,
+            'meta_data.source_customer_id': sourceCustomerId,
+            _id: { $ne: updatedCustomer._id } // Exclude the current customer
+          },
+          { $set: syncUpdate }
+        ).then(res => {
+          console.log(`[SYNC] Sibling Unified copies updated: ${res.matchedCount}/${res.modifiedCount}`);
+        })
+      );
     }
 
     await Promise.all(syncPromises);
