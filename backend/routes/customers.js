@@ -739,6 +739,16 @@ router.put('/:id', auth, async (req, res) => {
     let updatePayload = { ...req.body };
 
     if (updatePayload.meta_data) {
+      // SANITIZATION: Remove keys starting with '$' or containing '.' (Mongoose forbidden in Maps)
+      if (typeof updatePayload.meta_data === 'object') {
+        Object.keys(updatePayload.meta_data).forEach(key => {
+          if (key.startsWith('$') || key.includes('.')) {
+            console.log(`[DEBUG] Dropping forbidden key: ${key}`);
+            delete updatePayload.meta_data[key];
+          }
+        });
+      }
+
       const existingDoc = await Customer.findOne({ _id: req.params.id, business_id: user.business_id });
       if (existingDoc && existingDoc.meta_data) {
         // Merge existing hidden flags into the payload's meta_data
