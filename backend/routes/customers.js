@@ -259,20 +259,21 @@ router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
 
         // LINK the Unified Lead to this new Source Lead
         // We must update the lead we just responded with
+        let existingMeta = {};
+        if (newCustomer.meta_data instanceof Map) {
+          existingMeta = Object.fromEntries(newCustomer.meta_data);
+        } else {
+          existingMeta = newCustomer.meta_data || {};
+        }
+
         newCustomer.meta_data = {
-          ...newCustomer.meta_data,
+          ...existingMeta,
           is_unified_copy: true,
           source_spreadsheet_id: targetSourceId,
           source_customer_id: savedSourceCustomer._id
         };
 
-        // Handle Map type if necessary (though usually simple assignment works in Mongoose setters)
-        if (newCustomer.meta_data instanceof Map) {
-          newCustomer.meta_data.set('is_unified_copy', 'true');
-          newCustomer.meta_data.set('source_spreadsheet_id', targetSourceId.toString());
-          newCustomer.meta_data.set('source_customer_id', savedSourceCustomer._id.toString());
-        }
-
+        newCustomer.markModified('meta_data'); // CRITICAL: Ensure Mongoose detects the Map replacement
         await newCustomer.save();
 
         // Trigger sync for the source sheet
