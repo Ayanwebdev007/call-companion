@@ -696,6 +696,9 @@ router.get('/export/:spreadsheetId', auth, async (req, res) => {
 // UPDATE customer
 router.put('/:id', auth, async (req, res) => {
   try {
+    console.log(`[DEBUG] PUT /${req.params.id} request received.`);
+    console.log(`[DEBUG] Update Payload Keys:`, Object.keys(req.body));
+
     // First find the customer to get its spreadsheet_id
     const customer = await Customer.findById(req.params.id);
     if (!customer) {
@@ -825,7 +828,7 @@ router.put('/:id', auth, async (req, res) => {
 
     const syncPromises = [];
 
-    // Case 1: Meta Lead Sync (for duplicates across sheets with same Meta ID)
+    // Case 1: Meta Lead Sync
     let metaLeadId = null;
     if (updatedCustomer.meta_data) {
       if (updatedCustomer.meta_data instanceof Map) {
@@ -834,9 +837,10 @@ router.put('/:id', auth, async (req, res) => {
         metaLeadId = updatedCustomer.meta_data.meta_lead_id || updatedCustomer.meta_data.meta_id;
       }
     }
+    console.log(`[SYNC DEBUG] Meta Lead ID found: ${metaLeadId}`);
 
     if (metaLeadId) {
-      console.log(`[SYNC] .. matching Meta Lead ID: ${metaLeadId}`);
+      // ... existing sync logic ...
       syncPromises.push(
         Customer.updateMany(
           {
@@ -845,12 +849,12 @@ router.put('/:id', auth, async (req, res) => {
             _id: { $ne: updatedCustomer._id }
           },
           { $set: syncUpdate }
-        )
+        ).then(r => console.log(`[SYNC] Meta peers updated: ${r.modifiedCount}`))
       );
     }
 
-    // Case 2: Downstream Sync (This is a Source Lead, update its Unified copies)
-    // Find all customers where source_customer_id matches this customer's ID (check both string and ObjectId)
+    // Case 2: Downstream Sync
+    console.log(`[SYNC DEBUG] Checking Downstream (Source ID matching this ID)...`);
     syncPromises.push(
       Customer.updateMany(
         {
@@ -862,12 +866,12 @@ router.put('/:id', auth, async (req, res) => {
         },
         { $set: syncUpdate }
       ).then(res => {
-        if (res.modifiedCount > 0) console.log(`[SYNC] .. updated ${res.modifiedCount} downstream Unified copies.`);
+        console.log(`[SYNC] Downstream Unified copies found/updated: ${res.matchedCount}/${res.modifiedCount}`);
       })
     );
 
 
-    // Case 3: Upstream Sync (This is a Unified Copy, update its Source Original)
+    // Case 3: Upstream Sync
     let sourceCustomerId = null;
     if (updatedCustomer.meta_data) {
       if (updatedCustomer.meta_data instanceof Map) {
@@ -876,9 +880,10 @@ router.put('/:id', auth, async (req, res) => {
         sourceCustomerId = updatedCustomer.meta_data.source_customer_id;
       }
     }
+    console.log(`[SYNC DEBUG] Upstream Source ID: ${sourceCustomerId}`);
 
     if (sourceCustomerId) {
-      console.log(`[SYNC] .. matching Source Customer ID: ${sourceCustomerId}`);
+      // ... existing sync logic ...
       syncPromises.push(
         Customer.updateOne(
           {
@@ -887,7 +892,7 @@ router.put('/:id', auth, async (req, res) => {
           },
           { $set: syncUpdate }
         ).then(res => {
-          if (res.modifiedCount > 0) console.log(`[SYNC] .. updated Source Original.`);
+          console.log(`[SYNC] Upstream Source updated: ${res.modifiedCount}`);
         })
       );
     }
