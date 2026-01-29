@@ -50,7 +50,7 @@ jobs:
             cp .env backend/.env
             cd backend
             npm install --production
-            pm2 restart gs3 || pm2 start index.js --name "gs3"
+            pm2 restart call-companion-backend --update-env || pm2 start index.js --name "call-companion-backend"
             cd ..
 
             # 3. Frontend Build (Bare Metal)
