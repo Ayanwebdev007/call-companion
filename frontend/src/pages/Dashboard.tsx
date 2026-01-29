@@ -97,7 +97,7 @@ const Dashboard = ({ filterType }: DashboardProps) => {
   // Filter spreadsheets based on filterMode and selectedMetaPage
   const filteredSpreadsheets = useMemo(() => {
     if (filterMode === "manual") {
-      return spreadsheets.filter((s: Spreadsheet) => !s.is_meta);
+      return spreadsheets.filter((s: Spreadsheet) => !s.is_meta && !s.is_unified);
     }
 
     if (filterMode === "meta") {
@@ -185,7 +185,8 @@ const Dashboard = ({ filterType }: DashboardProps) => {
 
     createMutation.mutate({
       name: newSpreadsheetName,
-      description: newSpreadsheetDescription
+      description: newSpreadsheetDescription,
+      is_unified: filterMode === "unified" // Set is_unified flag based on current page
     });
   };
 
