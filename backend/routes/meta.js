@@ -175,17 +175,20 @@ router.post('/webhook', async (req, res) => {
                             }
 
                             // Define helper to save lead to a spreadsheet
-                            const saveLeadToSpreadsheet = async (targetSpreadsheet) => {
+                            const saveLeadToSpreadsheet = async (targetSpreadsheet, sourceMetadata = {}) => {
                                 // Duplicate check scoped to THIS spreadsheet
-                                const existing = await Customer.findOne({
+                                // For Unified Sheets, check against meta_lead_id OR source_customer_id to prevent dupes
+                                let duplicateQuery = {
                                     business_id: business._id,
                                     spreadsheet_id: targetSpreadsheet._id,
                                     'meta_data.meta_lead_id': normalizedLeadId
-                                });
+                                };
+
+                                const existing = await Customer.findOne(duplicateQuery);
 
                                 if (existing) {
                                     console.log(`[META-WEBHOOK] Lead ${normalizedLeadId} already exists in sheet ${targetSpreadsheet.name} (${targetSpreadsheet._id})`);
-                                    return;
+                                    return existing;
                                 }
 
                                 // Get the last position in this spreadsheet to append correctly
@@ -209,7 +212,8 @@ router.post('/webhook', async (req, res) => {
                                         meta_ad: adName,
                                         meta_lead_id: normalizedLeadId,
                                         meta_form: formName,
-                                        meta_page: pageName
+                                        meta_page: pageName,
+                                        ...sourceMetadata // Merge source info (is_unified_copy, source_customer_id, etc.)
                                     },
                                     status: 'new',
                                     position: newPosition
@@ -224,31 +228,60 @@ router.post('/webhook', async (req, res) => {
                                         { _id: targetSpreadsheet._id },
                                         { $addToSet: { meta_headers: { $each: leadHeaders } } }
                                     );
-                                    console.log(`[META-WEBHOOK] Updated headers for ${targetSpreadsheet.name}`);
                                 }
                                 console.log(`[META-WEBHOOK] Lead ${leadId} -> ${targetSpreadsheet.name}`);
+                                return customer;
                             };
 
-                            // Execution: Save to BOTH
-                            await Promise.all([
+                            // Execution: Save to BOTH Ad Sheet and Master Sheet
+                            // Capture the created customers to use as "Sources" for Unified Sheets
+                            const [adCustomer, masterCustomer] = await Promise.all([
                                 saveLeadToSpreadsheet(adSpreadsheet),
                                 saveLeadToSpreadsheet(masterSpreadsheet)
                             ]);
 
-                            // PROPAGATION: Find all Unified Sheets linked to this Ad Sheet
+                            // PROPAGATION 1: Unified Sheets linked to the AD SHEET
                             try {
-                                const unifiedSheets = await mongoose.model('Spreadsheet').find({
-                                    business_id: business._id,
-                                    is_unified: true,
-                                    linked_meta_sheets: adSpreadsheet._id
-                                });
+                                if (adCustomer) {
+                                    const unifiedSheetsAd = await mongoose.model('Spreadsheet').find({
+                                        business_id: business._id,
+                                        is_unified: true,
+                                        linked_meta_sheets: adSpreadsheet._id
+                                    });
 
-                                if (unifiedSheets.length > 0) {
-                                    console.log(`[META-WEBHOOK] Propagating lead to ${unifiedSheets.length} Unified Sheets`);
-                                    await Promise.all(unifiedSheets.map(sheet => saveLeadToSpreadsheet(sheet)));
+                                    if (unifiedSheetsAd.length > 0) {
+                                        console.log(`[META-WEBHOOK] Propagating Ad Lead to ${unifiedSheetsAd.length} Unified Sheets`);
+                                        await Promise.all(unifiedSheetsAd.map(sheet => saveLeadToSpreadsheet(sheet, {
+                                            is_unified_copy: true,
+                                            source_spreadsheet_id: adSpreadsheet._id,
+                                            source_customer_id: adCustomer._id
+                                        })));
+                                    }
                                 }
-                            } catch (propError) {
-                                console.error('[META-WEBHOOK] Propagation error:', propError);
+                            } catch (propErrorAd) {
+                                console.error('[META-WEBHOOK] Ad Propagation error:', propErrorAd);
+                            }
+
+                            // PROPAGATION 2: Unified Sheets linked to the MASTER SHEET
+                            try {
+                                if (masterCustomer) {
+                                    const unifiedSheetsMaster = await mongoose.model('Spreadsheet').find({
+                                        business_id: business._id,
+                                        is_unified: true,
+                                        linked_meta_sheets: masterSpreadsheet._id
+                                    });
+
+                                    if (unifiedSheetsMaster.length > 0) {
+                                        console.log(`[META-WEBHOOK] Propagating Master Lead to ${unifiedSheetsMaster.length} Unified Sheets`);
+                                        await Promise.all(unifiedSheetsMaster.map(sheet => saveLeadToSpreadsheet(sheet, {
+                                            is_unified_copy: true,
+                                            source_spreadsheet_id: masterSpreadsheet._id,
+                                            source_customer_id: masterCustomer._id
+                                        })));
+                                    }
+                                }
+                            } catch (propErrorMaster) {
+                                console.error('[META-WEBHOOK] Master Propagation error:', propErrorMaster);
                             }
 
                         } catch (leadError) {
