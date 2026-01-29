@@ -696,8 +696,7 @@ router.get('/export/:spreadsheetId', auth, async (req, res) => {
 // UPDATE customer
 router.put('/:id', auth, async (req, res) => {
   try {
-    console.log(`[DEBUG] PUT /${req.params.id} request received.`);
-    console.log(`[DEBUG] Update Payload Keys:`, Object.keys(req.body));
+
 
     // First find the customer to get its spreadsheet_id
     const customer = await Customer.findById(req.params.id);
@@ -738,8 +737,7 @@ router.put('/:id', auth, async (req, res) => {
     // Prevent overwriting of 'meta_data' hidden flags (source_customer_id, etc.) if frontend sends partial meta_data
     let updatePayload = { ...req.body };
 
-    console.log(`[DEBUG] RAW updatePayload keys:`, Object.keys(updatePayload));
-    console.log(`[DEBUG] RAW updatePayload:`, JSON.stringify(updatePayload, null, 2));
+
 
     // SANITIZATION: Recursive function to remove keys starting with '$' or containing '.'
     const sanitizeKeys = (obj) => {
@@ -748,7 +746,7 @@ router.put('/:id', auth, async (req, res) => {
       Object.keys(obj).forEach(key => {
         // Check current key
         if (key.startsWith('$') || key.includes('.')) {
-          console.log(`[DEBUG] Dropping forbidden key: ${key}`);
+
           delete obj[key];
           return; // Key deleted, no need to traverse its children
         }
@@ -771,7 +769,7 @@ router.put('/:id', auth, async (req, res) => {
         // Check the key suffix itself
         const subKey = key.substring('meta_data.'.length);
         if (subKey.startsWith('$') || subKey.includes('.')) {
-          console.log(`[DEBUG] Dropping forbidden dot-notation key: ${key}`);
+
           delete updatePayload[key];
         }
         // Also check the value if it's an object (though usually dot notation carries primitives)
@@ -841,8 +839,6 @@ router.put('/:id', auth, async (req, res) => {
     }
 
 
-    console.log(`[DEBUG] Final updatePayload before findOneAndUpdate:`, JSON.stringify(updatePayload, null, 2));
-    console.log(`[DEBUG] updatePayload keys:`, Object.keys(updatePayload));
 
     const updatedCustomer = await Customer.findOneAndUpdate(
       { _id: req.params.id, business_id: user.business_id },
@@ -854,7 +850,7 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
-    console.log(`[DEBUG] updatedCustomer after findOneAndUpdate:`, JSON.stringify(updatedCustomer, null, 2));
+
 
     // SYNC: Comprehensive Synchronization Logic
     // 1. Sync across Meta Sheets (based on meta_lead_id)
