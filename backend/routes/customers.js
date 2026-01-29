@@ -170,15 +170,29 @@ router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
     syncToGoogleSheets(spreadsheet_id);
 
     // REAL-TIME SYNC TO UNIFIED SHEETS
-    // ... (existing code for Meta -> Unified) ...
+    // Mirroring Fix from Meta Webhook: Check for Unified Sheets linked to THIS sheet OR its Master Sheet
+    let targetSpreadsheets = [spreadsheet_id];
+
+    if (spreadsheet.is_meta && !spreadsheet.is_master) {
+      const masterSheet = await Spreadsheet.findOne({
+        business_id: user.business_id,
+        page_name: spreadsheet.page_name,
+        form_name: spreadsheet.form_name,
+        is_master: true
+      });
+      if (masterSheet) {
+        targetSpreadsheets.push(masterSheet._id);
+      }
+    }
+
     const unifiedSheets = await Spreadsheet.find({
       business_id: user.business_id,
       is_unified: true,
-      linked_meta_sheets: spreadsheet_id
+      linked_meta_sheets: { $in: targetSpreadsheets }
     });
 
     if (unifiedSheets.length > 0) {
-      console.log(`[SYNC] Propagating new lead to ${unifiedSheets.length} Unified Sheets`);
+      console.log(`[SYNC] Propagating new manual lead to ${unifiedSheets.length} Unified Sheets`);
       const unifiedCopies = unifiedSheets.map(unifiedSheet => ({
         ...req.body,
         user_id: req.user.id,
@@ -809,27 +823,20 @@ router.put('/:id', auth, async (req, res) => {
     }
 
     // Case 2: Downstream Sync (This is a Source Lead, update its Unified copies)
-    // Find all customers where source_customer_id == this customer's ID
+    // Find all customers where source_customer_id matches this customer's ID (check both string and ObjectId)
     syncPromises.push(
       Customer.updateMany(
         {
           business_id: updatedCustomer.business_id,
-          'meta_data.source_customer_id': updatedCustomer._id.toString()
+          $or: [
+            { 'meta_data.source_customer_id': updatedCustomer._id.toString() },
+            { 'meta_data.source_customer_id': updatedCustomer._id }
+          ]
         },
         { $set: syncUpdate }
       ).then(res => {
         if (res.modifiedCount > 0) console.log(`[SYNC] .. updated ${res.modifiedCount} downstream Unified copies.`);
       })
-    );
-    // Also try with ObjectId helper just in case it was stored as ObjectId
-    syncPromises.push(
-      Customer.updateMany(
-        {
-          business_id: updatedCustomer.business_id,
-          'meta_data.source_customer_id': updatedCustomer._id
-        },
-        { $set: syncUpdate }
-      )
     );
 
 
@@ -848,7 +855,7 @@ router.put('/:id', auth, async (req, res) => {
       syncPromises.push(
         Customer.updateOne(
           {
-            _id: sourceCustomerId, // It's a direct ID lookup
+            _id: sourceCustomerId, // It's a direct ID lookup (Mongoose handles ObjectId casting)
             business_id: updatedCustomer.business_id
           },
           { $set: syncUpdate }
@@ -943,10 +950,17 @@ router.delete('/:id', auth, async (req, res) => {
       const primaryResult = await Customer.updateMany(
         {
           business_id: user.business_id,
-          'meta_data.source_customer_id': deletedCustomer._id.toString()
+          $or: [
+            { 'meta_data.source_customer_id': deletedCustomer._id.toString() },
+            { 'meta_data.source_customer_id': deletedCustomer._id }
+          ]
         },
         { is_deleted: true, deleted_at: new Date() }
       );
+
+      if (primaryResult.modifiedCount > 0) {
+        console.log(`[SYNC] Deleted ${primaryResult.modifiedCount} downstream Unified copies.`);
+      }
 
       // Strategy B: Fallback for older leads (Missing source_customer_id)
       if (primaryResult.modifiedCount === 0) {
