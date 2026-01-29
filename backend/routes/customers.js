@@ -738,23 +738,42 @@ router.put('/:id', auth, async (req, res) => {
     // Prevent overwriting of 'meta_data' hidden flags (source_customer_id, etc.) if frontend sends partial meta_data
     let updatePayload = { ...req.body };
 
-    // SANITIZATION: Remove keys starting with '$' or containing '.' (Mongoose forbidden in Maps)
+    // SANITIZATION: Recursive function to remove keys starting with '$' or containing '.'
+    const sanitizeKeys = (obj) => {
+      if (typeof obj !== 'object' || obj === null) return;
+
+      Object.keys(obj).forEach(key => {
+        // Check current key
+        if (key.startsWith('$') || key.includes('.')) {
+          console.log(`[DEBUG] Dropping forbidden key: ${key}`);
+          delete obj[key];
+          return; // Key deleted, no need to traverse its children
+        }
+
+        // Recurse if value is an object
+        if (typeof obj[key] === 'object' && obj[key] !== null) {
+          sanitizeKeys(obj[key]);
+        }
+      });
+    };
+
+    // Apply recursive sanitization to the entire payload
+    if (updatePayload.meta_data) {
+      sanitizeKeys(updatePayload.meta_data);
+    }
+
+    // Also scan for top-level dot-notation keys like 'meta_data.$bad' and clean them
     Object.keys(updatePayload).forEach(key => {
-      // Case A: Nested Object (e.g., meta_data: { $bad: 1 })
-      if (key === 'meta_data' && typeof updatePayload[key] === 'object' && updatePayload[key] !== null) {
-        Object.keys(updatePayload[key]).forEach(subKey => {
-          if (subKey.startsWith('$') || subKey.includes('.')) {
-            console.log(`[DEBUG] Dropping forbidden nested key: ${subKey}`);
-            delete updatePayload[key][subKey];
-          }
-        });
-      }
-      // Case B: Dot Notation (e.g., meta_data.$bad: 1)
-      else if (key.startsWith('meta_data.')) {
+      if (key.startsWith('meta_data.')) {
+        // Check the key suffix itself
         const subKey = key.substring('meta_data.'.length);
-        if (subKey.startsWith('$')) {
+        if (subKey.startsWith('$') || subKey.includes('.')) {
           console.log(`[DEBUG] Dropping forbidden dot-notation key: ${key}`);
           delete updatePayload[key];
+        }
+        // Also check the value if it's an object (though usually dot notation carries primitives)
+        else if (typeof updatePayload[key] === 'object') {
+          sanitizeKeys(updatePayload[key]);
         }
       }
     });
