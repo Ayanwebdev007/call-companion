@@ -781,15 +781,36 @@ router.put('/:id', auth, async (req, res) => {
       }
     });
 
+    // Handle meta_data updates (both nested and dot-notation formats)
     if (updatePayload.meta_data || Object.keys(updatePayload).some(k => k.startsWith('meta_data.'))) {
 
+      // Convert dot-notation keys to nested object format
+      const incomingMetaData = {};
+
+      // Extract dot-notation keys and convert them
+      Object.keys(updatePayload).forEach(key => {
+        if (key.startsWith('meta_data.')) {
+          const fieldName = key.substring('meta_data.'.length);
+          incomingMetaData[fieldName] = updatePayload[key];
+          delete updatePayload[key]; // Remove dot-notation key
+        }
+      });
+
+      // Also include any nested meta_data if it exists
+      if (updatePayload.meta_data && typeof updatePayload.meta_data === 'object') {
+        Object.assign(incomingMetaData, updatePayload.meta_data);
+      }
+
+      // Fetch existing document to preserve system flags
       const existingDoc = await Customer.findOne({ _id: req.params.id, business_id: user.business_id });
       if (existingDoc && existingDoc.meta_data) {
-        // Merge existing hidden flags into the payload's meta_data
+        // Get existing meta_data as plain object
         const existingMeta = existingDoc.meta_data instanceof Map ? Object.fromEntries(existingDoc.meta_data) : existingDoc.meta_data;
-        const newMeta = { ...existingMeta, ...updatePayload.meta_data };
 
-        // Ensure we keep the flags if they existed
+        // Merge: existing + incoming
+        const newMeta = { ...existingMeta, ...incomingMetaData };
+
+        // Ensure we keep the system flags
         if (existingDoc.meta_data instanceof Map) {
           if (existingDoc.meta_data.has('is_unified_copy')) newMeta.is_unified_copy = existingDoc.meta_data.get('is_unified_copy');
           if (existingDoc.meta_data.has('source_customer_id')) newMeta.source_customer_id = existingDoc.meta_data.get('source_customer_id');
@@ -802,11 +823,15 @@ router.put('/:id', auth, async (req, res) => {
           if (existingMeta.meta_lead_id) newMeta.meta_lead_id = existingMeta.meta_lead_id;
         }
 
+        // Set the final merged meta_data as nested object
         updatePayload.meta_data = newMeta;
+      } else {
+        // No existing meta_data, just use what we have
+        updatePayload.meta_data = incomingMetaData;
       }
 
       // AUTO-MAPPING: Sync meta_data dynamic fields to top-level standard fields
-      if (spreadsheet.column_mapping) {
+      if (spreadsheet && spreadsheet.column_mapping) {
         Object.entries(spreadsheet.column_mapping).forEach(([header, field]) => {
           if (updatePayload.meta_data[header] !== undefined) {
             updatePayload[field] = updatePayload.meta_data[header];
@@ -814,6 +839,10 @@ router.put('/:id', auth, async (req, res) => {
         });
       }
     }
+
+
+    console.log(`[DEBUG] Final updatePayload before findOneAndUpdate:`, JSON.stringify(updatePayload, null, 2));
+    console.log(`[DEBUG] updatePayload keys:`, Object.keys(updatePayload));
 
     const updatedCustomer = await Customer.findOneAndUpdate(
       { _id: req.params.id, business_id: user.business_id },
