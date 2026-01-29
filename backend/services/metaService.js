@@ -98,8 +98,8 @@ class MetaService {
                 fieldMap: fieldMap,
                 customerName: this.extractFieldValue(fieldData, ['full_name', 'name', 'first_name']),
                 email: this.extractFieldValue(fieldData, ['email']),
-                phoneNumber: this.extractFieldValue(fieldData, ['phone_number', 'phone']),
-                companyName: this.extractFieldValue(fieldData, ['company_name', 'company', 'organization']),
+                phoneNumber: this.extractFieldValue(fieldData, ['phone_number', 'phone', 'mobile', 'contact', 'tel', 'whatsapp']),
+                companyName: this.extractFieldValue(fieldData, ['company_name', 'company', 'organization', 'business', 'firm']),
                 // Direct metadata from Lead object - use multiple possible field names
                 campaignName: response.data.campaign_name || response.data.campaign?.name || '',
                 adSetName: response.data.adset_name || response.data.adset?.name || '',

@@ -88,8 +88,16 @@ export default {
 
         const { sock } = session;
 
+        if (!phone || phone === 'N/A' || phone.trim() === '') {
+            throw new Error('Invalid phone number: Number is missing or N/A');
+        }
+
         // Ensure phone is formatted (remove +, spaces, ensure suffix)
         let id = phone.replace(/[^0-9]/g, '');
+        if (!id) {
+            throw new Error('Invalid phone number: No numeric digits found');
+        }
+
         if (!id.endsWith('@s.whatsapp.net')) {
             id += '@s.whatsapp.net';
         }

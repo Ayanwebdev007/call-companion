@@ -51,15 +51,33 @@ export const SpreadsheetWhatsAppDialog = ({ customer, isOpen, onClose }: Spreads
     };
 
     const handleSend = async (msg: string) => {
-        if (!customer.phone_number) {
-            toast({ title: 'No phone number available', variant: 'destructive' });
+        let rawPhone = customer.phone_number;
+
+        // If top-level phone is missing or N/A, try to find it in meta_data
+        if (!rawPhone || rawPhone === 'N/A' || !rawPhone.replace(/[^0-9]/g, '')) {
+            if (customer.meta_data) {
+                // Common phone number keys in Meta forms
+                const possibleKeys = ['phone', 'mobile', 'contact', 'tel', 'whatsapp', 'number'];
+                const metaKey = Object.keys(customer.meta_data).find(key =>
+                    possibleKeys.some(p => key.toLowerCase().includes(p))
+                );
+
+                if (metaKey && customer.meta_data[metaKey]) {
+                    rawPhone = customer.meta_data[metaKey];
+                    console.log('Found phone number in meta_data:', rawPhone);
+                }
+            }
+        }
+
+        const phone = rawPhone?.replace(/[^0-9]/g, '');
+
+        if (!phone) {
+            toast({ title: 'No valid phone number available', variant: 'destructive' });
             return;
         }
 
         setIsSending(true);
         try {
-            const phone = customer.phone_number.replace(/[^0-9]/g, '');
-            console.log('Sending WhatsApp message:', { phone, message: msg });
             await api.post('/api/whatsapp/send', {
                 phone,
                 message: msg
