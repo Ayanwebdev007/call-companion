@@ -738,6 +738,9 @@ router.put('/:id', auth, async (req, res) => {
     // Prevent overwriting of 'meta_data' hidden flags (source_customer_id, etc.) if frontend sends partial meta_data
     let updatePayload = { ...req.body };
 
+    console.log(`[DEBUG] RAW updatePayload keys:`, Object.keys(updatePayload));
+    console.log(`[DEBUG] RAW updatePayload:`, JSON.stringify(updatePayload, null, 2));
+
     // SANITIZATION: Recursive function to remove keys starting with '$' or containing '.'
     const sanitizeKeys = (obj) => {
       if (typeof obj !== 'object' || obj === null) return;
@@ -821,6 +824,8 @@ router.put('/:id', auth, async (req, res) => {
     if (!updatedCustomer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
+
+    console.log(`[DEBUG] updatedCustomer after findOneAndUpdate:`, JSON.stringify(updatedCustomer, null, 2));
 
     // SYNC: Comprehensive Synchronization Logic
     // 1. Sync across Meta Sheets (based on meta_lead_id)
