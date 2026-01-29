@@ -840,6 +840,15 @@ router.put('/:id', auth, async (req, res) => {
     };
 
     // MERGE META_DATA: Sync custom fields but PROTECT system link IDs
+    console.log(`[SYNC DEBUG] updatedCustomer.meta_data exists:`, !!updatedCustomer.meta_data);
+    console.log(`[SYNC DEBUG] updatedCustomer.meta_data type:`, typeof updatedCustomer.meta_data);
+    if (updatedCustomer.meta_data instanceof Map) {
+      console.log(`[SYNC DEBUG] meta_data is Map with size:`, updatedCustomer.meta_data.size);
+      console.log(`[SYNC DEBUG] meta_data Map entries:`, Array.from(updatedCustomer.meta_data.entries()));
+    } else if (updatedCustomer.meta_data) {
+      console.log(`[SYNC DEBUG] meta_data object keys:`, Object.keys(updatedCustomer.meta_data));
+    }
+
     if (updatedCustomer.meta_data) {
       const sensitiveKeys = [
         'source_customer_id',
