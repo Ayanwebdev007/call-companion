@@ -795,6 +795,32 @@ router.put('/:id', auth, async (req, res) => {
       last_call_date: updatedCustomer.last_call_date
     };
 
+    // MERGE META_DATA: Sync custom fields but PROTECT system link IDs
+    if (updatedCustomer.meta_data) {
+      const sensitiveKeys = [
+        'source_customer_id',
+        'source_spreadsheet_id',
+        'is_unified_copy',
+        'meta_lead_id',
+        'meta_id'
+      ];
+
+      let metaEntries = [];
+      if (updatedCustomer.meta_data instanceof Map) {
+        metaEntries = Array.from(updatedCustomer.meta_data.entries());
+      } else {
+        metaEntries = Object.entries(updatedCustomer.meta_data);
+      }
+
+      metaEntries.forEach(([key, value]) => {
+        if (!sensitiveKeys.includes(key)) {
+          syncUpdate[`meta_data.${key}`] = value;
+        }
+      });
+    }
+
+    console.log(`[SYNC DEBUG] Prepared Update Payload:`, JSON.stringify(syncUpdate, null, 2));
+
     console.log(`[SYNC] Propagating update for Customer ${updatedCustomer._id} (${updatedCustomer.customer_name})`);
 
     const syncPromises = [];
