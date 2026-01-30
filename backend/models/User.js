@@ -16,6 +16,9 @@ const userSchema = new mongoose.Schema({
   plain_password: { type: String, select: false }, // Hidden by default, explicitly selected for Admin
 }, { timestamps: true });
 
+// Index for business lookups
+userSchema.index({ business_id: 1 });
+
 // Map _id to id
 userSchema.set('toJSON', {
   virtuals: true,

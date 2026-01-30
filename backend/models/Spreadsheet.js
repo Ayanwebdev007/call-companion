@@ -24,6 +24,11 @@ const spreadsheetSchema = new mongoose.Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
+// Performance Indexes
+spreadsheetSchema.index({ business_id: 1 });
+spreadsheetSchema.index({ user_id: 1 });
+spreadsheetSchema.index({ assigned_users: 1 });
+
 // Map _id to id
 spreadsheetSchema.set('toJSON', {
   virtuals: true,

@@ -25,6 +25,9 @@ const BusinessSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+// Index for admin lookup
+BusinessSchema.index({ admin_id: 1 });
+
 // Map _id to id
 BusinessSchema.set('toJSON', {
     virtuals: true,

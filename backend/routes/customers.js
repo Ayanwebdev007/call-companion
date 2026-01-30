@@ -70,8 +70,20 @@ router.get('/', auth, checkPermission('dashboard'), async (req, res) => {
       };
     }
 
-    const customers = await Customer.find(filter).sort({ position: 1, next_call_date: 1, next_call_time: 1 });
-    res.json(customers);
+    console.log(`[PERF] Fetching ALL customers, query:`, q || 'none');
+    const startTime = Date.now();
+
+    // Fetch ALL customers at once (no pagination)
+    const customers = await Customer.find(filter)
+      .sort({ position: 1, next_call_date: 1, next_call_time: 1 });
+
+    const queryTime = Date.now() - startTime;
+    console.log(`[PERF] Query completed in ${queryTime}ms - returned ${customers.length} total customers`);
+
+    res.json({
+      customers,
+      total: customers.length
+    });
   } catch (err) {
     console.error('Error loading customers:', err);
     res.status(500).json({ message: err.message });
@@ -198,8 +210,8 @@ router.post('/', auth, checkPermission('dashboard'), async (req, res) => {
         user_id: req.user.id,
         business_id: user.business_id,
         spreadsheet_id: unifiedSheet._id,
-        created_at: new Date(),
-        updated_at: new Date(),
+        created_at: newCustomer.created_at,
+        updated_at: newCustomer.updated_at,
         position: 0,
         meta_data: {
           ...meta_data,

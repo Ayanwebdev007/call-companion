@@ -50,7 +50,17 @@ export interface Spreadsheet {
   newLeadsCount?: number;
 }
 
-export const fetchCustomers = async (spreadsheetId?: string, q?: string): Promise<Customer[]> => {
+export interface PaginatedCustomers {
+  customers: Customer[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export const fetchCustomers = async (
+  spreadsheetId?: string,
+  q?: string
+): Promise<PaginatedCustomers | Customer[]> => {
   // Validate spreadsheetId if provided
   if (spreadsheetId && (spreadsheetId === 'undefined' || spreadsheetId === 'null')) {
     throw new Error('Invalid spreadsheet ID provided');
@@ -59,8 +69,11 @@ export const fetchCustomers = async (spreadsheetId?: string, q?: string): Promis
   const params = new URLSearchParams();
   if (spreadsheetId) params.set('spreadsheetId', spreadsheetId);
   if (q && q.trim().length > 0) params.set('q', q.trim());
-  const url = params.toString().length > 0 ? `${API_URL}?${params.toString()}` : API_URL;
+
+  const url = `${API_URL}?${params.toString()}`;
   const response = await api.get(url);
+
+  // Handle both legacy (array) and new (paginated object) responses for safety
   return response.data;
 };
 

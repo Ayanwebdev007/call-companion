@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, memo, Fragment } from "react";
+import { useState, useMemo, useRef, useEffect, memo, Fragment, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,8 @@ const Index = () => {
       navigate("/");
     }
   }, [spreadsheetId, navigate]);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]); // All data from API
+  const [renderIndex, setRenderIndex] = useState(0); // Current render position
   const [viewMode, setViewMode] = useState<"date" | "all">("date");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const { toast } = useToast();
@@ -147,6 +149,13 @@ const Index = () => {
   }, [showSearch]);
   const [debouncedQuery, setDebouncedQuery] = useState<string>("");
   const [selectedLinkedSheetId, setSelectedLinkedSheetId] = useState<string | null>(null);
+
+  // Reset when filters change - clear data and restart progressive render
+  useEffect(() => {
+    setAllCustomers([]);
+    setRenderIndex(0);
+  }, [spreadsheetId, debouncedQuery]);
+
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedQuery(searchQuery.trim());
@@ -188,33 +197,6 @@ const Index = () => {
     }
   }, [spreadsheetId]);
 
-  // Fetch customers
-  const { data: customers = [], isLoading, error } = useQuery({
-    queryKey: ["customers", spreadsheetId, debouncedQuery],
-    queryFn: async () => {
-      try {
-        console.log("Fetching customers for spreadsheet:", spreadsheetId);
-        // Validate spreadsheetId before making the request
-        if (!spreadsheetId) {
-          throw new Error("No spreadsheet ID provided");
-        }
-        if (spreadsheetId === "undefined" || spreadsheetId === "null") {
-          throw new Error(`Invalid spreadsheet ID: ${spreadsheetId}`);
-        }
-        const data = await fetchCustomers(spreadsheetId, debouncedQuery || undefined);
-        console.log("Customers fetched:", data);
-        if (!Array.isArray(data)) {
-          throw new Error("API response is not an array");
-        }
-        return data;
-      } catch (err) {
-        console.error("Fetch error:", err);
-        throw err;
-      }
-    },
-    enabled: !!user && !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null", // Only fetch when user and spreadsheetId are available
-  });
-
   // Fetch spreadsheet details
   const { data: spreadsheet } = useQuery({
     queryKey: ["spreadsheet", spreadsheetId],
@@ -226,6 +208,133 @@ const Index = () => {
     },
     enabled: !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null",
   });
+
+  // Fetch ALL customers (no pagination)
+  const { data: customerData, isLoading, error, isFetching } = useQuery({
+    queryKey: ["customers", spreadsheetId, debouncedQuery],
+    queryFn: async () => {
+      try {
+        console.log(`[PROGRESSIVE] Fetching ALL customers for spreadsheet:`, spreadsheetId);
+        if (!spreadsheetId) throw new Error("No spreadsheet ID provided");
+        if (spreadsheetId === "undefined" || spreadsheetId === "null") throw new Error(`Invalid spreadsheet ID: ${spreadsheetId}`);
+
+        const response = await fetchCustomers(spreadsheetId, debouncedQuery || undefined);
+        console.log(`[PROGRESSIVE] ALL customers fetched:`, response);
+        return response;
+      } catch (err) {
+        console.error("Fetch error:", err);
+        throw err;
+      }
+    },
+    enabled: !!user && !!spreadsheetId && spreadsheetId !== "undefined" && spreadsheetId !== "null",
+    staleTime: 30000,
+  });
+
+  // Receive ALL customers from API
+  useEffect(() => {
+    if (customerData) {
+      // Handle both array format and {customers, total} object format
+      const newCustomers = Array.isArray(customerData) ? customerData : (customerData.customers || []);
+      console.log(`[PROGRESSIVE] Received ${newCustomers.length} customers`);
+      setAllCustomers(newCustomers);
+    }
+  }, [customerData]);
+
+  // MASTER LIST: Derive the base set of customers based on Unified vs Single Sheet logic
+  const masterList = useMemo(() => {
+    if (!allCustomers || allCustomers.length === 0) return [];
+
+    // If it's a Unified Sheet, we ONLY show leads for the selected linked sheet
+    if (spreadsheet?.is_unified) {
+      if (!selectedLinkedSheetId) return []; // Don't show merged leads by default
+
+      return allCustomers.filter(c => {
+        const sourceId = (c.meta_data as any)?.source_spreadsheet_id;
+        return sourceId === selectedLinkedSheetId;
+      });
+    }
+
+    // For single sheets (Meta or Master), use the full list
+    return allCustomers;
+  }, [allCustomers, spreadsheet?.is_unified, selectedLinkedSheetId]);
+
+  // FULL FILTERED LIST (TABLE RENDERING)
+  const fullFilteredCustomers = useMemo(() => {
+    if (masterList.length === 0) return [];
+
+    let filtered = masterList;
+
+    // 1. Apply Import Date Range Filter (Stackable)
+    if (importDateRange.from) {
+      const from = startOfDay(importDateRange.from);
+      const to = importDateRange.to ? endOfDay(importDateRange.to) : endOfDay(importDateRange.from);
+
+      filtered = filtered.filter((c) => {
+        const dateRaw = c.created_at || (c as any).createdAt;
+        if (!dateRaw) return false;
+
+        try {
+          const date = typeof dateRaw === 'string' ? parseISO(dateRaw) : new Date(dateRaw);
+          if (!isValid(date)) return false;
+          return isWithinInterval(date, { start: from, end: to });
+        } catch (e) {
+          return false;
+        }
+      });
+    }
+
+    // 2. Apply View Mode Filter (Today / Selected Date)
+    if (viewMode === "date") {
+      const targetDateStr = format(selectedDate, "yyyy-MM-dd");
+      filtered = filtered.filter((c) => c.next_call_date === targetDateStr);
+    }
+
+    // 3. Search Filter is handled via the backend query, but masterList already isolates to the sub-sheet.
+
+    return filtered;
+  }, [masterList, viewMode, selectedDate, importDateRange]);
+
+  const todayCount = useMemo(() => {
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    // Count leads for today within the currently isolated sheet (masterList)
+    return masterList.filter(c => c.next_call_date === todayStr).length;
+  }, [masterList]);
+
+  const selectedDateCount = useMemo(() => {
+    const targetDateStr = format(selectedDate, "yyyy-MM-dd");
+    // Count leads for the selected date within the currently isolated sheet (masterList)
+    return masterList.filter(c => c.next_call_date === targetDateStr).length;
+  }, [masterList, selectedDate]);
+
+  // RESET PROGRESSIVE RENDER ON FILTER CHANGE
+  useEffect(() => {
+    if (fullFilteredCustomers.length > 0) {
+      // Show first 10 matching leads INSTANTLY to eliminate the blank delay
+      setRenderIndex(10);
+    } else {
+      setRenderIndex(0);
+    }
+  }, [fullFilteredCustomers.length, viewMode, selectedDate, debouncedQuery, selectedLinkedSheetId, importDateRange]);
+
+  // PROGRESSIVE RENDERING LOOP: Add more matching leads over time
+  useEffect(() => {
+    if (renderIndex >= fullFilteredCustomers.length) return;
+
+    const timer = setTimeout(() => {
+      const batchSize = 10;
+      setRenderIndex(prev => Math.min(prev + batchSize, fullFilteredCustomers.length));
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [renderIndex, fullFilteredCustomers.length]);
+
+  // The final list to be rendered in the table
+  const displayedCustomers = useMemo(() => {
+    return fullFilteredCustomers.slice(0, renderIndex);
+  }, [fullFilteredCustomers, renderIndex]);
+
+  const customers = displayedCustomers;
+
 
   const activeMetaHeaders = useMemo(() => {
     if (selectedLinkedSheetId && spreadsheet?.linked_meta_sheets) {
@@ -339,48 +448,6 @@ const Index = () => {
       toast({ title: "Error reordering customers", description: errorMessage, variant: "destructive" });
     },
   });
-
-  const displayedCustomers = useMemo(() => {
-    if (!customers) return [];
-    if (!Array.isArray(customers)) {
-      console.error("Customers is not an array:", customers);
-      return [];
-    }
-
-    let filtered = customers;
-
-    // Apply import date range filter if set
-    if (importDateRange.from) {
-      const from = startOfDay(importDateRange.from);
-      const to = importDateRange.to ? endOfDay(importDateRange.to) : endOfDay(importDateRange.from);
-
-      filtered = filtered.filter((c) => {
-        if (!c.created_at) return false;
-        const date = parseISO(c.created_at);
-        return isWithinInterval(date, { start: from, end: to });
-      });
-
-      // If range filter is active, we don't apply the single-day "Next Call Date" filter
-      return filtered;
-    }
-
-    // Default: Filter by Next Call Date if in date mode
-    if (viewMode === "date") {
-      const targetDateStr = format(selectedDate, "yyyy-MM-dd");
-      filtered = filtered.filter((c) => c.next_call_date === targetDateStr);
-    }
-
-    // Filter by Selected Linked Sheet (Unified View)
-    if (selectedLinkedSheetId) {
-      filtered = filtered.filter(c => {
-        // Check both source_spreadsheet_id and spreadsheet_id (for imported cases)
-        const sourceId = (c.meta_data as any)?.source_spreadsheet_id;
-        return sourceId === selectedLinkedSheetId;
-      });
-    }
-
-    return filtered;
-  }, [customers, viewMode, selectedDate, importDateRange, selectedLinkedSheetId]);
 
   // Toggle customer selection
   const toggleCustomerSelection = (customerId: string) => {
@@ -774,7 +841,7 @@ const Index = () => {
                 setSelectedDate(new Date());
               }}
             >
-              Today
+              Today ({todayCount})
             </Button>
 
             <Popover>
@@ -788,7 +855,7 @@ const Index = () => {
                   )}
                 >
                   <CalendarIcon className="h-4 w-4" />
-                  {format(selectedDate, "PPP")}
+                  {isToday(selectedDate) ? format(selectedDate, "PPP") : `${format(selectedDate, "PPP")} (${selectedDateCount})`}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -867,7 +934,7 @@ const Index = () => {
             size="sm"
             onClick={() => setViewMode("all")}
           >
-            All Customers ({customers.length})
+            All Customers ({importDateRange.from ? fullFilteredCustomers.length : masterList.length})
           </Button>
 
           <div className="ml-auto flex items-center gap-3">
@@ -1420,6 +1487,16 @@ const Index = () => {
             )}
           </ResizableTableBody>
         </ResizableTable>
+
+        {/* Progressive Rendering Indicator */}
+        {renderIndex < allCustomers.length && (
+          <div className="flex items-center justify-center py-4 bg-background border-t border-border/20">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+              Loading leads... ({renderIndex}/{allCustomers.length})
+            </div>
+          </div>
+        )}
       </div >
       {/* WhatsApp Message Dialog */}
       < SpreadsheetWhatsAppDialog

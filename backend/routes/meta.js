@@ -175,7 +175,7 @@ router.post('/webhook', async (req, res) => {
                             }
 
                             // Define helper to save lead to a spreadsheet
-                            const saveLeadToSpreadsheet = async (targetSpreadsheet, sourceMetadata = {}) => {
+                            const saveLeadToSpreadsheet = async (targetSpreadsheet, sourceMetadata = {}, sourceLead = null) => {
                                 // Duplicate check scoped to THIS spreadsheet
                                 // For Unified Sheets, check against meta_lead_id OR source_customer_id to prevent dupes
                                 let duplicateQuery = {
@@ -195,30 +195,41 @@ router.post('/webhook', async (req, res) => {
                                 const lastCustomer = await Customer.findOne({ spreadsheet_id: targetSpreadsheet._id }).sort({ position: -1 });
                                 const newPosition = lastCustomer ? lastCustomer.position + 1 : 0;
 
-                                const customer = new Customer({
+                                // DATA INHERITANCE: If this is a unified copy, inherit everything from the source lead
+                                const customerData = {
                                     user_id: business.admin_id,
                                     business_id: business._id,
                                     spreadsheet_id: targetSpreadsheet._id,
-                                    customer_name: leadDetails.customerName || 'Meta Lead',
-                                    company_name: leadDetails.companyName || 'Meta Ads',
-                                    phone_number: leadDetails.phoneNumber || 'N/A',
-                                    email: leadDetails.email || '',
-                                    remark: '', // CLEAN: Remarks are left empty for user notes
+                                    customer_name: sourceLead?.customer_name || leadDetails.customerName || 'Meta Lead',
+                                    company_name: sourceLead?.company_name || leadDetails.companyName || 'Meta Ads',
+                                    phone_number: sourceLead?.phone_number || leadDetails.phoneNumber || 'N/A',
+                                    email: sourceLead?.email || leadDetails.email || '',
+                                    remark: sourceLead?.remark || '',
+                                    status: sourceLead?.status || 'new',
+                                    color: sourceLead?.color || null,
+                                    next_call_date: sourceLead?.next_call_date || format(new Date(), "yyyy-MM-dd"),
+                                    next_call_time: sourceLead?.next_call_time || '',
+                                    last_call_date: sourceLead?.last_call_date || '',
+                                    position: newPosition,
                                     meta_data: {
                                         ...(leadDetails.fieldMap || {}),
-                                        // Store system metadata in meta_data instead of remark
+                                        ...(sourceLead?.meta_data instanceof Map ? Object.fromEntries(sourceLead.meta_data) : (sourceLead?.meta_data || {})),
                                         meta_campaign: campaignName,
                                         meta_ad_set: adSetName,
                                         meta_ad: adName,
                                         meta_lead_id: normalizedLeadId,
                                         meta_form: formName,
                                         meta_page: pageName,
-                                        ...sourceMetadata // Merge source info (is_unified_copy, source_customer_id, etc.)
-                                    },
-                                    status: 'new',
-                                    position: newPosition
-                                });
+                                        ...sourceMetadata
+                                    }
+                                };
 
+                                // PRESERVE ORIGINAL TIMESTAMP
+                                if (sourceLead?.created_at) {
+                                    customerData.created_at = sourceLead.created_at;
+                                }
+
+                                const customer = new Customer(customerData);
                                 await customer.save();
 
                                 // Update headers
@@ -255,7 +266,7 @@ router.post('/webhook', async (req, res) => {
                                             is_unified_copy: true,
                                             source_spreadsheet_id: adSpreadsheet._id,
                                             source_customer_id: adCustomer._id
-                                        })));
+                                        }, adCustomer)));
                                     }
                                 }
                             } catch (propErrorAd) {
@@ -277,7 +288,7 @@ router.post('/webhook', async (req, res) => {
                                             is_unified_copy: true,
                                             source_spreadsheet_id: masterSpreadsheet._id,
                                             source_customer_id: masterCustomer._id
-                                        })));
+                                        }, masterCustomer)));
                                     }
                                 }
                             } catch (propErrorMaster) {
