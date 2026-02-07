@@ -1481,7 +1481,7 @@ router.post('/reorder', auth, async (req, res) => {
       }
 
       // Check role or assignment (Admin, Owner, or Assigned User)
-      let hasWriteAccess = user.role === 'admin' ||
+      let hasWriteAccess = req.user.role === 'admin' ||
         spreadsheet.user_id.toString() === req.user.id ||
         (spreadsheet.assigned_users && spreadsheet.assigned_users.includes(req.user.id));
 
