@@ -3,6 +3,52 @@ import Customer from '../models/Customer.js';
 import Spreadsheet from '../models/Spreadsheet.js';
 
 /**
+ * Resolves a field value for a customer, falling back to meta_data for standard fields
+ * if the primary field is empty or generic (e.g., "Meta Lead").
+ */
+const resolveCustomerValue = (customer, fieldName) => {
+    // Convert Map to Object if needed for easier access
+    const meta = customer.meta_data instanceof Map ? Object.fromEntries(customer.meta_data) : (customer.meta_data || {});
+
+    if (fieldName === 'customer_name') {
+        let val = customer.customer_name || '';
+        if ((!val || val === 'Meta Lead') && meta) {
+            // Priority list for resolving names from Meta Ads
+            val = meta.full_name || meta.name || meta.first_name || meta.Customer_Name || val;
+        }
+        return val;
+    }
+
+    if (fieldName === 'phone_number') {
+        let val = customer.phone_number || '';
+        if ((!val || val === 'N/A' || val.length < 5) && meta) {
+            val = meta.phone_number || meta.phone || meta.mobile || meta.contact || val;
+        }
+        return val;
+    }
+
+    if (fieldName === 'company_name') {
+        let val = customer.company_name || '';
+        if ((!val || val === 'N/A' || val === 'Meta Ads') && meta) {
+            val = meta.company_name || meta.company || val;
+        }
+        return val;
+    }
+
+    // Standard fields
+    if (customer[fieldName] !== undefined && fieldName !== 'meta_data') {
+        return customer[fieldName] || '';
+    }
+
+    // If not a standard field, check meta_data directly (for custom headers)
+    if (meta[fieldName] !== undefined) {
+        return meta[fieldName] || '';
+    }
+
+    return '';
+};
+
+/**
  * Synchronizes a spreadsheet's data to Google Sheets if realtime sync is enabled.
  * @param {string} spreadsheetId - The ID of the CRM spreadsheet.
  * @param {boolean} force - If true, bypasses the realtime_sync check (for manual sync).
@@ -34,23 +80,7 @@ export const syncToGoogleSheets = async (spreadsheetId, force = false) => {
             const fields = Object.keys(mapping);
 
             dataRows = customers.map(c => {
-                return fields.map(field => {
-                    // Handle standard fields
-                    if (field === 'customer_name') return c.customer_name || '';
-                    if (field === 'company_name') return c.company_name || '';
-                    if (field === 'phone_number') return c.phone_number || '';
-                    if (field === 'next_call_date') return c.next_call_date || '';
-                    if (field === 'next_call_time') return c.next_call_time || '';
-                    if (field === 'last_call_date') return c.last_call_date || '';
-                    if (field === 'remark') return c.remark || '';
-                    if (field === 'status') return c.status || '';
-
-                    // Handle meta data fields
-                    if (c.meta_data) {
-                        return (c.meta_data instanceof Map ? c.meta_data.get(field) : c.meta_data[field]) || '';
-                    }
-                    return '';
-                });
+                return fields.map(field => resolveCustomerValue(c, field));
             });
         } else {
             // Fallback to default headers if no mapping (though mapping is expected for sync)
@@ -62,18 +92,17 @@ export const syncToGoogleSheets = async (spreadsheetId, force = false) => {
 
             dataRows = customers.map(c => {
                 const row = [
-                    c.customer_name || '',
-                    c.company_name || '',
-                    c.phone_number || '',
-                    c.next_call_date || '',
-                    c.last_call_date || '',
-                    c.next_call_time || '',
-                    c.remark || ''
+                    resolveCustomerValue(c, 'customer_name'),
+                    resolveCustomerValue(c, 'company_name'),
+                    resolveCustomerValue(c, 'phone_number'),
+                    resolveCustomerValue(c, 'next_call_date'),
+                    resolveCustomerValue(c, 'last_call_date'),
+                    resolveCustomerValue(c, 'next_call_time'),
+                    resolveCustomerValue(c, 'remark')
                 ];
                 if (spreadsheet.meta_headers) {
                     spreadsheet.meta_headers.forEach(h => {
-                        const val = c.meta_data instanceof Map ? c.meta_data.get(h) : c.meta_data[h];
-                        row.push(val || '');
+                        row.push(resolveCustomerValue(c, h));
                     });
                 }
                 return row;
