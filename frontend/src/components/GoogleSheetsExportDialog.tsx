@@ -70,10 +70,42 @@ const GoogleSheetsExportDialog = ({
         if (open) {
             setSheetUrl(initialUrl);
             setRealtimeSync(initialRealtimeSync);
-            if (initialMapping) setColumnMapping(initialMapping);
+
+            let mapping = initialMapping || {
+                'customer_name': 'Customer Name',
+                'company_name': 'Company Name',
+                'phone_number': 'Phone Number',
+                'next_call_date': 'Next Call Date',
+                'last_call_date': 'Last Call Date'
+            };
+
+            // Clean redundant meta headers from mapping if it's a Meta sheet
+            if (metaHeaders.length > 0) {
+                const redundantPatterns = [
+                    'full_name', 'name', 'first_name', 'last_name',
+                    'phone_number', 'phone', 'mobile', 'tel', 'whatsapp', 'contact',
+                    'company_name', 'company', 'organization', 'business', 'email'
+                ];
+
+                mapping = Object.entries(mapping).reduce((acc, [key, val]) => {
+                    const lowerKey = key.toLowerCase();
+                    const isRedundant = redundantPatterns.some(p => lowerKey === p || lowerKey === `meta_${p}` || lowerKey.includes(`meta_${p}`));
+                    if (!isRedundant) {
+                        acc[key] = val;
+                    }
+                    return acc;
+                }, {} as Record<string, string>);
+
+                // Ensure standard fields are always present for Meta sheets if they were removed or missing
+                if (!mapping['customer_name']) mapping['customer_name'] = 'Customer Name';
+                if (!mapping['phone_number']) mapping['phone_number'] = 'Phone Number';
+                if (!mapping['company_name']) mapping['company_name'] = 'Company Name';
+            }
+
+            setColumnMapping(mapping);
             setStep('url');
         }
-    }, [open, initialUrl, initialMapping, initialRealtimeSync]);
+    }, [open, initialUrl, initialMapping, initialRealtimeSync, metaHeaders]);
 
     const toggleField = (fieldId: string, label: string) => {
         setColumnMapping(prev => {

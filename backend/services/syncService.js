@@ -49,6 +49,19 @@ const resolveCustomerValue = (customer, fieldName) => {
 };
 
 /**
+ * Checks if a meta header is redundant because it's already covered by standard fields.
+ */
+const isRedundantHeader = (header) => {
+    const lower = header.toLowerCase();
+    const redundantPatterns = [
+        'full_name', 'name', 'first_name', 'last_name',
+        'phone_number', 'phone', 'mobile', 'tel', 'whatsapp', 'contact',
+        'company_name', 'company', 'organization', 'business', 'email'
+    ];
+    return redundantPatterns.some(p => lower === p || lower === `meta_${p}` || lower.includes(`meta_${p}`));
+};
+
+/**
  * Synchronizes a spreadsheet's data to Google Sheets if realtime sync is enabled.
  * @param {string} spreadsheetId - The ID of the CRM spreadsheet.
  * @param {boolean} force - If true, bypasses the realtime_sync check (for manual sync).
@@ -88,7 +101,10 @@ export const syncToGoogleSheets = async (spreadsheetId, force = false) => {
                 'Customer Name', 'Company Name', 'Phone Number',
                 'Next Call Date', 'Last Call Date', 'Next Call Time', 'Remark'
             ];
-            if (spreadsheet.meta_headers) headers.push(...spreadsheet.meta_headers);
+            if (spreadsheet.meta_headers) {
+                const filteredMeta = spreadsheet.meta_headers.filter(h => !isRedundantHeader(h));
+                headers.push(...filteredMeta);
+            }
 
             dataRows = customers.map(c => {
                 const row = [
@@ -102,7 +118,10 @@ export const syncToGoogleSheets = async (spreadsheetId, force = false) => {
                 ];
                 if (spreadsheet.meta_headers) {
                     spreadsheet.meta_headers.forEach(h => {
-                        row.push(resolveCustomerValue(c, h));
+                        // Only add if it's not redundant
+                        if (!isRedundantHeader(h)) {
+                            row.push(resolveCustomerValue(c, h));
+                        }
                     });
                 }
                 return row;
