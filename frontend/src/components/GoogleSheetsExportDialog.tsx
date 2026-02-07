@@ -249,20 +249,35 @@ const GoogleSheetsExportDialog = ({
                                             checked={!!columnMapping[f.id]}
                                             onCheckedChange={() => toggleField(f.id, f.label)}
                                         />
-                                        <Label htmlFor={f.id} className="text-sm cursor-pointer">{f.label}</Label>
+                                        <Label htmlFor={f.id} className="text-sm cursor-pointer font-medium">{f.label}</Label>
                                     </div>
                                 ))}
-                                {metaHeaders.map(h => (
-                                    <div key={h} className="flex items-center space-x-2">
-                                        <Checkbox
-                                            id={h}
-                                            checked={!!columnMapping[h]}
-                                            onCheckedChange={() => toggleField(h, h)}
-                                        />
-                                        <Label htmlFor={h} className="text-sm cursor-pointer text-blue-600">{h}</Label>
-                                    </div>
-                                ))}
+
+                                {metaHeaders
+                                    // Filter out headers that are already covered by standard fields
+                                    .filter(h => {
+                                        const lower = h.toLowerCase();
+                                        const redundant = [
+                                            'full_name', 'name', 'first_name', 'last_name',
+                                            'phone_number', 'phone', 'mobile', 'tel', 'whatsapp', 'contact',
+                                            'company_name', 'company', 'organization', 'business', 'email'
+                                        ];
+                                        return !redundant.some(r => lower === r || lower.includes(`meta_${r}`));
+                                    })
+                                    .map(h => (
+                                        <div key={h} className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id={h}
+                                                checked={!!columnMapping[h]}
+                                                onCheckedChange={() => toggleField(h, h)}
+                                            />
+                                            <Label htmlFor={h} className="text-sm cursor-pointer text-blue-600 font-medium">{h}</Label>
+                                        </div>
+                                    ))}
                             </div>
+                            <p className="text-[10px] text-blue-600 bg-blue-50 p-2 rounded border border-blue-100 italic">
+                                <b>Tip:</b> Standard fields (like Name and Phone) now automatically pull data from your Meta lead fields to match your styled Sheet template.
+                            </p>
                         </div>
 
                         <div className="flex gap-2">
