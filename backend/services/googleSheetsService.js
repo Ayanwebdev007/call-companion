@@ -13,14 +13,29 @@ class GoogleSheetsService {
     try {
       const serviceAccountPath = path.resolve(process.cwd(), 'service-account.json');
 
+      console.log('[SHEETS-DEBUG] Checking Auth Configuration...');
+      console.log('[SHEETS-DEBUG] GOOGLE_SERVICE_ACCOUNT_JSON exists?', !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+      if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+        console.log('[SHEETS-DEBUG] Value length:', process.env.GOOGLE_SERVICE_ACCOUNT_JSON.length);
+      }
+      console.log('[SHEETS-DEBUG] Service Account File Path:', serviceAccountPath);
+      console.log('[SHEETS-DEBUG] File exists?', fs.existsSync(serviceAccountPath));
+      console.log('[SHEETS-DEBUG] GOOGLE_API_KEY exists?', !!process.env.GOOGLE_API_KEY);
+
       if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
         // Use credentials from environment variable (Common for Render/Heroku)
         console.log('[SHEETS] Initializing with Service Account (from ENV)...');
-        const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-        this.auth = new google.auth.GoogleAuth({
-          credentials,
-          scopes: ['https://www.googleapis.com/auth/spreadsheets']
-        });
+        try {
+          const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+          this.auth = new google.auth.GoogleAuth({
+            credentials,
+            scopes: ['https://www.googleapis.com/auth/spreadsheets']
+          });
+          console.log('[SHEETS-DEBUG] GoogleAuth initialized successfully with ENV JSON');
+        } catch (jsonError) {
+          console.error('[SHEETS-DEBUG] CRITICAL: Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON!', jsonError.message);
+          console.error('[SHEETS-DEBUG] Content snippet:', process.env.GOOGLE_SERVICE_ACCOUNT_JSON.substring(0, 50) + '...');
+        }
       } else if (fs.existsSync(serviceAccountPath)) {
         // Use Service Account file if available
         console.log('[SHEETS] Initializing with Service Account (from file)...');
@@ -32,6 +47,8 @@ class GoogleSheetsService {
         // Fallback to API Key for read-only public access
         console.log('[SHEETS] Initializing with API Key (Read-only)...');
         this.auth = process.env.GOOGLE_API_KEY;
+      } else {
+        console.warn('[SHEETS-DEBUG] NO AUTH METHOD FOUND!');
       }
 
       this.sheets = google.sheets({
