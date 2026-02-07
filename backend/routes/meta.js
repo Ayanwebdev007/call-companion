@@ -207,7 +207,7 @@ router.post('/webhook', async (req, res) => {
                                     remark: sourceLead?.remark || '',
                                     status: sourceLead?.status || 'new',
                                     color: sourceLead?.color || null,
-                                    next_call_date: sourceLead?.next_call_date || format(new Date(), "yyyy-MM-dd"),
+                                    next_call_date: sourceLead?.next_call_date || new Date().toISOString().split('T')[0],
                                     next_call_time: sourceLead?.next_call_time || '',
                                     last_call_date: sourceLead?.last_call_date || '',
                                     position: newPosition,

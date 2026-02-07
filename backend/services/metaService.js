@@ -126,6 +126,89 @@ class MetaService {
         }
         return '';
     }
+
+    async getCampaigns(pageId, pageAccessToken) {
+        try {
+            const response = await axios.get(`${this.baseUrl}/${pageId}/campaigns`, {
+                params: {
+                    access_token: pageAccessToken,
+                    fields: 'name,id',
+                    limit: 100
+                }
+            });
+            return response.data.data;
+        } catch (error) {
+            console.error('[META-SERVICE] Error fetching campaigns:', error.response?.data || error.message);
+            return [];
+        }
+    }
+
+    async getAdsInCampaign(campaignId, pageAccessToken) {
+        try {
+            const response = await axios.get(`${this.baseUrl}/${campaignId}/ads`, {
+                params: {
+                    access_token: pageAccessToken,
+                    fields: 'name,id,adset{name,id}',
+                    limit: 100
+                }
+            });
+            return response.data.data;
+        } catch (error) {
+            console.error('[META-SERVICE] Error fetching ads:', error.response?.data || error.message);
+            return [];
+        }
+    }
+
+    async getAdLeads(adId, pageAccessToken, dateRange = {}) {
+        try {
+            let allLeads = [];
+            let url = `${this.baseUrl}/${adId}/leads`;
+
+            const params = {
+                access_token: pageAccessToken,
+                fields: 'created_time,field_data,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id',
+                limit: 100
+            };
+
+            if (dateRange.since) params.since = Math.floor(new Date(dateRange.since).getTime() / 1000);
+            if (dateRange.until) params.until = Math.floor(new Date(dateRange.until).getTime() / 1000);
+
+            let hasNext = true;
+            while (hasNext) {
+                const response = await axios.get(url, { params: url.includes('?') ? {} : params });
+                const leads = response.data.data || [];
+
+                // Map the leads immediately
+                const mappedLeads = leads.map(l => {
+                    const fieldMap = {};
+                    (l.field_data || []).forEach(f => {
+                        if (f.name && f.values && f.values.length > 0) fieldMap[f.name] = f.values[0];
+                    });
+                    return {
+                        ...l,
+                        fieldMap,
+                        customerName: this.extractFieldValue(l.field_data || [], ['full_name', 'name', 'first_name']),
+                        email: this.extractFieldValue(l.field_data || [], ['email']),
+                        phoneNumber: this.extractFieldValue(l.field_data || [], ['phone_number', 'phone', 'mobile', 'contact', 'tel', 'whatsapp']),
+                        companyName: this.extractFieldValue(l.field_data || [], ['company_name', 'company']),
+                        metaLeadId: l.id
+                    };
+                });
+
+                allLeads = allLeads.concat(mappedLeads);
+
+                if (response.data.paging?.next) {
+                    url = response.data.paging.next;
+                } else {
+                    hasNext = false;
+                }
+            }
+            return allLeads;
+        } catch (error) {
+            console.error(`[META-SERVICE] Error fetching leads for Ad ${adId}:`, error.response?.data || error.message);
+            return [];
+        }
+    }
 }
 
 export default new MetaService();
