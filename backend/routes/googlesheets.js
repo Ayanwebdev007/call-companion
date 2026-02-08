@@ -325,12 +325,30 @@ router.post('/export', auth, async (req, res) => {
 
     if (mapping && Object.keys(mapping).length > 0) {
       // Use custom mapping (Dynamic)
-      headers = Object.values(mapping);
-      const fields = Object.keys(mapping);
+      // CRITICAL: For Meta sheets, preserve the order from spreadsheet.meta_headers!
+      let fields = [];
+
+      if (spreadsheet.is_meta && spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
+        // Build fields array in meta_headers order, then add tracking fields
+        fields = [...spreadsheet.meta_headers]; // Meta headers first
+
+        // Add tracking fields that exist in the mapping (in this specific order)
+        const trackingFields = ['next_call_date', 'last_call_date', 'next_call_time', 'remark', 'status'];
+        trackingFields.forEach(field => {
+          if (mapping[field] && !fields.includes(field)) {
+            fields.push(field);
+          }
+        });
+      } else {
+        // Non-Meta sheet: use mapping order as-is
+        fields = Object.keys(mapping);
+      }
+
+      headers = fields.map(f => mapping[f]);
 
       console.log('[EXPORT DEBUG] Using custom mapping');
-      console.log('[EXPORT DEBUG] Fields to export:', fields);
-      console.log('[EXPORT DEBUG] Headers to export:', headers);
+      console.log('[EXPORT DEBUG] Fields to export (ordered):', fields);
+      console.log('[EXPORT DEBUG] Headers to export (ordered):', headers);
 
       dataRows = customers.map(c => {
         return fields.map(field => resolveCustomerValue(c, field));

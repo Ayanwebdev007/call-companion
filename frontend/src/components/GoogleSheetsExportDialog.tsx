@@ -89,14 +89,22 @@ const GoogleSheetsExportDialog = ({
 
                 // If no mapping existed at all OR after cleanup we have nothing, default to Meta headers
                 if (!initialMapping || Object.keys(mapping).length === 0) {
+                    // CRITICAL: Preserve Meta sheet column order!
+                    // Meta headers FIRST (in the same order as spreadsheet.meta_headers)
+                    // Then tracking fields (Next Call Date, Last Call Date, Remark, Status)
                     const metaMap: Record<string, string> = {};
+
+                    // Add Meta headers first to preserve order
                     metaHeaders.forEach(h => { metaMap[h] = h; });
+
+                    // Then add tracking fields
                     metaMap['next_call_date'] = 'Next Call Date';
                     metaMap['last_call_date'] = 'Last Call Date';
                     metaMap['remark'] = 'Remark';
                     metaMap['status'] = 'Status';
+
                     mapping = metaMap;
-                    console.log('[CLEANUP] Set default Meta mapping:', Object.keys(mapping));
+                    console.log('[CLEANUP] Set default Meta mapping (preserving order):', Object.keys(mapping));
                 }
             }
 
