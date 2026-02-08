@@ -47,13 +47,7 @@ const GoogleSheetsExportDialog = ({
     const [googleTitle, setGoogleTitle] = useState("");
 
     const [realtimeSync, setRealtimeSync] = useState(initialRealtimeSync);
-    const [columnMapping, setColumnMapping] = useState<Record<string, string>>(initialMapping || {
-        'customer_name': 'Customer Name',
-        'company_name': 'Company Name',
-        'phone_number': 'Phone Number',
-        'next_call_date': 'Next Call Date',
-        'last_call_date': 'Last Call Date'
-    });
+    const [columnMapping, setColumnMapping] = useState<Record<string, string>>(initialMapping || {});
 
     const standardFields = [
         { id: 'customer_name', label: 'Customer Name' },
@@ -71,13 +65,8 @@ const GoogleSheetsExportDialog = ({
             setSheetUrl(initialUrl);
             setRealtimeSync(initialRealtimeSync);
 
-            let mapping = initialMapping || {
-                'customer_name': 'Customer Name',
-                'company_name': 'Company Name',
-                'phone_number': 'Phone Number',
-                'next_call_date': 'Next Call Date',
-                'last_call_date': 'Last Call Date'
-            };
+            // Default to empty mapping unless one is provided.
+            let mapping = initialMapping || {};
 
             // If it's a Meta sheet and no initial mapping, default to selecting ALL Meta headers
             // and RELEVANT tracking fields (like Next Call Date/Remark), but NOT necessarily Name/Phone
@@ -282,27 +271,16 @@ const GoogleSheetsExportDialog = ({
                                     </div>
                                 ))}
 
-                                {metaHeaders
-                                    // Filter out headers that are already covered by standard fields
-                                    .filter(h => {
-                                        const lower = h.toLowerCase();
-                                        const redundant = [
-                                            'full_name', 'name', 'first_name', 'last_name',
-                                            'phone_number', 'phone', 'mobile', 'tel', 'whatsapp', 'contact',
-                                            'company_name', 'company', 'organization', 'business', 'email'
-                                        ];
-                                        return !redundant.some(r => lower === r || lower.includes(`meta_${r}`));
-                                    })
-                                    .map(h => (
-                                        <div key={h} className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id={h}
-                                                checked={!!columnMapping[h]}
-                                                onCheckedChange={() => toggleField(h, h)}
-                                            />
-                                            <Label htmlFor={h} className="text-sm cursor-pointer text-blue-600 font-medium">{h}</Label>
-                                        </div>
-                                    ))}
+                                {metaHeaders.map(h => (
+                                    <div key={h} className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={h}
+                                            checked={!!columnMapping[h]}
+                                            onCheckedChange={() => toggleField(h, h)}
+                                        />
+                                        <Label htmlFor={h} className="text-sm cursor-pointer text-blue-600 font-medium">{h}</Label>
+                                    </div>
+                                ))}
                             </div>
                             <p className="text-[10px] text-blue-600 bg-blue-50 p-2 rounded border border-blue-100 italic">
                                 <b>Tip:</b> Standard fields (like Name and Phone) now automatically pull data from your Meta lead fields to match your styled Sheet template.
