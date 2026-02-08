@@ -68,24 +68,15 @@ const GoogleSheetsExportDialog = ({
             // Start with whatever the DB gave us (or empty)
             let mapping = initialMapping ? { ...initialMapping } : {};
 
-            // CLEANUP LOGIC: If this is a Meta Sheet, we want to prioritize raw Meta headers.
-            // If the user has old "forced" mappings saved in the DB (like 'Customer Name' + 'full_name'),
-            // we should detect this redundancy and remove the standard field to clean up their view.
+            // AGGRESSIVE CLEANUP: For Meta sheets, ALWAYS remove standard CRM fields
+            // This fixes the persistent column issue where old mappings keep reappearing
             if (metaHeaders && metaHeaders.length > 0) {
-                const hasMetaName = metaHeaders.some(h => h === 'full_name' || h === 'name');
-                const hasMetaPhone = metaHeaders.some(h => h === 'phone_number' || h === 'phone' || h === 'mobile');
+                // Unconditionally remove standard fields - Meta sheets should use raw Meta data
+                delete mapping['customer_name'];
+                delete mapping['phone_number'];
+                delete mapping['company_name'];
 
-                // If we have a raw name field, remove the generic 'Customer Name' if it exists
-                if (hasMetaName && mapping['customer_name']) {
-                    delete mapping['customer_name'];
-                }
-
-                // If we have a raw phone field, remove the generic 'Phone Number' if it exists
-                if (hasMetaPhone && mapping['phone_number']) {
-                    delete mapping['phone_number'];
-                }
-
-                // If no mapping existed at all, default to ALL meta headers + tracking fields
+                // If no mapping existed at all OR after cleanup we have nothing, default to Meta headers
                 if (!initialMapping || Object.keys(mapping).length === 0) {
                     const metaMap: Record<string, string> = {};
                     metaHeaders.forEach(h => { metaMap[h] = h; });
