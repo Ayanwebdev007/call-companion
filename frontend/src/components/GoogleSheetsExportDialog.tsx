@@ -49,7 +49,9 @@ const GoogleSheetsExportDialog = ({
     const [realtimeSync, setRealtimeSync] = useState(initialRealtimeSync);
     const [columnMapping, setColumnMapping] = useState<Record<string, string>>(initialMapping || {});
 
-    const standardFields = [
+    // For Meta sheets, ONLY show tracking fields (not name/phone/company)
+    // Meta sheets should use raw Meta headers for identity fields
+    const allStandardFields = [
         { id: 'customer_name', label: 'Customer Name' },
         { id: 'company_name', label: 'Company Name' },
         { id: 'phone_number', label: 'Phone Number' },
@@ -59,6 +61,11 @@ const GoogleSheetsExportDialog = ({
         { id: 'remark', label: 'Remark' },
         { id: 'status', label: 'Status' }
     ];
+
+    // Filter out identity fields for Meta sheets
+    const standardFields = metaHeaders && metaHeaders.length > 0
+        ? allStandardFields.filter(f => !['customer_name', 'company_name', 'phone_number'].includes(f.id))
+        : allStandardFields;
 
     useEffect(() => {
         if (open) {
