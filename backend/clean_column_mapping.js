@@ -1,13 +1,11 @@
-const mongoose = require('mongoose');
-require('dotenv').config();
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import Spreadsheet from './models/Spreadsheet.js';
+
+dotenv.config();
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/calling-crm', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-});
-
-const Spreadsheet = require('./models/Spreadsheet');
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/calling-crm');
 
 async function cleanColumnMappings() {
     try {
