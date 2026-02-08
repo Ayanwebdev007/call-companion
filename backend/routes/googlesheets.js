@@ -319,10 +319,18 @@ router.post('/export', auth, async (req, res) => {
     let headers = [];
     let dataRows = [];
 
+    console.log('[EXPORT DEBUG] Raw columnMapping from frontend:', JSON.stringify(mapping));
+    console.log('[EXPORT DEBUG] Is Meta Sheet?', spreadsheet.is_meta);
+    console.log('[EXPORT DEBUG] Meta Headers:', spreadsheet.meta_headers);
+
     if (mapping && Object.keys(mapping).length > 0) {
       // Use custom mapping (Dynamic)
       headers = Object.values(mapping);
       const fields = Object.keys(mapping);
+
+      console.log('[EXPORT DEBUG] Using custom mapping');
+      console.log('[EXPORT DEBUG] Fields to export:', fields);
+      console.log('[EXPORT DEBUG] Headers to export:', headers);
 
       dataRows = customers.map(c => {
         return fields.map(field => resolveCustomerValue(c, field));
@@ -333,6 +341,8 @@ router.post('/export', auth, async (req, res) => {
       if (spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
         headers = [...spreadsheet.meta_headers];
 
+        console.log('[EXPORT DEBUG] Using fallback meta_headers:', headers);
+
         dataRows = customers.map(c => {
           const row = [];
           spreadsheet.meta_headers.forEach(h => {
@@ -342,6 +352,7 @@ router.post('/export', auth, async (req, res) => {
         });
       } else {
         // Absolute failsafe if nothing is defined: Export just Name/Phone to avoid empty sheet error
+        console.log('[EXPORT DEBUG] Using absolute failsafe (Name/Phone only)');
         headers = ['Customer Name', 'Phone Number'];
         dataRows = customers.map(c => [
           resolveCustomerValue(c, 'customer_name'),
@@ -350,6 +361,7 @@ router.post('/export', auth, async (req, res) => {
       }
     }
 
+    console.log('[EXPORT DEBUG] FINAL headers being sent to Google:', headers);
     const finalData = [headers, ...dataRows];
 
     // 4. Update the spreadsheet with sync settings and URL
