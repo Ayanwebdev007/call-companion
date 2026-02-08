@@ -65,27 +65,36 @@ const GoogleSheetsExportDialog = ({
             setSheetUrl(initialUrl);
             setRealtimeSync(initialRealtimeSync);
 
-            // Default to empty mapping unless one is provided.
-            let mapping = initialMapping || {};
+            // Start with whatever the DB gave us (or empty)
+            let mapping = initialMapping ? { ...initialMapping } : {};
 
-            // If it's a Meta sheet and no initial mapping, default to selecting ALL Meta headers
-            // and RELEVANT tracking fields (like Next Call Date/Remark), but NOT necessarily Name/Phone
-            if (!initialMapping && metaHeaders && metaHeaders.length > 0) {
-                const metaMap: Record<string, string> = {};
+            // CLEANUP LOGIC: If this is a Meta Sheet, we want to prioritize raw Meta headers.
+            // If the user has old "forced" mappings saved in the DB (like 'Customer Name' + 'full_name'),
+            // we should detect this redundancy and remove the standard field to clean up their view.
+            if (metaHeaders && metaHeaders.length > 0) {
+                const hasMetaName = metaHeaders.some(h => h === 'full_name' || h === 'name');
+                const hasMetaPhone = metaHeaders.some(h => h === 'phone_number' || h === 'phone' || h === 'mobile');
 
-                // Add Meta headers first
-                metaHeaders.forEach(h => {
-                    metaMap[h] = h;
-                });
+                // If we have a raw name field, remove the generic 'Customer Name' if it exists
+                if (hasMetaName && mapping['customer_name']) {
+                    delete mapping['customer_name'];
+                }
 
-                // Add useful tracking fields
-                metaMap['next_call_date'] = 'Next Call Date';
-                metaMap['last_call_date'] = 'Last Call Date';
-                metaMap['remark'] = 'Remark';
-                metaMap['status'] = 'Status';
+                // If we have a raw phone field, remove the generic 'Phone Number' if it exists
+                if (hasMetaPhone && mapping['phone_number']) {
+                    delete mapping['phone_number'];
+                }
 
-                // We do NOT force Name/Phone/Company here. User can check them if they want normalized columns.
-                mapping = metaMap;
+                // If no mapping existed at all, default to ALL meta headers + tracking fields
+                if (!initialMapping || Object.keys(mapping).length === 0) {
+                    const metaMap: Record<string, string> = {};
+                    metaHeaders.forEach(h => { metaMap[h] = h; });
+                    metaMap['next_call_date'] = 'Next Call Date';
+                    metaMap['last_call_date'] = 'Last Call Date';
+                    metaMap['remark'] = 'Remark';
+                    metaMap['status'] = 'Status';
+                    mapping = metaMap;
+                }
             }
 
             setColumnMapping(mapping);
