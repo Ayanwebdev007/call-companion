@@ -328,39 +328,26 @@ router.post('/export', auth, async (req, res) => {
         return fields.map(field => resolveCustomerValue(c, field));
       });
     } else {
-      // Fallback to default headers (same as existing logic)
-      headers = [
-        'Customer Name',
-        'Company Name',
-        'Phone Number',
-        'Next Call Date',
-        'Last Call Date',
-        'Next Call Time',
-        'Remark'
-      ];
-
+      // Fallback: Use ONLY meta_headers if available. 
+      // We do NOT force standard headers anymore.
       if (spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
-        headers.push(...spreadsheet.meta_headers);
-      }
+        headers = [...spreadsheet.meta_headers];
 
-      dataRows = customers.map(c => {
-        const row = [
-          resolveCustomerValue(c, 'customer_name'),
-          resolveCustomerValue(c, 'company_name'),
-          resolveCustomerValue(c, 'phone_number'),
-          resolveCustomerValue(c, 'next_call_date'),
-          resolveCustomerValue(c, 'last_call_date'),
-          resolveCustomerValue(c, 'next_call_time'),
-          resolveCustomerValue(c, 'remark')
-        ];
-
-        if (spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
+        dataRows = customers.map(c => {
+          const row = [];
           spreadsheet.meta_headers.forEach(h => {
             row.push(resolveCustomerValue(c, h));
           });
-        }
-        return row;
-      });
+          return row;
+        });
+      } else {
+        // Absolute failsafe if nothing is defined: Export just Name/Phone to avoid empty sheet error
+        headers = ['Customer Name', 'Phone Number'];
+        dataRows = customers.map(c => [
+          resolveCustomerValue(c, 'customer_name'),
+          resolveCustomerValue(c, 'phone_number')
+        ]);
+      }
     }
 
     const finalData = [headers, ...dataRows];
