@@ -79,27 +79,24 @@ const GoogleSheetsExportDialog = ({
                 'last_call_date': 'Last Call Date'
             };
 
-            // Clean redundant meta headers from mapping if it's a Meta sheet
-            if (metaHeaders.length > 0) {
-                const redundantPatterns = [
-                    'full_name', 'name', 'first_name', 'last_name',
-                    'phone_number', 'phone', 'mobile', 'tel', 'whatsapp', 'contact',
-                    'company_name', 'company', 'organization', 'business', 'email'
-                ];
+            // If it's a Meta sheet and no initial mapping, default to selecting ALL Meta headers
+            // and RELEVANT tracking fields (like Next Call Date/Remark), but NOT necessarily Name/Phone
+            if (!initialMapping && metaHeaders && metaHeaders.length > 0) {
+                const metaMap: Record<string, string> = {};
 
-                mapping = Object.entries(mapping).reduce((acc, [key, val]) => {
-                    const lowerKey = key.toLowerCase();
-                    const isRedundant = redundantPatterns.some(p => lowerKey === p || lowerKey === `meta_${p}` || lowerKey.includes(`meta_${p}`));
-                    if (!isRedundant) {
-                        acc[key] = val;
-                    }
-                    return acc;
-                }, {} as Record<string, string>);
+                // Add Meta headers first
+                metaHeaders.forEach(h => {
+                    metaMap[h] = h;
+                });
 
-                // Ensure standard fields are always present for Meta sheets if they were removed or missing
-                if (!mapping['customer_name']) mapping['customer_name'] = 'Customer Name';
-                if (!mapping['phone_number']) mapping['phone_number'] = 'Phone Number';
-                if (!mapping['company_name']) mapping['company_name'] = 'Company Name';
+                // Add useful tracking fields
+                metaMap['next_call_date'] = 'Next Call Date';
+                metaMap['last_call_date'] = 'Last Call Date';
+                metaMap['remark'] = 'Remark';
+                metaMap['status'] = 'Status';
+
+                // We do NOT force Name/Phone/Company here. User can check them if they want normalized columns.
+                mapping = metaMap;
             }
 
             setColumnMapping(mapping);

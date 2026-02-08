@@ -53,18 +53,6 @@ const resolveCustomerValue = (customer, fieldName) => {
   return '';
 };
 
-/**
- * Checks if a meta header is redundant because it's already covered by standard fields.
- */
-const isRedundantHeader = (header) => {
-  const lower = header.toLowerCase();
-  const redundantPatterns = [
-    'full_name', 'name', 'first_name', 'last_name',
-    'phone_number', 'phone', 'mobile', 'tel', 'whatsapp', 'contact',
-    'company_name', 'company', 'organization', 'business', 'email'
-  ];
-  return redundantPatterns.some(p => lower === p || lower === `meta_${p}` || lower.includes(`meta_${p}`));
-};
 
 // Validate Google Sheets URL
 router.post('/validate', auth, async (req, res) => {
@@ -352,8 +340,7 @@ router.post('/export', auth, async (req, res) => {
       ];
 
       if (spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
-        const filteredMeta = spreadsheet.meta_headers.filter(h => !isRedundantHeader(h));
-        headers.push(...filteredMeta);
+        headers.push(...spreadsheet.meta_headers);
       }
 
       dataRows = customers.map(c => {
@@ -369,9 +356,7 @@ router.post('/export', auth, async (req, res) => {
 
         if (spreadsheet.meta_headers && spreadsheet.meta_headers.length > 0) {
           spreadsheet.meta_headers.forEach(h => {
-            if (!isRedundantHeader(h)) {
-              row.push(resolveCustomerValue(c, h));
-            }
+            row.push(resolveCustomerValue(c, h));
           });
         }
         return row;
