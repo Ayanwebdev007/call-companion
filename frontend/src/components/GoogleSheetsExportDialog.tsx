@@ -78,10 +78,14 @@ const GoogleSheetsExportDialog = ({
             // AGGRESSIVE CLEANUP: For Meta sheets, ALWAYS remove standard CRM fields
             // This fixes the persistent column issue where old mappings keep reappearing
             if (metaHeaders && metaHeaders.length > 0) {
+                console.log('[CLEANUP] Before cleanup:', Object.keys(mapping));
+
                 // Unconditionally remove standard fields - Meta sheets should use raw Meta data
                 delete mapping['customer_name'];
                 delete mapping['phone_number'];
                 delete mapping['company_name'];
+
+                console.log('[CLEANUP] After cleanup:', Object.keys(mapping));
 
                 // If no mapping existed at all OR after cleanup we have nothing, default to Meta headers
                 if (!initialMapping || Object.keys(mapping).length === 0) {
@@ -92,9 +96,11 @@ const GoogleSheetsExportDialog = ({
                     metaMap['remark'] = 'Remark';
                     metaMap['status'] = 'Status';
                     mapping = metaMap;
+                    console.log('[CLEANUP] Set default Meta mapping:', Object.keys(mapping));
                 }
             }
 
+            console.log('[CLEANUP] FINAL mapping being set:', Object.keys(mapping));
             setColumnMapping(mapping);
             setStep('url');
         }
@@ -163,6 +169,9 @@ const GoogleSheetsExportDialog = ({
         setIsExporting(true);
         setStep('exporting');
         try {
+            console.log('[EXPORT] columnMapping being sent to backend:', columnMapping);
+            console.log('[EXPORT] Keys:', Object.keys(columnMapping));
+
             const response = await exportToGoogleSheet(
                 spreadsheetId,
                 sheetUrl,
