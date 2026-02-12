@@ -48,8 +48,35 @@ export function LeadDetailsDialog({ isOpen, onClose, customer }: LeadDetailsDial
     const handleCall = async () => {
         if (!customer) return;
         setCalling(true);
+
+        let phoneNumberToCall = customer.phone_number;
+
+        // Fallback logic for "N/A" or truncated numbers
+        if (!phoneNumberToCall || phoneNumberToCall === 'N/A' || phoneNumberToCall.length < 5) {
+            if (customer.meta_data) {
+                const meta = customer.meta_data as any;
+                const candidates = [
+                    meta.phone_number, meta.phone, meta.mobile, meta.contact, meta.tel, meta.whatsapp,
+                    meta.Phone, meta['Phone Number'], meta['Mobile Number'], meta['Contact Number'],
+                    meta['Full Phone'], meta['Full Number'], meta['[Phone]']
+                ];
+
+                const resolved = candidates.find(v => v && typeof v === 'string' && v.trim().length >= 7 && v !== 'N/A');
+                if (resolved) {
+                    phoneNumberToCall = resolved.trim();
+                } else {
+                    // One last attempt: search all string values in meta_data for something that looks like a phone number (10+ digits)
+                    const allValues = Object.values(meta);
+                    const phoneLike = allValues.find(v => typeof v === 'string' && v.replace(/\D/g, '').length >= 10);
+                    if (phoneLike) {
+                        phoneNumberToCall = (phoneLike as string).trim();
+                    }
+                }
+            }
+        }
+
         try {
-            const response = await requestMobileCall(customer.id, customer.phone_number, customer.customer_name);
+            const response = await requestMobileCall(customer.id, phoneNumberToCall, customer.customer_name);
 
             if (response.notification_sent) {
                 toast({

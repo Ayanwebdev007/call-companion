@@ -636,13 +636,39 @@ const Index = () => {
   };
 
   const handleMobileCall = async (customer: Customer) => {
+    let phoneNumberToCall = customer.phone_number;
+
+    // Fallback logic for "N/A" or truncated numbers
+    if (!phoneNumberToCall || phoneNumberToCall === 'N/A' || phoneNumberToCall.length < 5) {
+      if (customer.meta_data) {
+        const meta = customer.meta_data;
+        const candidates = [
+          meta.phone_number, meta.phone, meta.mobile, meta.contact, meta.tel, meta.whatsapp,
+          meta.Phone, meta['Phone Number'], meta['Mobile Number'], meta['Contact Number'],
+          meta['Full Phone'], meta['Full Number'], meta['[Phone]']
+        ];
+
+        const resolved = candidates.find(v => v && typeof v === 'string' && v.trim().length >= 7 && v !== 'N/A');
+        if (resolved) {
+          phoneNumberToCall = resolved.trim();
+        } else {
+          // One last attempt: search all string values in meta_data for something that looks like a phone number (10+ digits)
+          const allValues = Object.values(meta);
+          const phoneLike = allValues.find(v => typeof v === 'string' && v.replace(/\D/g, '').length >= 10);
+          if (phoneLike) {
+            phoneNumberToCall = (phoneLike as string).trim();
+          }
+        }
+      }
+    }
+
     toast({
       title: "Sending Call Request...",
-      description: `Requesting mobile to call ${customer.customer_name}...`,
+      description: `Requesting mobile to call ${customer.customer_name} (${phoneNumberToCall})...`,
     });
 
     try {
-      await requestMobileCall(customer.id, customer.phone_number, customer.customer_name);
+      await requestMobileCall(customer.id, phoneNumberToCall, customer.customer_name);
       toast({
         title: "Call Request Sent",
         description: "Check your mobile device to start the call.",

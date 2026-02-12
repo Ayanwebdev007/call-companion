@@ -30,6 +30,35 @@ router.post('/request-call', auth, async (req, res) => {
 
         if (phone_number) phone_number = phone_number.trim();
 
+        // FALLBACK: If phone_number is missing, "N/A", or too short, try to fetch it from customer meta_data
+        if (!phone_number || phone_number === 'N/A' || phone_number.length < 5) {
+            console.log(`[MOBILE-API] Phone number '${phone_number}' for customer_id ${customer_id} looks invalid. Attempting resolution from meta_data...`);
+            const customer = await mongoose.model('Customer').findById(customer_id);
+            if (customer && customer.meta_data) {
+                // Common field names from Google Sheets/Meta
+                const meta = customer.meta_data instanceof Map ? Object.fromEntries(customer.meta_data) : customer.meta_data;
+                const candidates = [
+                    meta.phone_number, meta.phone, meta.mobile, meta.contact, meta.tel, meta.whatsapp,
+                    meta.Phone, meta['Phone Number'], meta['Mobile Number'], meta['Contact Number'],
+                    meta['Full Phone'], meta['Full Number'], meta['[Phone]']
+                ];
+
+                const resolved = candidates.find(v => v && typeof v === 'string' && v.trim().length >= 7 && v !== 'N/A');
+                if (resolved) {
+                    console.log(`[MOBILE-API] Resolved phone number from meta_data: ${resolved}`);
+                    phone_number = resolved.trim();
+                } else {
+                    // One last attempt: search all string values in meta_data for something that looks like a phone number (10+ digits)
+                    const allValues = Object.values(meta);
+                    const phoneLike = allValues.find(v => typeof v === 'string' && v.replace(/\D/g, '').length >= 10);
+                    if (phoneLike) {
+                        console.log(`[MOBILE-API] Found phone-like string in meta_data: ${phoneLike}`);
+                        phone_number = phoneLike.trim();
+                    }
+                }
+            }
+        }
+
         if (!customer_id || !phone_number || !customer_name) {
             return res.status(400).json({ message: 'Missing required fields' });
         }

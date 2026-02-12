@@ -382,7 +382,7 @@ export const fetchMetaAnalytics = async (): Promise<MetaAnalyticsResponse> => {
 };
 
 // Mobile Calling API
-export const requestMobileCall = async (customerId: string, phoneNumber: string, customerName: string): Promise<{ success: boolean; request_id: string }> => {
+export const requestMobileCall = async (customerId: string, phoneNumber: string, customerName: string): Promise<{ success: boolean; request_id: string; notification_sent: boolean }> => {
   const response = await api.post(`${API_BASE_URL}/api/mobile/request-call`, {
     customer_id: customerId,
     phone_number: phoneNumber,
