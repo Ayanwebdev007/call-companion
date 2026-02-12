@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Smartphone, Check, Loader2, Copy } from "lucide-react";
@@ -15,8 +16,8 @@ const ConnectMobile = () => {
     // We encode the token directly. Security Note: Token expires in 1 day.
     // For Render, the mobile app needs to talk to the backend directly because the frontend rewrite 
     // depends on the browser's relative path handling.
-    // Use the current origin as the default backend URL
-    const backendUrl = window.location.origin;
+    // Dynamic backend detection
+    const backendUrl = API_BASE_URL;
 
     const qrData = JSON.stringify({
         token: token,
@@ -54,6 +55,12 @@ const ConnectMobile = () => {
                         <div className="p-4 bg-white rounded-xl shadow-sm border">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={qrCodeUrl} alt="Pairing QR Code" className="w-48 h-48" />
+                        </div>
+
+                        <div className="px-3 py-1 bg-slate-100 rounded-full border border-slate-200">
+                            <code className="text-[10px] font-mono text-slate-600">
+                                Server: {backendUrl}
+                            </code>
                         </div>
 
                         <div className="text-center space-y-2 max-w-sm">
