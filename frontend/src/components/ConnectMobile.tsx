@@ -16,8 +16,10 @@ const ConnectMobile = () => {
     // We encode the token directly. Security Note: Token expires in 1 day.
     // For Render, the mobile app needs to talk to the backend directly because the frontend rewrite 
     // depends on the browser's relative path handling.
-    // Dynamic backend detection
-    const backendUrl = API_BASE_URL;
+    // Dynamic backend detection - Prefer current origin if ENV is pointing to old Render
+    const backendUrl = (API_BASE_URL.includes('onrender.com') && !window.location.hostname.includes('onrender.com'))
+        ? window.location.origin
+        : API_BASE_URL;
 
     const qrData = JSON.stringify({
         token: token,
