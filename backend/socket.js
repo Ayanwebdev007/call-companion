@@ -15,8 +15,9 @@ export function initializeSocketIO(server) {
                 'http://localhost:5173',
                 'http://192.168.31.210:8081',
                 'https://call-companion-frontend.onrender.com',
-                'https://digityzeinternational.online'
-            ],
+                'https://digityzeinternational.online',
+                process.env.FRONTEND_URL
+            ].filter(Boolean),
             credentials: true
         }
     });
@@ -76,7 +77,7 @@ export function sendCallRequestToMobile(userId, callRequest) {
         console.log(`[WebSocket] Call request sent to mobile: userId=${userId}, socketId=${socketId}`);
         return true;
     } else {
-        console.log(`[WebSocket] Mobile not connected: userId=${userId}`);
+        console.log(`[WebSocket] Mobile not connected: userId=${userId}. Active clients:`, Array.from(mobileClients.keys()));
         return false;
     }
 }

@@ -49,12 +49,22 @@ export function LeadDetailsDialog({ isOpen, onClose, customer }: LeadDetailsDial
         if (!customer) return;
         setCalling(true);
         try {
-            await requestMobileCall(customer.id, customer.phone_number, customer.customer_name);
-            toast({
-                title: "Call Request Sent",
-                description: "Check your mobile device to start the call.",
-                duration: 5000,
-            });
+            const response = await requestMobileCall(customer.id, customer.phone_number, customer.customer_name);
+
+            if (response.notification_sent) {
+                toast({
+                    title: "Call Request Sent",
+                    description: "Check your mobile device to start the call.",
+                    duration: 5000,
+                });
+            } else {
+                toast({
+                    title: "Mobile App Not Connected",
+                    description: "Your mobile app is paired but not currently online. Please open the app.",
+                    variant: "destructive",
+                    duration: 5000,
+                });
+            }
         } catch (error) {
             toast({
                 title: "Call Failed",
