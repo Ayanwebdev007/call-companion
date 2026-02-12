@@ -157,10 +157,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _socket!.on('call:request', (data) {
       print('[WebSocket] Call request received: $data');
+      String phoneNumber = data['phone_number']?.toString() ?? '';
+      String customerName = data['customer_name']?.toString() ?? 'Unknown';
+      String requestId = data['request_id']?.toString() ?? '';
+      
       _showCallRequestNotification(
-        data['request_id'],
-        data['customer_name'],
-        data['phone_number'],
+        requestId,
+        customerName,
+        phoneNumber,
       );
     });
 
@@ -229,9 +233,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     // Check for internet but allow offline matching from local cache if possible
     // For now, we'll try the API and if it fails, we'll store as an "unlinked" log locally
+    // Sanitize number for matching (digits only)
+    final cleanNumber = number.replaceAll(RegExp(r'\D'), '');
+    
     try {
       final response = await http.get(
-        Uri.parse('$_serverUrl/api/mobile/match-number/$number'),
+        Uri.parse('$_serverUrl/api/mobile/match-number/$cleanNumber'),
         headers: {'x-auth-token': _token!},
       );
 
@@ -510,13 +517,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // Create a pending log immediately for One-Click flow
       _createPendingLog(customerName, phoneNumber);
 
-      final uri = Uri.parse('tel:$phoneNumber');
+      // Sanitize number for dialer (keep only digits and +)
+      final cleanNumber = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
+      final uri = Uri(scheme: 'tel', path: cleanNumber);
+      
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
         setState(() {
           _status = 'Calling $customerName...';
-          _logs
-              .add('${DateTime.now().toIso8601String()}: Initiated One-Click Call to $customerName');
+          _logs.add('${DateTime.now().toIso8601String()}: Initiated One-Click Call to $customerName ($cleanNumber)');
         });
       }
 

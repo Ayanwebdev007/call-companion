@@ -26,7 +26,9 @@ router.get('/verify', auth, async (req, res) => {
 // @access  Private
 router.post('/request-call', auth, async (req, res) => {
     try {
-        const { customer_id, phone_number, customer_name } = req.body;
+        let { customer_id, phone_number, customer_name } = req.body;
+
+        if (phone_number) phone_number = phone_number.trim();
 
         if (!customer_id || !phone_number || !customer_name) {
             return res.status(400).json({ message: 'Missing required fields' });
