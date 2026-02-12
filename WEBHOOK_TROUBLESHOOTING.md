@@ -13,7 +13,7 @@
 ### Step 1: Check Your CRM Configuration
 
 1. **Go to your CRM Meta Settings:**
-   - Navigate to: `https://call-companion-frontend.onrender.com/meta-settings`
+   - Navigate to: `https://digityzeinternational.online/meta-settings`
    - Log in if needed
 
 2. **Verify all fields are filled:**
@@ -43,7 +43,7 @@
 
 3. **Edit Webhook Subscription:**
    - Click **Edit Subscription** or **Add Subscription**
-   - **Callback URL:** `https://call-companion-backend.onrender.com/api/meta/webhook`
+   - **Callback URL:** `https://digityzeinternational.online/api/meta/webhook`
    - **Verify Token:** Paste the **EXACT** token from Step 1 (must match character-for-character)
    - **Important:** 
      - Token is case-sensitive
@@ -82,7 +82,7 @@
 
 Once Render deploys the new code (2-3 minutes), you can check your configuration:
 
-**Visit:** `https://call-companion-backend.onrender.com/api/meta/debug-config`
+**Visit:** `https://digityzeinternational.online/api/meta/debug-config`
 
 This will show:
 - All users with Meta tokens configured
@@ -161,7 +161,7 @@ Before testing with a real lead, verify:
   - [ ] Verify Token is generated and saved
 
 - [ ] **Meta Developer Console:**
-  - [ ] Webhook URL: `https://call-companion-backend.onrender.com/api/meta/webhook`
+  - [ ] Webhook URL: `https://digityzeinternational.online/api/meta/webhook`
   - [ ] Verify Token matches CRM exactly
   - [ ] Webhook shows "Verified" status (not "pending")
   - [ ] Subscribed to "Page" object
@@ -177,7 +177,7 @@ Before testing with a real lead, verify:
 
 ### Test 1: Verify Webhook Configuration
 
-1. Visit: `https://call-companion-backend.onrender.com/api/meta/debug-config`
+1. Visit: `https://digityzeinternational.online/api/meta/debug-config`
 2. Check that your user appears with:
    - Page ID: `806449735881894`
    - Verify Token: Set (shows preview)
@@ -232,7 +232,7 @@ Before testing with a real lead, verify:
 
 ## 🔗 Useful Links
 
-- **Debug Endpoint:** `https://call-companion-backend.onrender.com/api/meta/debug-config`
+- **Debug Endpoint:** `https://digityzeinternational.online/api/meta/debug-config`
 - **Webhook URL:** `https://call-companion-backend.onrender.com/api/meta/webhook`
 - **Meta Developers:** https://developers.facebook.com/
 - **Render Dashboard:** https://dashboard.render.com

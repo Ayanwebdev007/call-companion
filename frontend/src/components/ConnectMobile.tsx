@@ -15,7 +15,8 @@ const ConnectMobile = () => {
     // We encode the token directly. Security Note: Token expires in 1 day.
     // For Render, the mobile app needs to talk to the backend directly because the frontend rewrite 
     // depends on the browser's relative path handling.
-    const backendUrl = 'https://call-companion-backend.onrender.com';
+    // Use the current origin as the default backend URL
+    const backendUrl = window.location.origin;
 
     const qrData = JSON.stringify({
         token: token,

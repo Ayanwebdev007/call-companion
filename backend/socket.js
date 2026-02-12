@@ -14,7 +14,8 @@ export function initializeSocketIO(server) {
                 'http://localhost:8081',
                 'http://localhost:5173',
                 'http://192.168.31.210:8081',
-                'https://call-companion-frontend.onrender.com'
+                'https://call-companion-frontend.onrender.com',
+                'https://digityzeinternational.online'
             ],
             credentials: true
         }

@@ -30,7 +30,7 @@ Your code is pushed to GitHub. Render will automatically:
 ### Step 2: Configure Meta Settings in Your CRM
 
 1. **Go to your CRM frontend:**
-   - Navigate to: `https://call-companion-frontend.onrender.com/meta-settings`
+   - Navigate to: `https://digityzeinternational.online/meta-settings`
    - Or your frontend URL
 
 2. **Enter your Meta credentials:**
@@ -40,7 +40,7 @@ Your code is pushed to GitHub. Render will automatically:
    - **Copy the Verify Token** - You'll need it for Meta Developer Console
 
 3. **Copy the Webhook URL:**
-   - The page will show: `https://call-companion-backend.onrender.com/api/meta/webhook`
+   - The page will show: `https://digityzeinternational.online/api/meta/webhook`
    - Click "Copy" button
 
 4. **Click "Save Configuration"**
@@ -63,7 +63,7 @@ Your code is pushed to GitHub. Render will automatically:
    - Click **Subscribe to this object**
 
 4. **Enter Webhook Details:**
-   - **Callback URL:** `https://call-companion-backend.onrender.com/api/meta/webhook`
+   - **Callback URL:** `https://digityzeinternational.online/api/meta/webhook`
    - **Verify Token:** (Paste the token you generated/saved in Step 2)
    - Click **Verify and Save**
 
@@ -112,7 +112,7 @@ Your code is pushed to GitHub. Render will automatically:
 **Solutions:**
 1. Make sure Verify Token in CRM matches Verify Token in Meta Developer Console (exact match, case-sensitive)
 2. Check that backend is deployed and running
-3. Verify webhook URL is correct: `https://call-companion-backend.onrender.com/api/meta/webhook`
+3. Verify webhook URL is correct: `https://digityzeinternational.online/api/meta/webhook`
 4. Check backend logs in Render dashboard for verification attempts
 
 ### Leads Not Appearing in CRM
@@ -161,7 +161,7 @@ Before testing, verify:
 - [ ] Meta Page ID entered in CRM: `806449735881894`
 - [ ] Meta Page Access Token entered in CRM
 - [ ] Verify Token generated and saved in CRM
-- [ ] Webhook URL configured in Meta: `https://call-companion-backend.onrender.com/api/meta/webhook`
+- [ ] Webhook URL configured in Meta: `https://digityzeinternational.online/api/meta/webhook`
 - [ ] Verify Token matches in both CRM and Meta Developer Console
 - [ ] Webhook subscribed to "Page" object
 - [ ] "leadgen" field subscribed in webhook

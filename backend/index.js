@@ -36,6 +36,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://192.168.31.210:8081',
   'https://call-companion-frontend.onrender.com',
+  'https://digityzeinternational.online',
   process.env.FRONTEND_URL
 ];
 
