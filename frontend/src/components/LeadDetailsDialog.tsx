@@ -96,12 +96,12 @@ export function LeadDetailsDialog({ isOpen, onClose, customer }: LeadDetailsDial
                             </div>
                             <Button
                                 size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                                className="bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-2 rounded-full shadow-lg shadow-green-500/20 transition-all hover:scale-105 active:scale-95 gap-2"
                                 onClick={handleCall}
                                 disabled={calling}
                             >
                                 <Phone className="h-4 w-4" />
-                                {calling ? "Requesting..." : "Call via Mobile"}
+                                {calling ? "Requesting..." : "One-Click Call"}
                             </Button>
                         </div>
 

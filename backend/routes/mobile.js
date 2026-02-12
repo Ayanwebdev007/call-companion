@@ -138,34 +138,56 @@ router.post('/sync-logs', auth, async (req, res) => {
         let syncedCount = 0;
 
         for (const log of logs) {
-            const { phoneNumber, type, duration, timestamp } = log;
+            const { phoneNumber, type, duration, timestamp, note, status } = log;
+
+            // Normalize phone number (remove non-digits for safer matching)
+            const normalizedPhone = phoneNumber.replace(/\D/g, '');
 
             // FILTER: Only process if this number is in our leads
             const customerId = leadPhoneMap.get(phoneNumber);
 
             if (customerId) {
-                // Check if this specific call log already exists (deduplication)
-                const exists = await CallLog.findOne({
+                // Check for a pending log to update first (from One-Click flow)
+                let existingLog = await CallLog.findOne({
                     user_id: req.user.id,
                     phone_number: phoneNumber,
-                    timestamp: new Date(timestamp),
-                    duration: duration
-                });
+                    status: 'pending'
+                }).sort({ timestamp: -1 });
 
-                if (!exists) {
-                    // Create Call Log
-                    await CallLog.create({
+                if (existingLog && status === 'completed') {
+                    existingLog.duration = duration;
+                    existingLog.status = 'completed';
+                    existingLog.timestamp = new Date(timestamp);
+                    existingLog.note = note || 'One-Click Call completed';
+                    existingLog.synced_from_mobile = true;
+                    await existingLog.save();
+                } else {
+                    const exists = await CallLog.findOne({
                         user_id: req.user.id,
-                        customer_id: customerId,
                         phone_number: phoneNumber,
-                        call_type: type.toLowerCase(),
-                        duration: duration,
                         timestamp: new Date(timestamp),
-                        synced_from_mobile: true
+                        duration: duration,
+                        status: 'completed'
                     });
 
-                    // Update Customer "Last Call" info
-                    const customer = await Customer.findById(customerId);
+                    if (!exists) {
+                        await CallLog.create({
+                            user_id: req.user.id,
+                            customer_id: customerId,
+                            phone_number: phoneNumber,
+                            call_type: type.toLowerCase(),
+                            duration: duration,
+                            timestamp: new Date(timestamp),
+                            synced_from_mobile: true,
+                            note: note || '',
+                            status: status || 'completed'
+                        });
+                    }
+                }
+
+                // Update Customer "Last Call" info
+                const customer = await Customer.findById(customerId);
+                if (customer) {
                     const logDate = new Date(timestamp);
                     const logDateStr = logDate.toISOString().split('T')[0];
 
@@ -173,11 +195,10 @@ router.post('/sync-logs', auth, async (req, res) => {
                         customer.last_call_date = logDateStr;
                         await customer.save();
                     }
-
-                    syncedCount++;
                 }
+
+                syncedCount++;
             }
-            // If not in leads, silently ignore (privacy)
         }
 
         res.json({
@@ -225,6 +246,40 @@ router.get('/call-logs/:customerId', auth, async (req, res) => {
         res.json(logs);
     } catch (err) {
         console.error('[Mobile] Error fetching customer call logs:', err.message);
+        res.status(500).send('Server error');
+    }
+});
+
+// @route   GET /api/mobile/match-number/:phoneNumber
+// @desc    Match a phone number to an existing lead
+// @access  Private
+router.get('/match-number/:phoneNumber', auth, async (req, res) => {
+    try {
+        const { phoneNumber } = req.params;
+        const normalizedPhone = phoneNumber.replace(/\D/g, '');
+
+        // Search for a customer with this phone number
+        // We look for exact match or potentially normalized match if we store it that way
+        const leads = await Customer.find({
+            user_id: req.user.id,
+            is_deleted: false,
+            $or: [
+                { phone_number: phoneNumber },
+                { phone_number: { $regex: new RegExp(normalizedPhone + '$') } }
+            ]
+        }).select('customer_name company_name phone_number status');
+
+        if (leads.length > 0) {
+            res.json({
+                match: true,
+                leads, // Return all matching leads for Scenario B
+                multiple: leads.length > 1
+            });
+        } else {
+            res.json({ match: false });
+        }
+    } catch (err) {
+        console.error('[Mobile] Match number error:', err.message);
         res.status(500).send('Server error');
     }
 });

@@ -8,7 +8,8 @@ const callLogSchema = new mongoose.Schema({
     duration: { type: Number, default: 0 }, // Duration in seconds
     timestamp: { type: Date, default: Date.now },
     note: { type: String, default: '' },
-    synced_from_mobile: { type: Boolean, default: false }
+    synced_from_mobile: { type: Boolean, default: false },
+    status: { type: String, enum: ['pending', 'completed'], default: 'completed' }
 }, { timestamps: true });
 
 // Index for quick lookup by customer or phone
