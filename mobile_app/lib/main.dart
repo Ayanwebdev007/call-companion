@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:phone_state/phone_state.dart';
 import 'package:overlay_support/overlay_support.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,6 +48,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   IO.Socket? _socket;
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
+  late final WebViewController _webViewController;
+  bool _isWebViewInitialized = false;
 
   String? _pendingCallRequestId;
   String? _pendingCallNumber;
@@ -66,6 +69,55 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _loadSettings();
     _requestPermissions();
     _initializePhoneStateListener();
+    _initializeWebViewController();
+  }
+
+  void _initializeWebViewController() {
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setBackgroundColor(const Color(0x00000000))
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onProgress: (int progress) {
+            // Update loading bar.
+          },
+          onPageStarted: (String url) {},
+          onPageFinished: (String url) {},
+          onWebResourceError: (WebResourceError error) {},
+          onNavigationRequest: (NavigationRequest request) {
+            if (request.url.startsWith('tel:')) {
+              _launchTelUrl(request.url);
+              return NavigationDecision.prevent;
+            }
+            return NavigationDecision.navigate;
+          },
+        ),
+      )
+      ..addJavaScriptChannel(
+        'FlutterChannel',
+        onMessageReceived: (JavaScriptMessage message) {
+          final data = jsonDecode(message.message);
+          if (data['action'] == 'call') {
+            _initiateCallFromWeb(data['phoneNumber'], data['customerName']);
+          }
+        },
+      );
+    setState(() {
+      _isWebViewInitialized = true;
+    });
+  }
+
+  Future<void> _launchTelUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  void _initiateCallFromWeb(String phoneNumber, String customerName) {
+    // Generate a temporary request ID to track
+    final requestId = "web_${DateTime.now().millisecondsSinceEpoch}";
+    _acceptCall(requestId, phoneNumber, customerName);
   }
 
   Future<void> _requestPermissions() async {
@@ -127,6 +179,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (_token != null) {
       _verifyConnection();
       _connectWebSocket();
+      _loadCrmWebView();
+    }
+  }
+
+  void _loadCrmWebView() {
+    if (_serverUrl != null && _token != null) {
+      _webViewController.loadRequest(
+        Uri.parse(_serverUrl!),
+        headers: {'x-auth-token': _token!},
+      );
     }
   }
 
@@ -577,6 +639,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       _verifyConnection();
       _connectWebSocket();
+      _loadCrmWebView();
     } catch (e) {
       setState(() => _status = 'Pairing Error: $e');
     }
@@ -686,117 +749,148 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
         ],
       ),
-      body: Padding(
+      body: _token == null 
+        ? _buildPairingScreen()
+        : _buildCrmOrStatusView(),
+    );
+  }
+
+  Widget _buildPairingScreen() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.qr_code_scanner, size: 80, color: Colors.blue),
+          const SizedBox(height: 20),
+          const Text("Device Not Paired", style: TextStyle(fontSize: 20)),
+          const SizedBox(height: 10),
+          const Text("Scan the QR code on your Web Dashboard to begin."),
+          const SizedBox(height: 40),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => QRScanScreen(onScan: _pair),
+              ));
+            },
+            icon: const Icon(Icons.privacy_tip),
+            label: const Text('PAIR DEVICE NOW'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCrmOrStatusView() {
+    return Column(
+      children: [
+        // Top status bar
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: _socket?.connected == true ? Colors.green.shade50 : Colors.red.shade50,
+          child: Row(
+            children: [
+              Icon(
+                _socket?.connected == true ? Icons.online_prediction : Icons.offline_bolt,
+                size: 16,
+                color: _socket?.connected == true ? Colors.green : Colors.red,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _status,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _socket?.connected == true ? Colors.green.shade700 : Colors.red.shade700,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              if (_pendingCallRequestId != null)
+                const Icon(Icons.phone_callback, size: 16, color: Colors.orange),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 16),
+                onPressed: () => _webViewController.reload(),
+                visualDensity: VisualDensity.compact,
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout, size: 16),
+                onPressed: () async {
+                   final prefs = await SharedPreferences.getInstance();
+                   await prefs.clear();
+                   setState(() {
+                     _token = null;
+                     _serverUrl = null;
+                     _status = 'Not Paired';
+                   });
+                },
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+        ),
+        
+        // Main CRM View
+        Expanded(
+          child: Stack(
+            children: [
+              if (_isWebViewInitialized)
+                WebViewWidget(controller: _webViewController),
+              
+              // Pending call overlay (UI fallback)
+              if (_pendingCallRequestId != null)
+                Positioned(
+                  bottom: 20,
+                  left: 20,
+                  right: 20,
+                  child: _buildQuickActionCallCard(),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActionCallCard() {
+    return Card(
+      elevation: 8,
+      color: Colors.white,
+      shadowColor: Colors.black45,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          _socket?.connected == true
-                              ? Icons.check_circle
-                              : Icons.circle_outlined,
-                          color: _socket?.connected == true
-                              ? Colors.green
-                              : Colors.grey,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Status: $_status',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_serverUrl != null)
-                      Text('Server: $_serverUrl',
-                          style: const TextStyle(fontSize: 12)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Pending call request card
-            if (_pendingCallRequestId != null)
-              Card(
-                color: Colors.orange.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Call Request',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text('$_pendingCallName\n$_pendingCallNumber',
-                          textAlign: TextAlign.center),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          ElevatedButton.icon(
-                            onPressed: () => _acceptCall(
-                              _pendingCallRequestId!,
-                              _pendingCallNumber!,
-                              _pendingCallName!,
-                            ),
-                            icon: const Icon(Icons.phone),
-                            label: const Text('Accept'),
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green),
-                          ),
-                          ElevatedButton.icon(
-                            onPressed: () =>
-                                _rejectCall(_pendingCallRequestId!),
-                            icon: const Icon(Icons.phone_disabled),
-                            label: const Text('Reject'),
-                            style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-            const SizedBox(height: 20),
+            const Text("INCOMING CALL REQUEST", 
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+            const SizedBox(height: 8),
+            Text(_pendingCallName ?? "Unknown", style: const TextStyle(fontSize: 18)),
+            Text(_pendingCallNumber ?? ""),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(MaterialPageRoute(
-                      builder: (context) => QRScanScreen(onScan: _pair),
-                    ));
-                  },
-                  icon: const Icon(Icons.qr_code),
-                  label: const Text('Pair Device'),
+                MaterialButton(
+                  onPressed: () => _acceptCall(
+                    _pendingCallRequestId!, _pendingCallNumber!, _pendingCallName!),
+                  color: Colors.green,
+                  textColor: Colors.white,
+                  shape: const CircleBorder(),
+                  padding: const EdgeInsets.all(16),
+                  child: const Icon(Icons.phone),
                 ),
-                ElevatedButton.icon(
-                  onPressed: _syncCalls,
-                  icon: const Icon(Icons.sync),
-                  label: const Text('Sync Now'),
+                MaterialButton(
+                  onPressed: () => _rejectCall(_pendingCallRequestId!),
+                  color: Colors.red,
+                  textColor: Colors.white,
+                  shape: const CircleBorder(),
+                  padding: const EdgeInsets.all(16),
+                  child: const Icon(Icons.close),
                 ),
               ],
-            ),
-            const Divider(height: 40),
-            Expanded(
-              child: ListView.builder(
-                itemCount: _logs.length,
-                itemBuilder: (ctx, i) => ListTile(
-                  leading: const Icon(Icons.history, size: 16),
-                  title: Text(_logs[i], style: const TextStyle(fontSize: 12)),
-                ),
-              ),
             )
           ],
         ),

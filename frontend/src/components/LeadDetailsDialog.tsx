@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { useState, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import MobileBridge from "@/lib/mobile_bridge";
 
 interface LeadDetailsDialogProps {
     isOpen: boolean;
@@ -75,8 +76,15 @@ export function LeadDetailsDialog({ isOpen, onClose, customer }: LeadDetailsDial
             }
         }
 
+        // NEW: Try native bridge first if running inside Flutter app
+        if (MobileBridge.makeCall(phoneNumberToCall, customer.customer_name)) {
+            setCalling(false);
+            return;
+        }
+
         try {
             const response = await requestMobileCall(customer.id, phoneNumberToCall, customer.customer_name);
+            // ... rest of the socket-based logic
 
             if (response.notification_sent) {
                 toast({
