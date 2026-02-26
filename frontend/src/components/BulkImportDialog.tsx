@@ -20,9 +20,10 @@ import { cn } from "@/lib/utils";
 
 interface BulkImportDialogProps {
   onImportSuccess: () => void;
+  showText?: boolean;
 }
 
-export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
+export function BulkImportDialog({ onImportSuccess, showText }: BulkImportDialogProps) {
   const { id: spreadsheetId } = useParams<{ id: string }>();
   const [isOpen, setIsOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -109,10 +110,20 @@ export function BulkImportDialog({ onImportSuccess }: BulkImportDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8 border-border/50">
-          <div className="flex items-center gap-2 justify-center w-full">
+        <Button
+          variant={showText ? "ghost" : "outline"}
+          size="sm"
+          className={cn(
+            "group relative transition-all duration-300",
+            showText ? "w-full justify-start px-2 h-8" : "overflow-hidden hover:w-auto hover:px-3 px-0 w-8 border-border/50"
+          )}
+        >
+          <div className={cn("flex items-center gap-2 w-full", showText ? "justify-start" : "justify-center")}>
             <Upload className="h-4 w-4 flex-shrink-0" />
-            <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap overflow-hidden">
+            <span className={cn(
+              "whitespace-nowrap overflow-hidden transition-all duration-300",
+              showText ? "opacity-100 max-w-full" : "max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100"
+            )}>
               Bulk Import
             </span>
           </div>

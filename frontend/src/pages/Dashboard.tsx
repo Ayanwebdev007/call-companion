@@ -9,13 +9,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchSpreadsheets, fetchSharedSpreadsheets, createSpreadsheet, deleteSpreadsheet, shareSpreadsheet, Spreadsheet } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft, ArrowRight, Download, Webhook, LayoutDashboard, Filter, X, Link2 } from "lucide-react";
+import { LogOut, Plus, Trash2, Share2, User, Users, FileSpreadsheet, ArrowLeft, ArrowRight, Download, Webhook, LayoutDashboard, Filter, X, Link2, MoreVertical, ChevronDown, ChevronUp } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import GoogleSheetsDialog from "@/components/GoogleSheetsDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MergeDialog } from "@/components/MergeDialog";
 import { LinkSheetsDialog } from "@/components/LinkSheetsDialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface DashboardProps {
   filterType?: "manual" | "meta" | "unified";
@@ -60,6 +61,17 @@ const Dashboard = ({ filterType }: DashboardProps) => {
   const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
   const [isLinkSheetsDialogOpen, setIsLinkSheetsDialogOpen] = useState(false);
   const [selectedUnifiedSheet, setSelectedUnifiedSheet] = useState<Spreadsheet | null>(null);
+  const [expandedSheets, setExpandedSheets] = useState<Set<string>>(new Set());
+
+  const toggleSheetExpansion = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setExpandedSheets(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
+      return newSet;
+    });
+  };
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { logout, user } = useAuth();
@@ -339,48 +351,49 @@ const Dashboard = ({ filterType }: DashboardProps) => {
         {/* Meta Filter Sub-navigation */}
         {filterMode === "meta" && (
           <div className="border-b border-border/10 animate-in fade-in slide-in-from-top-4 duration-300">
-            <div className={`container mx-auto ${filterType ? 'px-4 py-2' : 'px-4 py-2'} flex flex-col md:flex-row items-center justify-between gap-4`}>
+            <div className={`container mx-auto px-2 md:px-4 py-2 flex flex-row items-center justify-between gap-2 overflow-x-auto no-scrollbar`}>
               {/* View Segment Tabs */}
-              <div className="flex bg-secondary/50 p-1 rounded-lg border border-border/50">
+              <div className="flex bg-secondary/50 p-1 rounded-lg border border-border/50 shrink-0">
                 <button
                   onClick={() => setMetaViewMode("ad")}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${metaViewMode === "ad" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                  className={`px-2 md:px-3 py-1 text-[10px] md:text-xs font-medium rounded-md transition-all ${metaViewMode === "ad" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
                 >
                   Ad Views
                 </button>
                 <button
                   onClick={() => setMetaViewMode("form")}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${metaViewMode === "form" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                  className={`px-2 md:px-3 py-1 text-[10px] md:text-xs font-medium rounded-md transition-all ${metaViewMode === "form" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}
                 >
-                  Form Views (Master)
+                  Form Views
                 </button>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 shrink-0">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 gap-2 border-dashed bg-background/50 hover:bg-background/80">
-                      <Filter className="h-4 w-4" />
-                      Filter Sheets
+                    <Button variant="outline" size="sm" className="h-8 gap-1 md:gap-2 border-dashed bg-background/50 hover:bg-background/80 px-2 md:px-3">
+                      <Filter className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline text-xs">Filter Sheets</span>
+                      <span className="sm:hidden text-[10px]">Filter</span>
                       {(selectedMetaPage !== "all" || selectedMetaForm !== "all" || selectedMetaCampaign !== "all" || selectedMetaAdSet !== "all" || selectedMetaAd !== "all") && (
-                        <span className="ml-1 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                        <span className="ml-0.5 rounded-full bg-primary/20 px-1.5 py-0.5 text-[10px] font-semibold text-primary flex items-center justify-center">
                           {Number(selectedMetaPage !== "all") + Number(selectedMetaForm !== "all") + Number(selectedMetaCampaign !== "all") + Number(selectedMetaAdSet !== "all") + Number(selectedMetaAd !== "all")}
                         </span>
                       )}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-4 max-h-[80vh] overflow-y-auto" align="start">
+                  <PopoverContent className="w-[calc(100vw-32px)] md:w-80 p-4 max-h-[80vh] overflow-y-auto" align="end" alignOffset={-10}>
                     <div className="space-y-4">
-                      <div className="space-y-2">
+                      <div className="space-y-1 md:space-y-2">
                         <h4 className="font-medium leading-none text-sm">Filter Meta Sheets</h4>
                         <p className="text-xs text-muted-foreground">Filter by any combination of fields</p>
                       </div>
 
                       {/* Page Filter */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium">Page</label>
+                      <div className="space-y-1 md:space-y-2">
+                        <label className="text-[10px] md:text-xs font-medium uppercase tracking-wider text-muted-foreground">Page</label>
                         <Select value={selectedMetaPage} onValueChange={setSelectedMetaPage}>
-                          <SelectTrigger className="h-8">
+                          <SelectTrigger className="h-8 md:h-9 text-xs">
                             <SelectValue placeholder="All Pages" />
                           </SelectTrigger>
                           <SelectContent>
@@ -391,10 +404,10 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                       </div>
 
                       {/* Form Filter */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium">Form</label>
+                      <div className="space-y-1 md:space-y-2">
+                        <label className="text-[10px] md:text-xs font-medium uppercase tracking-wider text-muted-foreground">Form</label>
                         <Select value={selectedMetaForm} onValueChange={setSelectedMetaForm}>
-                          <SelectTrigger className="h-8">
+                          <SelectTrigger className="h-8 md:h-9 text-xs">
                             <SelectValue placeholder="All Forms" />
                           </SelectTrigger>
                           <SelectContent>
@@ -405,10 +418,10 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                       </div>
 
                       {/* Campaign Filter */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium">Campaign</label>
+                      <div className="space-y-1 md:space-y-2">
+                        <label className="text-[10px] md:text-xs font-medium uppercase tracking-wider text-muted-foreground">Campaign</label>
                         <Select value={selectedMetaCampaign} onValueChange={setSelectedMetaCampaign}>
-                          <SelectTrigger className="h-8">
+                          <SelectTrigger className="h-8 md:h-9 text-xs">
                             <SelectValue placeholder="All Campaigns" />
                           </SelectTrigger>
                           <SelectContent>
@@ -419,10 +432,10 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                       </div>
 
                       {/* Ad Set Filter */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium">Ad Set</label>
+                      <div className="space-y-1 md:space-y-2">
+                        <label className="text-[10px] md:text-xs font-medium uppercase tracking-wider text-muted-foreground">Ad Set</label>
                         <Select value={selectedMetaAdSet} onValueChange={setSelectedMetaAdSet}>
-                          <SelectTrigger className="h-8">
+                          <SelectTrigger className="h-8 md:h-9 text-xs">
                             <SelectValue placeholder="All Ad Sets" />
                           </SelectTrigger>
                           <SelectContent>
@@ -433,10 +446,10 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                       </div>
 
                       {/* Ad Filter */}
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium">Ad Name</label>
+                      <div className="space-y-1 md:space-y-2">
+                        <label className="text-[10px] md:text-xs font-medium uppercase tracking-wider text-muted-foreground">Ad Name</label>
                         <Select value={selectedMetaAd} onValueChange={setSelectedMetaAd}>
-                          <SelectTrigger className="h-8">
+                          <SelectTrigger className="h-8 md:h-9 text-xs">
                             <SelectValue placeholder="All Ads" />
                           </SelectTrigger>
                           <SelectContent>
@@ -446,10 +459,11 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                         </Select>
                       </div>
 
+
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="w-full justify-start text-muted-foreground h-8 px-2 hover:text-foreground"
+                        className="w-full justify-start text-muted-foreground h-8 md:h-9 px-2 hover:text-foreground text-xs"
                         onClick={() => {
                           setSelectedMetaPage("all");
                           setSelectedMetaForm("all");
@@ -465,35 +479,38 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                   </PopoverContent>
                 </Popover>
 
-                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                  {/* Active Filter Chips */}
-                  {selectedMetaPage !== "all" && (
-                    <div className="flex items-center gap-1 text-xs bg-secondary/50 px-2.5 py-1 rounded-full border border-border/50 animate-in fade-in zoom-in-95">
-                      <span className="opacity-60 font-medium">Page:</span>
-                      <span className="font-semibold">{selectedMetaPage}</span>
-                      <button onClick={() => setSelectedMetaPage("all")} className="ml-1 hover:text-destructive transition-colors p-0.5"><X className="h-3 w-3" /></button>
-                    </div>
-                  )}
-                  {selectedMetaCampaign !== "all" && (
-                    <div className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full border border-primary/20 animate-in fade-in zoom-in-95">
-                      <span className="opacity-60 font-medium">Campaign:</span>
-                      <span className="font-semibold">{selectedMetaCampaign}</span>
-                      <button onClick={() => setSelectedMetaCampaign("all")} className="ml-1 hover:text-destructive transition-colors p-0.5"><X className="h-3 w-3" /></button>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsMergeDialogOpen(true)}
-                      className="h-8 gap-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary"
-                    >
-                      <Filter className="h-4 w-4 rotate-90" />
-                      Merge Duplicates
-                    </Button>
-                  </div>
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsMergeDialogOpen(true)}
+                    className="h-8 gap-1 md:gap-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary px-2 md:px-3"
+                  >
+                    <Filter className="h-3.5 w-3.5 rotate-90" />
+                    <span className="hidden sm:inline text-xs">Merge Duplicates</span>
+                    <span className="sm:hidden text-[10px]">Merge</span>
+                  </Button>
                 </div>
               </div>
             </div>
+            {/* Active Filter Chips Scrollable Row */}
+            {(selectedMetaPage !== "all" || selectedMetaCampaign !== "all") && (
+              <div className="container mx-auto px-2 md:px-4 py-1.5 flex items-center gap-2 overflow-x-auto no-scrollbar border-t border-border/5">
+                {selectedMetaPage !== "all" && (
+                  <div className="flex items-center gap-1 text-[10px] md:text-xs bg-secondary/50 px-2 py-0.5 md:py-1 rounded-full border border-border/50 animate-in fade-in zoom-in-95 shrink-0">
+                    <span className="opacity-60 font-medium">Page:</span>
+                    <span className="font-semibold">{selectedMetaPage}</span>
+                    <button onClick={() => setSelectedMetaPage("all")} className="ml-0.5 hover:text-destructive transition-colors p-0.5"><X className="h-3 w-3" /></button>
+                  </div>
+                )}
+                {selectedMetaCampaign !== "all" && (
+                  <div className="flex items-center gap-1 text-[10px] md:text-xs bg-primary/10 text-primary px-2 py-0.5 md:py-1 rounded-full border border-primary/20 animate-in fade-in zoom-in-95 shrink-0">
+                    <span className="opacity-60 font-medium">Camp:</span>
+                    <span className="font-semibold">{selectedMetaCampaign}</span>
+                    <button onClick={() => setSelectedMetaCampaign("all")} className="ml-0.5 hover:text-destructive transition-colors p-0.5"><X className="h-3 w-3" /></button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -595,10 +612,10 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${spreadsheet.is_shared ? 'bg-blue-500' : 'bg-gradient-to-b from-primary to-blue-600'} opacity-60 group-hover:opacity-100 transition-opacity`} />
 
                 {/* Icon */}
-                <div className={`ml-2 p-3 rounded-full transition-all duration-300 shrink-0 relative ${spreadsheet.is_shared
+                <div className={`ml-1 md:ml-2 p-2 md:p-3 rounded-full transition-all duration-300 shrink-0 relative ${spreadsheet.is_shared
                   ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:bg-blue-500/20'
                   : 'bg-primary/10 text-primary group-hover:bg-primary/20'}`}>
-                  {spreadsheet.is_shared ? <Users className="h-5 w-5" /> : <FileSpreadsheet className="h-5 w-5" />}
+                  {spreadsheet.is_shared ? <Users className="h-4 w-4 md:h-5 md:w-5" /> : <FileSpreadsheet className="h-4 w-4 md:h-5 md:w-5" />}
 
                   {/* New Leads Notification Badge */}
                   {spreadsheet.newLeadsCount !== undefined && spreadsheet.newLeadsCount > 0 && (
@@ -609,45 +626,54 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                 </div>
 
                 {/* Main Info */}
-                <div className="flex-1 min-w-0 grid gap-1">
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-semibold text-base text-foreground/90 group-hover:text-foreground transition-colors truncate">
+                <div className="flex-1 min-w-0 flex flex-col gap-0.5 md:gap-1">
+                  <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                    <h3 className="font-bold text-sm md:text-base text-foreground/90 group-hover:text-foreground transition-colors truncate max-w-[150px] sm:max-w-none">
                       {spreadsheet.name}
                     </h3>
                     {!spreadsheet.is_shared && ((spreadsheet.user_id as any)?.name || (spreadsheet.user_id as any)?.username) && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-secondary/50 text-muted-foreground ring-1 ring-border/30">
-                        By {(spreadsheet.user_id as any).name || (spreadsheet.user_id as any).username}
+                      <span className={`${spreadsheet.is_meta ? 'hidden sm:inline-flex' : 'inline-flex'} items-center px-1.5 md:px-2 py-0.5 rounded-full text-[8px] md:text-[10px] font-bold bg-secondary/80 text-muted-foreground ring-1 ring-border/30`}>
+                        BY {(spreadsheet.user_id as any).name || (spreadsheet.user_id as any).username}
                       </span>
                     )}
                     {spreadsheet.is_shared && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/20">
-                        Shared by {spreadsheet.owner} ({spreadsheet.permission_level === 'read-write' ? 'Edit' : 'View'})
+                      <span className="inline-flex items-center px-1.5 md:px-2 py-0.5 rounded-full text-[8px] md:text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-1 ring-blue-500/20">
+                        SHARED
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-x-4 gap-y-1 flex-wrap">
-                    {spreadsheet.description ? (
-                      <p className="text-xs text-muted-foreground truncate max-w-[300px]">{spreadsheet.description}</p>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/40 italic">No description</span>
+                  <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
+                    {spreadsheet.description && (
+                      <p className={`${spreadsheet.is_meta ? 'hidden sm:block' : ''} text-[10px] md:text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-[300px]`}>
+                        {spreadsheet.description}
+                      </p>
                     )}
 
-                    {/* Meta Chips */}
-                    <div className="flex items-center gap-2">
+                    {/* Mobile Detail Toggle */}
+                    {((spreadsheet.page_name) || (spreadsheet.ad_name || spreadsheet.campaign_name)) && (
+                      <div
+                        className="flex sm:hidden items-center gap-1 mt-1 bg-secondary/30 px-2 py-1 rounded-md border border-border/40 text-[10px] text-muted-foreground cursor-pointer select-none"
+                        onClick={(e) => toggleSheetExpansion(e, spreadsheet.id)}
+                      >
+                        {expandedSheets.has(spreadsheet.id) ? (
+                          <><ChevronUp className="h-3 w-3" /> Hide Meta Data</>
+                        ) : (
+                          <><ChevronDown className="h-3 w-3" /> Show Meta Data</>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Meta Chips - Hidden on mobile unless expanded, always visible on desktop */}
+                    <div className={`${expandedSheets.has(spreadsheet.id) ? 'flex' : 'hidden'} sm:flex items-center gap-1.5 mt-1 sm:mt-0 flex-wrap w-full sm:w-auto`}>
                       {spreadsheet.page_name && (
-                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80 bg-secondary/50 px-2 py-0.5 rounded border border-border/30">
-                          <span className="opacity-50 uppercase tracking-wider">Page:</span> {spreadsheet.page_name}
-                        </div>
-                      )}
-                      {spreadsheet.form_name && (
-                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80 bg-secondary/50 px-2 py-0.5 rounded border border-border/30">
-                          <span className="opacity-50 uppercase tracking-wider">Form:</span> {spreadsheet.form_name}
+                        <div className="text-[8px] md:text-[10px] font-bold text-muted-foreground/80 bg-secondary/50 px-1.5 py-0.5 rounded border border-border/30">
+                          PAGE: {spreadsheet.page_name}
                         </div>
                       )}
                       {(spreadsheet.ad_name || spreadsheet.campaign_name) && (
-                        <div className="flex items-center gap-1 text-[10px] text-primary/80 bg-primary/5 px-2 py-0.5 rounded border border-primary/20">
-                          <span className="opacity-50 uppercase tracking-wider">{spreadsheet.ad_name ? 'Ad' : 'Campaign'}:</span> {spreadsheet.ad_name || spreadsheet.campaign_name}
+                        <div className="text-[8px] md:text-[10px] font-bold text-primary/80 bg-primary/5 px-1.5 py-0.5 rounded border border-primary/20">
+                          {spreadsheet.ad_name ? 'AD' : 'CAMP'}: {spreadsheet.ad_name || spreadsheet.campaign_name}
                         </div>
                       )}
                     </div>
@@ -655,15 +681,11 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                 </div>
 
                 {/* Right Actions */}
-                <div className="flex items-center gap-6 pl-4 border-l border-border/10">
-                  <div className="flex flex-col items-end gap-0 hidden lg:flex whitespace-nowrap">
-                    <span className="text-[10px] font-bold text-foreground/80">{new Date(spreadsheet.created_at).toLocaleDateString()}</span>
-                    <span className="text-[10px] text-muted-foreground">{new Date(spreadsheet.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                  </div>
-
-                  <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 sm:translate-x-2 sm:group-hover:translate-x-0" onClick={(e) => e.stopPropagation()}>
-                    {!spreadsheet.is_shared && (
-                      <>
+                <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 sm:translate-x-2 sm:group-hover:translate-x-0" onClick={(e) => e.stopPropagation()}>
+                  {!spreadsheet.is_shared && (
+                    <>
+                      {/* Desktop UI */}
+                      <div className="hidden sm:flex items-center gap-1">
                         {spreadsheet.is_unified && (
                           <Button
                             variant="ghost"
@@ -706,19 +728,49 @@ const Dashboard = ({ filterType }: DashboardProps) => {
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                      </>
-                    )}
-                  </div>
+                      </div>
 
-                  <div className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-colors">
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
+                      {/* Mobile 3-Dot Dropdown */}
+                      <div className="flex sm:hidden items-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-[200px]">
+                            {spreadsheet.is_unified && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedUnifiedSheet(spreadsheet);
+                                setIsLinkSheetsDialogOpen(true);
+                              }}>
+                                <Link2 className="mr-2 h-4 w-4" /> Sources
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleShareSpreadsheet(spreadsheet.id); }}>
+                              <Share2 className="mr-2 h-4 w-4 text-blue-500" /> Share
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSelectedSpreadsheetForImport(spreadsheet.id); setIsGoogleSheetsDialogOpen(true); }}>
+                              <Download className="mr-2 h-4 w-4 text-green-500" /> Import Leads
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive font-medium" onClick={(e) => { e.stopPropagation(); handleDeleteSpreadsheet(spreadsheet.id, spreadsheet.name); }}>
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex h-8 w-8 rounded-full items-center justify-center text-muted-foreground group-hover:text-primary group-hover:bg-primary/10 transition-colors shrink-0">
+                  <ArrowRight className="h-4 w-4 text-primary md:text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                 </div>
               </div>
             ))}
           </div>
-        )
-        }
+        )}
       </div>
 
       {/* Dialogs relocated to root for persistence across layouts */}
@@ -859,18 +911,19 @@ const Dashboard = ({ filterType }: DashboardProps) => {
         onOpenChange={setIsGoogleSheetsDialogOpen}
         spreadsheetId={selectedSpreadsheetForImport}
       />
-
-      {selectedUnifiedSheet && (
-        <LinkSheetsDialog
-          isOpen={isLinkSheetsDialogOpen}
-          onClose={() => {
-            setIsLinkSheetsDialogOpen(false);
-            setSelectedUnifiedSheet(null);
-          }}
-          unifiedSheet={selectedUnifiedSheet}
-        />
-      )}
-    </div>
+      {
+        selectedUnifiedSheet && (
+          <LinkSheetsDialog
+            isOpen={isLinkSheetsDialogOpen}
+            onClose={() => {
+              setIsLinkSheetsDialogOpen(false);
+              setSelectedUnifiedSheet(null);
+            }}
+            unifiedSheet={selectedUnifiedSheet}
+          />
+        )
+      }
+    </div >
   );
 };
 

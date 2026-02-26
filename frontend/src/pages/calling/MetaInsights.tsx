@@ -125,131 +125,186 @@ export default function MetaInsights() {
 
     const LeadTable = ({ data }: { data: typeof leads }) => (
         <div className="rounded-xl border border-border/50 overflow-hidden bg-card/30">
-            <table className="w-full text-left text-xs">
-                <thead className="bg-secondary/50 text-muted-foreground font-bold border-b border-border/50">
-                    <tr>
-                        <th className="px-4 py-3">Lead Name</th>
-                        <th className="px-4 py-3">Source (Page/Form)</th>
-                        <th className="px-4 py-3">Campaign & Ad</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Arrived At</th>
-                        <th className="px-4 py-3 text-right">Action</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-border/30">
-                    {data.map((lead) => (
-                        <tr key={lead.id} className="hover:bg-accent/5 transition-colors group">
-                            <td className="px-4 py-3">
+            {/* Mobile View: Cards */}
+            <div className="block md:hidden divide-y divide-border/30">
+                {data.length === 0 ? (
+                    <div className="py-12 text-center text-muted-foreground italic text-xs px-4">
+                        No leads found in this period.
+                    </div>
+                ) : (
+                    data.map((lead) => (
+                        <div key={lead.id} className="p-4 flex flex-col gap-3 hover:bg-accent/5 transition-colors">
+                            <div className="flex justify-between items-start">
                                 <div className="flex flex-col">
-                                    <span className="font-bold text-foreground">{lead.customer_name}</span>
-                                    <span className="text-[10px] text-muted-foreground opacity-70">{lead.phone_number}</span>
+                                    <span className="font-bold text-sm text-foreground">{lead.customer_name}</span>
+                                    <span className="text-[11px] text-muted-foreground font-medium">{lead.phone_number}</span>
                                 </div>
-                            </td>
-                            <td className="px-4 py-3">
-                                <div className="flex flex-col max-w-[150px]">
-                                    <span className="truncate" title={lead.spreadsheet_id.page_name}>{lead.spreadsheet_id.page_name || 'N/A'}</span>
-                                    <span className="text-[10px] text-muted-foreground truncate" title={lead.spreadsheet_id.form_name}>{lead.spreadsheet_id.form_name}</span>
-                                </div>
-                            </td>
-                            <td className="px-4 py-3">
-                                <div className="flex flex-col max-w-[200px]">
-                                    <span className="text-primary font-medium truncate" title={lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name}>
-                                        {lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name || 'N/A'}
-                                    </span>
-                                    <span className="text-[10px] text-muted-foreground truncate" title={lead.meta_data?.meta_ad || lead.spreadsheet_id.ad_name}>
-                                        {lead.meta_data?.meta_ad || lead.spreadsheet_id.ad_name || 'N/A'}
-                                    </span>
-                                </div>
-                            </td>
-                            <td className="px-4 py-3">
                                 <span className={cn(
-                                    "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                                    lead.status === 'new' ? "bg-red-500/10 text-red-600" : "bg-green-500/10 text-green-600"
+                                    "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ring-1",
+                                    lead.status === 'new' ? "bg-red-500/10 text-red-600 ring-red-500/20" : "bg-green-500/10 text-green-600 ring-green-500/20"
                                 )}>
                                     {lead.status}
                                 </span>
-                            </td>
-                            <td className="px-4 py-3">
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 text-[10px] bg-secondary/30 p-2 rounded-lg border border-border/10">
                                 <div className="flex flex-col">
-                                    <span>{new Date(lead.created_at!).toLocaleDateString()}</span>
-                                    <span className="text-[10px] text-muted-foreground">{new Date(lead.created_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span className="text-muted-foreground uppercase text-[8px] font-bold">Source</span>
+                                    <span className="truncate font-medium" title={lead.spreadsheet_id.page_name}>{lead.spreadsheet_id.page_name || 'N/A'}</span>
+                                    <span className="text-[9px] text-muted-foreground truncate" title={lead.spreadsheet_id.form_name}>{lead.spreadsheet_id.form_name}</span>
                                 </div>
-                            </td>
-                            <td className="px-4 py-3 text-right">
+                                <div className="flex flex-col">
+                                    <span className="text-muted-foreground uppercase text-[8px] font-bold">Ad Detail</span>
+                                    <span className="truncate font-medium text-primary" title={lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name}>
+                                        {lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name || 'N/A'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                                <span>{new Date(lead.created_at!).toLocaleDateString()} at {new Date(lead.created_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                 <Button
-                                    variant="ghost"
+                                    variant="secondary"
                                     size="sm"
-                                    className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary transition-all"
+                                    className="h-7 text-[10px] font-bold bg-primary/10 text-primary hover:bg-primary hover:text-white border-none px-3"
                                     onClick={() => navigate(`/spreadsheet/${(lead.spreadsheet_id as any)._id || lead.spreadsheet_id.id}`)}
                                 >
-                                    <ArrowRight className="h-3 w-3" />
+                                    Open <ArrowRight className="ml-1 h-3 w-3" />
                                 </Button>
-                            </td>
-                        </tr>
-                    ))}
-                    {data.length === 0 && (
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* Desktop View: Table */}
+            <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                    <thead className="bg-secondary/50 text-muted-foreground font-bold border-b border-border/50">
                         <tr>
-                            <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground italic">No leads found in this period.</td>
+                            <th className="px-4 py-3">Lead Name</th>
+                            <th className="px-4 py-3">Source (Page/Form)</th>
+                            <th className="px-4 py-3">Campaign & Ad</th>
+                            <th className="px-4 py-3">Status</th>
+                            <th className="px-4 py-3">Arrived At</th>
+                            <th className="px-4 py-3 text-right">Action</th>
                         </tr>
-                    )}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody className="divide-y divide-border/30">
+                        {data.map((lead) => (
+                            <tr key={lead.id} className="hover:bg-accent/5 transition-colors group">
+                                <td className="px-4 py-3">
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-foreground">{lead.customer_name}</span>
+                                        <span className="text-[10px] text-muted-foreground opacity-70">{lead.phone_number}</span>
+                                    </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <div className="flex flex-col max-w-[150px]">
+                                        <span className="truncate" title={lead.spreadsheet_id.page_name}>{lead.spreadsheet_id.page_name || 'N/A'}</span>
+                                        <span className="text-[10px] text-muted-foreground truncate" title={lead.spreadsheet_id.form_name}>{lead.spreadsheet_id.form_name}</span>
+                                    </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <div className="flex flex-col max-w-[200px]">
+                                        <span className="text-primary font-medium truncate" title={lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name}>
+                                            {lead.meta_data?.meta_campaign || lead.spreadsheet_id.campaign_name || 'N/A'}
+                                        </span>
+                                        <span className="text-[10px] text-muted-foreground truncate" title={lead.meta_data?.meta_ad || lead.spreadsheet_id.ad_name}>
+                                            {lead.meta_data?.meta_ad || lead.spreadsheet_id.ad_name || 'N/A'}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <span className={cn(
+                                        "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                                        lead.status === 'new' ? "bg-red-500/10 text-red-600" : "bg-green-500/10 text-green-600"
+                                    )}>
+                                        {lead.status}
+                                    </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <div className="flex flex-col">
+                                        <span>{new Date(lead.created_at!).toLocaleDateString()}</span>
+                                        <span className="text-[10px] text-muted-foreground">{new Date(lead.created_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 w-7 p-0 hover:bg-primary/10 hover:text-primary transition-all"
+                                        onClick={() => navigate(`/spreadsheet/${(lead.spreadsheet_id as any)._id || lead.spreadsheet_id.id}`)}
+                                    >
+                                        <ArrowRight className="h-3 w-3" />
+                                    </Button>
+                                </td>
+                            </tr>
+                        ))}
+                        {data.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground italic">No leads found in this period.</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 
     return (
-        <div className="p-8 space-y-8 animate-fade-in">
-            <div className="flex items-center justify-between">
+        <div className="p-4 md:p-8 space-y-6 md:space-y-8 animate-fade-in">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                        <Facebook className="text-[#1877F2] h-8 w-8" />
-                        Meta Lead Insights
+                    <h1 className="text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2 md:gap-3">
+                        <Facebook className="text-[#1877F2] h-6 w-6 md:h-8 md:w-8" />
+                        Meta Insights
                     </h1>
-                    <p className="text-muted-foreground mt-2">In-depth analytics for your Facebook & Instagram lead campaigns.</p>
+                    <p className="text-sm md:text-base text-muted-foreground mt-1 md:mt-2">In-depth analytics for your Facebook & Instagram lead campaigns.</p>
                 </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-4">
-                <Card className="bg-blue-500/10 border-blue-200/20">
-                    <CardHeader className="pb-2 p-4">
-                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                <Card className="bg-blue-500/10 border-blue-200/20 hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-1 p-3 md:pb-2 md:p-4">
+                        <CardTitle className="text-[9px] md:text-xs font-bold uppercase tracking-wider text-blue-600 flex items-center gap-1 md:gap-2">
                             <Clock className="h-3 w-3" /> Leads Today
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                        <div className="text-3xl font-black text-blue-700">{analytics?.stats.leadsToday || 0}</div>
+                    <CardContent className="p-3 pt-0 md:p-4 md:pt-0">
+                        <div className="text-2xl md:text-3xl font-black text-blue-700">{analytics?.stats.leadsToday || 0}</div>
                     </CardContent>
                 </Card>
-                <Card className="bg-indigo-500/10 border-indigo-200/20">
-                    <CardHeader className="pb-2 p-4">
-                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-indigo-600 flex items-center gap-2">
+                <Card className="bg-indigo-500/10 border-indigo-200/20 hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-1 p-3 md:pb-2 md:p-4">
+                        <CardTitle className="text-[9px] md:text-xs font-bold uppercase tracking-wider text-indigo-600 flex items-center gap-1 md:gap-2">
                             <Hash className="h-3 w-3" /> This Week
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                        <div className="text-3xl font-black text-indigo-700">{analytics?.stats.leadsThisWeek || 0}</div>
+                    <CardContent className="p-3 pt-0 md:p-4 md:pt-0">
+                        <div className="text-2xl md:text-3xl font-black text-indigo-700">{analytics?.stats.leadsThisWeek || 0}</div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader className="pb-2 p-4">
-                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Capture Forms</CardTitle>
+                <Card className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-1 p-3 md:pb-2 md:p-4">
+                        <CardTitle className="text-[9px] md:text-xs font-bold uppercase tracking-wider text-muted-foreground">Capture Forms</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                        <div className="text-3xl font-black">{Object.keys(analytics?.charts.formLeads || {}).length}</div>
+                    <CardContent className="p-3 pt-0 md:p-4 md:pt-0">
+                        <div className="text-2xl md:text-3xl font-black">{Object.keys(analytics?.charts.formLeads || {}).length}</div>
                     </CardContent>
                 </Card>
-                <Card>
-                    <CardHeader className="pb-2 p-4">
-                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Leads</CardTitle>
+                <Card className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-1 p-3 md:pb-2 md:p-4">
+                        <CardTitle className="text-[9px] md:text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Leads</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                        <div className="text-3xl font-black">{analytics?.stats.totalLeads || 0}</div>
+                    <CardContent className="p-3 pt-0 md:p-4 md:pt-0">
+                        <div className="text-2xl md:text-3xl font-black">{analytics?.stats.totalLeads || 0}</div>
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3">
-                <Card>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <Card className="overflow-hidden">
                     <CardHeader>
                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                             <Target className="h-4 w-4 text-orange-500" />
@@ -271,7 +326,7 @@ export default function MetaInsights() {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="overflow-hidden">
                     <CardHeader>
                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                             <Layers className="h-4 w-4 text-purple-500" />
@@ -293,7 +348,7 @@ export default function MetaInsights() {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="overflow-hidden">
                     <CardHeader>
                         <CardTitle className="text-sm font-bold flex items-center gap-2">
                             <PlayCircle className="h-4 w-4 text-blue-500" />
@@ -316,7 +371,7 @@ export default function MetaInsights() {
                 </Card>
             </div>
 
-            <Card>
+            <Card className="overflow-hidden">
                 <CardHeader>
                     <CardTitle className="text-sm font-bold flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-green-500" />
@@ -394,8 +449,8 @@ export default function MetaInsights() {
                 </CardContent>
             </Card>
 
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <Card className="overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle className="text-sm font-bold">Leads per Page</CardTitle>
                         <Facebook className="h-4 w-4 text-[#1877F2]" />
@@ -421,7 +476,7 @@ export default function MetaInsights() {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="overflow-hidden">
                     <CardHeader className="flex flex-row items-center justify-between">
                         <CardTitle className="text-sm font-bold">Leads per Form</CardTitle>
                         <Clock className="h-4 w-4 text-muted-foreground" />

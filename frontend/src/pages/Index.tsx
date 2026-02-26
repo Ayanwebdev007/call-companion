@@ -690,18 +690,18 @@ const Index = () => {
       {/* Fixed Header Section */}
       <div className="flex-shrink-0 z-50 relative">
         {/* Main Header */}
-        <header className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border/50 px-6 py-4 shadow-sm transition-all duration-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="rounded-full hover:bg-accent/50" onClick={() => window.history.back()}>
-                <ArrowLeft className="h-5 w-5" />
+        <header className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border/50 px-2 py-2 md:px-6 md:py-4 shadow-sm transition-all duration-200">
+          <div className="flex items-center justify-between gap-1 overflow-x-hidden">
+            <div className="flex items-center gap-1 md:gap-4 flex-1 min-w-0">
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:h-10 md:w-10 shrink-0 rounded-full hover:bg-accent/50" onClick={() => window.history.back()}>
+                <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
               </Button>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-bold text-foreground tracking-tight">
+              <div className="flex flex-col min-w-0 flex-1">
+                <div className="flex items-center gap-1 md:gap-2 overflow-hidden">
+                  <h1 className="text-base md:text-xl font-bold text-foreground tracking-tight truncate">
                     {spreadsheet ? spreadsheet.name : 'Calling CRM'}
                   </h1>
-                  <div className="flex items-center gap-1 ml-2 border-l border-border/40 pl-2">
+                  <div className="hidden md:flex items-center gap-0.5 md:gap-1 ml-1 md:ml-2 border-l border-border/40 pl-1 md:pl-2 shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -724,10 +724,11 @@ const Index = () => {
                     </Button>
                   </div>
                 </div>
-                <span className="text-xs text-muted-foreground font-medium">Welcome back, {user?.username}</span>
+                <span className="text-xs text-muted-foreground font-medium truncate">Welcome back, {user?.username}</span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+
+            <div className="flex items-center gap-1 md:gap-3 shrink-0">
               <div className="hidden md:flex flex-col items-end mr-4 border-r border-border/50 pr-4">
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Today</span>
                 <span className="text-sm font-semibold text-foreground">
@@ -754,7 +755,8 @@ const Index = () => {
                 </div>
               )}
 
-              <div className="flex items-center gap-2 bg-secondary/30 p-1 rounded-lg border border-border/50">
+              {/* Desktop Actions Row */}
+              <div className="hidden md:flex items-center gap-2 bg-secondary/30 p-1 rounded-lg border border-border/50">
                 <BulkImportDialog onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })} />
                 <Button variant="ghost" size="sm"
                   className="h-8 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8"
@@ -838,13 +840,13 @@ const Index = () => {
                   <div className="flex items-center justify-center gap-2 w-full">
                     <Download className="h-4 w-4 flex-shrink-0" />
                     <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
-                      Export
+                      Export Local
                     </span>
                   </div>
                 </Button>
               </div>
 
-              <Button variant="ghost" size="sm" onClick={logout} className="ml-2 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8">
+              <Button variant="ghost" size="sm" onClick={logout} className="hidden md:flex ml-2 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 group relative overflow-hidden transition-all duration-300 hover:w-auto hover:px-3 px-0 w-8">
                 <div className="flex items-center justify-center gap-2 w-full">
                   <LogOut className="h-4 w-4 flex-shrink-0" />
                   <span className="max-w-0 opacity-0 group-hover:max-w-xs group-hover:opacity-100 transition-all duration-300 whitespace-nowrap">
@@ -852,13 +854,110 @@ const Index = () => {
                   </span>
                 </div>
               </Button>
+
+              {/* Mobile 3-Dot Settings Menu */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="md:hidden h-8 w-8 rounded-full hover:bg-accent/50 text-muted-foreground">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2 bg-background/95 backdrop-blur shadow-xl" align="end">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between px-2 py-2 mb-2 bg-secondary/30 rounded-md border border-border/50">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Today</span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {format(new Date(), "MMM do, yyyy")}
+                      </span>
+                    </div>
+
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Editing Actions</div>
+                    <div className="grid grid-cols-2 gap-1 mb-2">
+                      <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo || isProcessing} className="justify-start gap-2 h-8 px-2">
+                        <Undo2 className="h-3.5 w-3.5" /> Undo
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo || isProcessing} className="justify-start gap-2 h-8 px-2 text-right">
+                        <Redo2 className="h-3.5 w-3.5 ml-auto" /> Redo
+                      </Button>
+                    </div>
+
+                    <div className="h-px bg-border/50 my-1"></div>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 mt-1">Sheet Actions</div>
+
+                    <div className="flex items-center w-full px-2 py-1 hover:bg-accent/50 rounded-sm">
+                      <div className="flex-1">
+                        <BulkImportDialog
+                          onImportSuccess={() => queryClient.invalidateQueries({ queryKey: ["customers", spreadsheetId] })}
+                          showText={true}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Note: BulkImportDialog component structure is tightly coupled with rendering a button natively, so we embed it neatly */}
+                    <div className="flex items-center w-full px-2 py-1 hover:bg-accent/50 rounded-sm cursor-pointer" onClick={(e) => { e.preventDefault(); setIsGoogleSheetsDialogOpen(true); }}>
+                      <FileSpreadsheet className="h-4 w-4 mr-2 text-green-600 dark:text-green-400" />
+                      <span className="text-sm flex-1">Import from Drive</span>
+                    </div>
+
+                    <div className="flex items-center w-full px-2 py-1.5 hover:bg-accent/50 rounded-sm cursor-pointer" onClick={() => setIsExportDialogOpen(true)}>
+                      <Upload className="h-4 w-4 mr-2 text-blue-600 dark:text-blue-400" />
+                      <span className="text-sm flex-1">Export to Drive</span>
+                    </div>
+
+                    {spreadsheet?.linked_google_sheet_url && (
+                      <div className="flex items-center w-full px-2 py-1.5 hover:bg-accent/50 rounded-sm cursor-pointer" onClick={async () => {
+                        if (!spreadsheetId) return;
+                        setIsSyncing(true);
+                        try {
+                          const res = await syncGoogleSheet(spreadsheetId);
+                          toast({ title: "Sync successful", description: res.message });
+                        } catch (error: any) {
+                          toast({ title: "Sync failed", description: error.response?.data?.message || error.message, variant: "destructive" });
+                        } finally {
+                          setIsSyncing(false);
+                        }
+                      }}>
+                        <RefreshCw className={cn("h-4 w-4 mr-2 text-amber-600 dark:text-amber-400", isSyncing && "animate-spin")} />
+                        <span className="text-sm flex-1">Sync Drive Changes</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center w-full px-2 py-1.5 hover:bg-accent/50 rounded-sm cursor-pointer" onClick={async () => {
+                      if (!spreadsheetId) return;
+                      try {
+                        const blob = await exportCustomers(spreadsheetId);
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `customers_export.xlsx`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                      } catch (error) {
+                        toast({ title: "Export failed", description: "Failed to export customer data. Please try again.", variant: "destructive" });
+                      }
+                    }}>
+                      <Download className="h-4 w-4 mr-2 text-foreground" />
+                      <span className="text-sm flex-1">Download Local .xlsx</span>
+                    </div>
+
+                    <div className="h-px bg-border/50 my-1"></div>
+
+                    <div className="flex items-center w-full px-2 py-1.5 hover:bg-destructive/10 rounded-sm cursor-pointer text-destructive" onClick={logout}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      <span className="text-sm flex-1 font-medium">Log out</span>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </header>
 
         {/* Sheet Tabs */}
-        <div className="bg-background/95 border-b border-border/50 px-6 py-2 flex items-center gap-4 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30">
-          <div className="flex items-center gap-2">
+        <div className="bg-background/95 border-b border-border/50 px-2 md:px-6 py-2 flex items-center justify-between gap-1 md:gap-4 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60 sticky top-[57px] md:top-[65px] z-40 w-full">
+          <div className="flex items-center gap-1 md:gap-2">
             <Button
               variant={viewMode === "date" && isToday(selectedDate) ? "secondary" : "ghost"}
               size="sm"
@@ -866,8 +965,11 @@ const Index = () => {
                 setViewMode("date");
                 setSelectedDate(new Date());
               }}
+              className="px-2 md:px-3 h-8 gap-1.5"
+              title="Today"
             >
-              Today ({todayCount})
+              <CalendarIcon className="h-4 w-4 md:hidden" />
+              <span className="hidden md:inline">Today ({todayCount})</span>
             </Button>
 
             <Popover>
@@ -876,15 +978,21 @@ const Index = () => {
                   variant={viewMode === "date" ? "secondary" : "ghost"}
                   size="sm"
                   className={cn(
-                    "gap-2",
-                    viewMode === "date" && !isToday(selectedDate) && "bg-secondary"
+                    "h-8 gap-1.5 transition-all duration-300",
+                    viewMode === "date" && !isToday(selectedDate) ? "px-2 md:px-3 bg-secondary w-auto" : "px-0 md:px-3 w-8 md:w-auto justify-center md:justify-start"
                   )}
+                  title="Pick Date"
                 >
                   <CalendarIcon className="h-4 w-4" />
-                  {isToday(selectedDate) ? format(selectedDate, "PPP") : `${format(selectedDate, "PPP")} (${selectedDateCount})`}
+                  <span className={cn(
+                    "md:inline",
+                    viewMode === "date" && !isToday(selectedDate) ? "inline text-xs" : "hidden"
+                  )}>
+                    {isToday(selectedDate) ? format(selectedDate, "MMM d") : `${format(selectedDate, "MMM d")} (${selectedDateCount})`}
+                  </span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 max-w-[95vw] sm:max-w-md" align="center">
                 <Calendar
                   mode="single"
                   selected={selectedDate}
@@ -905,24 +1013,29 @@ const Index = () => {
                   variant={importDateRange.from ? "secondary" : "ghost"}
                   size="sm"
                   className={cn(
-                    "gap-2 ml-2",
-                    importDateRange.from && "bg-secondary"
+                    "h-8 gap-1.5 transition-all duration-300",
+                    importDateRange.from ? "px-2 md:px-3 bg-secondary w-auto" : "px-0 md:px-3 w-8 md:w-auto justify-center md:justify-start"
                   )}
                   title="Filter by Import Date Range"
                 >
                   <Filter className="h-4 w-4" />
-                  {importDateRange.from ? (
-                    importDateRange.to ? (
-                      `${format(importDateRange.from, "MMM d")} - ${format(importDateRange.to, "MMM d")}`
+                  <span className={cn(
+                    "md:inline",
+                    importDateRange.from ? "inline text-xs" : "hidden"
+                  )}>
+                    {importDateRange.from ? (
+                      importDateRange.to ? (
+                        `${format(importDateRange.from, "MMM d")} - ${format(importDateRange.to, "MMM d")}`
+                      ) : (
+                        format(importDateRange.from, "MMM d")
+                      )
                     ) : (
-                      format(importDateRange.from, "MMM d")
-                    )
-                  ) : (
-                    "Import Date"
-                  )}
+                      "Import Date"
+                    )}
+                  </span>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 max-w-[95vw] sm:max-w-md" align="center">
                 <div className="p-3 border-b border-border flex items-center justify-between">
                   <span className="text-xs font-semibold">Filter by Import Date</span>
                   <Button
@@ -953,17 +1066,20 @@ const Index = () => {
             </Popover>
           </div>
 
-          <div className="h-6 w-px bg-border/50" />
+          <div className="h-5 md:h-6 w-px bg-border/50 shrink-0" />
 
           <Button
             variant={viewMode === "all" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => setViewMode("all")}
+            className="px-2 md:px-3 h-8 gap-1.5"
+            title="All Customers"
           >
-            All Customers ({importDateRange.from ? fullFilteredCustomers.length : masterList.length})
+            <Users className="h-4 w-4 md:hidden" />
+            <span className="hidden md:inline">All Customers ({importDateRange.from ? fullFilteredCustomers.length : masterList.length})</span>
           </Button>
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-1 md:gap-3">
             {!showSearch && (
               <Button
                 variant="ghost"
@@ -979,7 +1095,7 @@ const Index = () => {
               <div
                 ref={searchRef}
                 className={cn(
-                  "relative w-[280px] duration-200",
+                  "relative w-[140px] sm:w-[200px] md:w-[280px] duration-200",
                   searchClosing
                     ? "animate-out slide-out-to-right-2 fade-out"
                     : "animate-in slide-in-from-right-2 fade-in"
@@ -1009,13 +1125,13 @@ const Index = () => {
 
         {/* Unified Sheet Sub-Sheet Selector */}
         {spreadsheet?.is_unified && spreadsheet.linked_meta_sheets && spreadsheet.linked_meta_sheets.length > 0 && (
-          <div className="bg-background/95 border-b border-border/50 px-6 py-2 overflow-x-auto whitespace-nowrap scrollbar-hide flex gap-2">
+          <div className="bg-background/95 border-b border-border/50 px-4 md:px-6 py-2 overflow-x-auto no-scrollbar whitespace-nowrap flex gap-2 w-full">
             {spreadsheet.linked_meta_sheets.map((linkedSheet: any) => (
               <Button
                 key={linkedSheet._id || linkedSheet.id}
                 variant={selectedLinkedSheetId === (linkedSheet._id || linkedSheet.id) ? "default" : "outline"}
                 size="sm"
-                className="rounded-full text-xs h-7"
+                className="rounded-full text-xs h-7 shrink-0"
                 onClick={() => setSelectedLinkedSheetId(linkedSheet._id || linkedSheet.id)}
               >
                 {linkedSheet.name}
@@ -1108,12 +1224,12 @@ const Index = () => {
 
 
       {/* Spreadsheet - Only this section should scroll */}
-      < div className="flex-1 overflow-auto bg-muted/10" >
+      <div className="flex-1 overflow-auto bg-muted/10" >
         <ResizableTable className="w-full border-separate border-spacing-0">
           <ResizableTableHeader className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm shadow-sm supports-[backdrop-filter]:bg-background/60">
             <ResizableTableRow className="bg-muted/50 hover:bg-muted/60 transition-colors border-b border-border/50">
               <ResizableTableHead
-                className="border-b border-border/50 px-3 py-2 text-left text-xs font-semibold text-muted-foreground w-10 sticky top-0 bg-muted/50"
+                className="border-b border-border/50 px-0 sm:px-3 py-2 text-center text-xs font-semibold text-muted-foreground w-6 min-w-[24px] sm:w-10 sm:min-w-[40px] sticky top-0 bg-muted/50"
                 resizable={false}
               >
                 {/* Row numbers header */}
@@ -1150,7 +1266,7 @@ const Index = () => {
                 Remark
               </ResizableTableHead>
               <ResizableTableHead
-                className="border-b border-border/50 px-2 py-1 text-center text-xs font-semibold text-muted-foreground w-12 sticky top-0 bg-muted/50"
+                className="border-b border-border/50 px-2 py-1 text-center text-xs font-semibold text-muted-foreground w-12 sticky top-0 right-0 bg-muted z-20 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]"
                 resizable={false}
               >
                 Actions
@@ -1177,7 +1293,7 @@ const Index = () => {
             </ResizableTableRow>
             {/* New Row Input */}
             <ResizableTableRow className="bg-background shadow-md z-30 relative group border-b-2 border-primary/20">
-              <ResizableTableCell className="border-b border-primary/20 px-1 py-0.5 text-xs text-primary font-bold text-center bg-primary/5 sticky left-0 h-6">
+              <ResizableTableCell className="border-b border-primary/20 px-0 sm:px-1 py-0.5 text-xs text-primary font-bold text-center bg-primary/5 sticky left-0 h-6 w-6 min-w-[24px] sm:w-10 sm:min-w-[40px]">
                 <Plus className="h-3 w-3 mx-auto" />
               </ResizableTableCell>
               {shouldShowMetaHeaders ? (
@@ -1299,9 +1415,9 @@ const Index = () => {
               <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="w-full h-full px-3 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
+                    <button className="w-full h-full px-1 sm:px-3 text-left flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
                       <CalendarIcon className="h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{newRow.last_call_date && isValid(parseISO(newRow.last_call_date)) ? format(parseISO(newRow.last_call_date), "dd/MM/yyyy") : "Select"}</span>
+                      <span className="text-[10px] sm:text-xs whitespace-nowrap overflow-hidden text-clip">{newRow.last_call_date && isValid(parseISO(newRow.last_call_date)) ? format(parseISO(newRow.last_call_date), "dd/MM/yyyy") : "Select"}</span>
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -1318,9 +1434,9 @@ const Index = () => {
               <ResizableTableCell className="border-b border-primary/20 p-0 h-6">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="w-full h-full px-3 text-left text-xs flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
+                    <button className="w-full h-full px-1 sm:px-3 text-left flex items-center gap-1 hover:bg-accent/10 transition-colors text-muted-foreground hover:text-foreground">
                       <CalendarIcon className="h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{newRow.next_call_date && isValid(parseISO(newRow.next_call_date)) ? format(parseISO(newRow.next_call_date), "dd/MM/yyyy") : "Select"}</span>
+                      <span className="text-[10px] sm:text-xs whitespace-nowrap overflow-hidden text-clip">{newRow.next_call_date && isValid(parseISO(newRow.next_call_date)) ? format(parseISO(newRow.next_call_date), "dd/MM/yyyy") : "Select"}</span>
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -1357,7 +1473,7 @@ const Index = () => {
                   />
                 </div>
               </ResizableTableCell>
-              <ResizableTableCell className="border-b border-primary/20 p-0.5 text-center bg-background group-hover:bg-accent/5 transition-colors h-6">
+              <ResizableTableCell className="border-b border-primary/20 p-0.5 text-center bg-background group-hover:bg-muted transition-colors h-6 sticky right-0 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                 <Button
                   size="sm"
                   onClick={handleAddRow}
@@ -1513,17 +1629,18 @@ const Index = () => {
             )}
           </ResizableTableBody>
         </ResizableTable>
+      </div>
 
-        {/* Progressive Rendering Indicator */}
-        {renderIndex < allCustomers.length && (
-          <div className="flex items-center justify-center py-4 bg-background border-t border-border/20">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-              Loading leads... ({renderIndex}/{allCustomers.length})
-            </div>
+      {/* Progressive Rendering Indicator */}
+      {renderIndex < allCustomers.length && (
+        <div className="flex items-center justify-center py-4 bg-background border-t border-border/20">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+            Loading leads... ({renderIndex}/{allCustomers.length})
           </div>
-        )}
-      </div >
+        </div>
+      )}
+
       {/* WhatsApp Message Dialog */}
       < SpreadsheetWhatsAppDialog
         isOpen={isWhatsAppDialogOpen}
@@ -1556,18 +1673,20 @@ const Index = () => {
         phoneNumber={selectedCallCustomer?.phone_number || ''}
       />
 
-      {spreadsheet && (
-        <GoogleSheetsExportDialog
-          open={isExportDialogOpen}
-          onOpenChange={setIsExportDialogOpen}
-          spreadsheetId={spreadsheetId!}
-          spreadsheetName={spreadsheet.name}
-          initialUrl={spreadsheet.linked_google_sheet_url}
-          metaHeaders={spreadsheet.meta_headers || []}
-          initialMapping={spreadsheet.column_mapping}
-          initialRealtimeSync={spreadsheet.realtime_sync}
-        />
-      )}
+      {
+        spreadsheet && (
+          <GoogleSheetsExportDialog
+            open={isExportDialogOpen}
+            onOpenChange={setIsExportDialogOpen}
+            spreadsheetId={spreadsheetId!}
+            spreadsheetName={spreadsheet.name}
+            initialUrl={spreadsheet.linked_google_sheet_url}
+            metaHeaders={spreadsheet.meta_headers || []}
+            initialMapping={spreadsheet.column_mapping}
+            initialRealtimeSync={spreadsheet.realtime_sync}
+          />
+        )
+      }
     </div >
   );
 };
@@ -1702,7 +1821,7 @@ function SpreadsheetRow({
       onDragEnd={onDragEnd}
     >
       <ResizableTableCell
-        className="border-b border-border/50 border-r border-border/50 px-1 py-0.5 text-xs text-muted-foreground text-center bg-muted/20"
+        className="border-b border-border/50 border-r border-border/50 px-0 sm:px-1 py-0.5 text-xs text-muted-foreground text-center bg-muted/20 w-6 min-w-[24px] sm:w-10 sm:min-w-[40px]"
         style={{ height: '24px' }}
         title="Drag to reorder"
         draggable
@@ -1842,12 +1961,12 @@ function SpreadsheetRow({
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-6">
         <Popover>
           <PopoverTrigger asChild>
-            <button className="w-full h-full px-2 text-left text-sm flex items-center gap-1 hover:bg-accent/10 transition-colors">
+            <button className="w-full h-full px-1 sm:px-2 text-left flex items-center gap-1 hover:bg-accent/10 transition-colors">
               <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-              <span className="truncate">{lastCallDate && isValid(lastCallDate) ? format(lastCallDate, "dd/MM/yyyy") : "Pick"}</span>
+              <span className="text-[10px] sm:text-sm whitespace-nowrap overflow-hidden text-clip">{lastCallDate && isValid(lastCallDate) ? format(lastCallDate, "dd/MM/yyyy") : "Pick"}</span>
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent className="w-auto p-0 max-w-[95vw] sm:max-w-md" align="center">
             <Calendar
               mode="single"
               selected={lastCallDate}
@@ -1861,12 +1980,12 @@ function SpreadsheetRow({
       <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0 h-8">
         <Popover>
           <PopoverTrigger asChild>
-            <button className="w-full h-full px-2 text-left text-sm flex items-center gap-1 hover:bg-accent/10 transition-colors">
+            <button className="w-full h-full px-1 sm:px-2 text-left flex items-center gap-1 hover:bg-accent/10 transition-colors">
               <CalendarIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-              <span className="truncate">{date && isValid(date) ? format(date, "dd/MM/yyyy") : "Pick"}</span>
+              <span className="text-[10px] sm:text-sm whitespace-nowrap overflow-hidden text-clip">{date && isValid(date) ? format(date, "dd/MM/yyyy") : "Pick"}</span>
             </button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent className="w-auto p-0 max-w-[95vw] sm:max-w-md" align="center">
             <Calendar
               mode="single"
               selected={date}
@@ -1912,8 +2031,8 @@ function SpreadsheetRow({
           />
         </div>
       </ResizableTableCell>
-      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0.5 text-center h-6">
-        <div className="flex items-center justify-center gap-1 h-full">
+      <ResizableTableCell className="border-b border-border/50 border-r border-border/50 p-0.5 text-center h-6 sticky right-0 bg-background group-hover:bg-muted transition-colors z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+        <div className="flex items-center justify-center gap-1 h-full bg-inherit">
           <Button
             variant="ghost"
             size="sm"
